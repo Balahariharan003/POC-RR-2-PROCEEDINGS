@@ -16,9 +16,11 @@ import {
   MessageSquare,
   Send,
   Paperclip,
-  Mic
+  Mic,
+  Smartphone
 } from 'lucide-react';
 import { apiService } from '../../services/apiService.js';
+import MobileQrModal from '../upload/MobileQrModal.jsx';
 
 export default function RRAssistantView({ 
   currentLanguage = 'en',
@@ -28,6 +30,7 @@ export default function RRAssistantView({
 }) {
   // Workflow States: 'upload' | 'file_selected' | 'processing' | 'generated'
   const [workflowState, setWorkflowState] = useState('upload');
+  const [showMobileQr, setShowMobileQr] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileInfo, setFileInfo] = useState({ name: '', sizeFormatted: '' });
   const [isDragOver, setIsDragOver] = useState(false);
@@ -44,6 +47,27 @@ export default function RRAssistantView({
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (activeSession) return;
+    try {
+      const draft = JSON.parse(localStorage.getItem('rr_draft') || 'null');
+      if (draft && typeof draft.content === 'string' && draft.content) {
+        setGeneratedContent(draft.content);
+        setFileInfo({ name: draft.fileName || 'Saved proceedings', sizeFormatted: draft.fileSize || '' });
+        setPromptHistory(Array.isArray(draft.promptHistory) ? draft.promptHistory : []);
+        setCurrentSessionId(draft.sessionId || null);
+        setWorkflowState('generated');
+      }
+    } catch (error) { console.warn('Could not load saved draft:', error); }
+  }, []);
+
+  useEffect(() => {
+    if (workflowState !== 'generated') return;
+    try {
+      localStorage.setItem('rr_draft', JSON.stringify({ content: generatedContent, fileName: fileInfo.name, fileSize: fileInfo.sizeFormatted, promptHistory, sessionId: currentSessionId }));
+    } catch (error) { setLastUpdatedMessage('Draft could not be saved locally. Export the document to keep your changes.'); }
+  }, [workflowState, generatedContent, fileInfo, promptHistory, currentSessionId]);
 
   // Restore session when activeSession prop changes (ChatGPT & Gemini style restore)
   useEffect(() => {
@@ -164,8 +188,8 @@ export default function RRAssistantView({
         district: result.entities?.jurisdiction?.district || "ஈரோடு",
         amount: `₹ ${Number(result.entities?.financials?.principal_amount || 460690).toLocaleString('en-IN')}/-`,
         status: "DRAFT",
-        groundingScore: result.validationInsights?.grounding_score || 0.96,
-        hallucinationScore: result.validationInsights?.hallucination_score || 0.04,
+        groundingScore: result.validation_insights?.grounding_score ?? 0.96,
+        hallucinationScore: result.validation_insights?.hallucination_score ?? 0.04,
         promptHistory: [initialPrompt],
         documentContent: formattedDoc,
         notes: "Automated OCR extraction and draft generation completed in RR Assistant."
@@ -282,6 +306,9 @@ export default function RRAssistantView({
 
   // Reset to initial upload (Section 9 & 11)
   const handleResetWorkflow = () => {
+    try { localStorage.removeItem('rr_draft'); } catch (error) { console.warn('Could not clear draft:', error); }
+    setPromptHistory([]);
+    setCurrentSessionId(null);
     setSelectedFile(null);
     setFileInfo({ name: '', sizeFormatted: '' });
     setGeneratedContent('');
@@ -291,7 +318,7 @@ export default function RRAssistantView({
 
   return (
     <div style={{
-      maxWidth: '1000px',
+      maxWidth: workflowState === 'generated' ? 'none' : '1000px',
       margin: '0 auto',
       width: '100%',
       display: 'flex',
@@ -299,8 +326,19 @@ export default function RRAssistantView({
       gap: '1.5rem',
       paddingBottom: '2.5rem'
     }}>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  handleFile(e.target.files[0]);
+                }
+              }}
+              accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf"
+              style={{ display: 'none' }}
+            />
       {/* =========================================================================
-          STEP 1 & 4: INITIAL CENTERED UPLOAD WORKSPACE (EXACT GDP DESIGN)
+          STEP 1 & 4: INITIAL CENTERED UPLOAD WORKSPACE (RR ASSISTANT DESIGN)
           ========================================================================= */}
       {workflowState === 'upload' && (
         <div style={{
@@ -330,23 +368,23 @@ export default function RRAssistantView({
           <h1 style={{
             fontSize: '1.75rem',
             fontWeight: 700,
-            color: '#0f243c',
+            color: '#102C57',
             margin: '0 0 8px 0',
             letterSpacing: '-0.01em'
           }}>
-            RR Assistant
+            RR Proceedings Assistant
           </h1>
           <p style={{
             fontSize: '0.95rem',
-            color: '#64748b',
+            color: '#3A4B63',
             maxWidth: '540px',
             lineHeight: 1.5,
             margin: '0 auto 30px auto'
           }}>
-            Upload or scan an order to begin AI-powered revenue recovery processing.
+            Upload a source document to generate RR proceedings in the fixed template.
           </p>
 
-          {/* Centered White Upload Card (Exact GDP Card Structure) */}
+          {/* Centered White Upload Card (Exact Match to Reference Screenshot) */}
           <div
             onDrop={handleDrop}
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
@@ -355,8 +393,8 @@ export default function RRAssistantView({
             style={{
               width: '100%',
               maxWidth: '540px',
-              backgroundColor: isDragOver ? '#f8fbff' : '#ffffff',
-              border: isDragOver ? '2px dashed #0284c7' : '2px dashed #bcd5ee',
+              backgroundColor: isDragOver ? '#FEFAF6' : '#FFFFFF',
+              border: isDragOver ? '2px dashed #102C57' : '2px dashed #DAC0A3',
               borderRadius: '16px',
               padding: '48px 32px',
               display: 'flex',
@@ -364,52 +402,43 @@ export default function RRAssistantView({
               alignItems: 'center',
               textAlign: 'center',
               cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              boxShadow: '0 1px 3px rgba(16, 44, 87, 0.05)',
               transition: 'all 0.25s ease'
             }}
           >
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={(e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                  handleFile(e.target.files[0]);
-                }
-              }}
-              accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf"
-              style={{ display: 'none' }}
-            />
+
 
             {/* Upload Icon Circle */}
             <div style={{
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              backgroundColor: '#e0f2fe',
+              backgroundColor: '#FEFAF6',
+              border: '1px solid #EADBC8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#0284c7',
+              color: '#102C57',
               marginBottom: '18px'
             }}>
-              <UploadCloud size={32} color="#0284c7" />
+              <UploadCloud size={30} color="#102C57" />
             </div>
 
             {/* Title & Description */}
             <h3 style={{
               fontSize: '1.25rem',
               fontWeight: 700,
-              color: '#0f243c',
+              color: '#102C57',
               margin: '0 0 6px 0'
             }}>
-              Upload Docs
+              Upload Source Document
             </h3>
             <p style={{
               fontSize: '0.875rem',
-              color: '#64748b',
+              color: '#687991',
               margin: '0 0 22px 0'
             }}>
-              Drag &amp; drop your docs here or click to browse
+              Drag &amp; drop your document here
             </p>
 
             {/* Dark Navy Browse Button */}
@@ -417,38 +446,81 @@ export default function RRAssistantView({
               type="button"
               onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
               style={{
-                backgroundColor: '#0d2744',
+                backgroundColor: '#102C57',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '6px',
-                padding: '12px 28px',
+                padding: '12px 32px',
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '10px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(13, 39, 68, 0.2)',
+                boxShadow: '0 4px 12px rgba(16, 44, 87, 0.2)',
                 transition: 'all 0.2s ease'
               }}
             >
-              <FileText size={18} />
-              <span>Browse Docs</span>
+              <span>Browse Document</span>
             </button>
 
             {/* Supported Formats */}
             <p style={{
               fontSize: '0.775rem',
-              color: '#94a3b8',
+              color: '#687991',
               marginTop: '18px',
               marginBottom: 0,
               fontWeight: 500
             }}>
-              Supported formats: PDF • JPG • PNG • WEBP
+              PDF • JPG • PNG • WEBP
             </p>
+
+            {/* OR Divider */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              width: '60%',
+              margin: '22px 0 14px 0',
+              color: '#DAC0A3',
+              fontSize: '0.75rem',
+              fontWeight: 600
+            }}>
+              <span style={{ flex: 1, height: '1px', backgroundColor: '#DAC0A3' }} />
+              <span style={{ padding: '0 12px', color: '#DAC0A3' }}>OR</span>
+              <span style={{ flex: 1, height: '1px', backgroundColor: '#DAC0A3' }} />
+            </div>
+
+            {/* Mobile Scan Option */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowMobileQr(true); }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#102C57',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: '6px'
+              }}
+            >
+              <Smartphone size={18} />
+              <span>Scan using mobile</span>
+            </button>
           </div>
         </div>
       )}
+
+      {/* Mobile QR Intake Modal */}
+      <MobileQrModal 
+        isOpen={showMobileQr} 
+        onClose={() => setShowMobileQr(false)} 
+        onSimulateMobileUpload={handleLoadSample} 
+      />
 
       {/* =========================================================================
           STEP 2 & 5: FILE SELECTED — DOCUMENT INFO & GENERATE ACTION
@@ -636,7 +708,7 @@ export default function RRAssistantView({
             {/* Title & Document Info */}
             <div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e293b', margin: '0 0 0.2rem 0' }}>
-                Generated Official Content
+                Generated RR Proceedings
               </h2>
               <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>Document Information:</span>
@@ -704,8 +776,9 @@ export default function RRAssistantView({
             </div>
           </div>
 
-          {/* Section 6: Large Editable Content Area */}
-          <div style={{
+          <div className="rr-generated-layout">
+          {/* Editable proceedings: 60% of the workspace */}
+          <div className="rr-document-panel" style={{
             background: '#ffffff',
             border: '1px solid #e2e8f0',
             borderRadius: '10px',
@@ -731,13 +804,15 @@ export default function RRAssistantView({
             </div>
 
             {/* Official Document Textarea Editor */}
-            <div style={{ padding: '1.25rem' }}>
+            <div className="rr-document-editor">
               <textarea
+                aria-label="Editable RR proceedings"
                 value={generatedContent}
                 onChange={(e) => setGeneratedContent(e.target.value)}
                 style={{
                   width: '100%',
-                  minHeight: '560px',
+                  height: '100%',
+                  minHeight: '0',
                   padding: '1.5rem',
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px',
@@ -747,15 +822,15 @@ export default function RRAssistantView({
                   fontSize: '0.94rem',
                   lineHeight: '1.85',
                   outline: 'none',
-                  resize: 'vertical',
+                  resize: 'none',
                   boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
                 }}
               />
             </div>
           </div>
 
-          {/* Section 7: Exact Prompt Input Area Matching Screenshot 2 */}
-          <div style={{
+          {/* Proceedings chat: 40% of the workspace */}
+          <div className="rr-chat-panel" style={{
             background: '#ffffff',
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
@@ -764,20 +839,35 @@ export default function RRAssistantView({
             display: 'flex',
             flexDirection: 'column'
           }}>
-            {/* Top: Textarea Input */}
+            <div className="rr-chat-heading">
+              <MessageSquare size={18} />
+              <div><h3>RR Assistant</h3><p>Request changes to your proceedings</p></div>
+            </div>
+            <div className="rr-chat-history" role="log" aria-label="Proceedings conversation" aria-live="polite">
+              <div className="rr-chat-message rr-chat-assistant">Your proceedings are ready in the fixed template. Review the document on the left, or send an instruction to revise it.</div>
+              {promptHistory.slice(1).map((item) => (
+                <React.Fragment key={item.id}>
+                  <div className="rr-chat-message rr-chat-user">{item.prompt}</div>
+                  <div className="rr-chat-message rr-chat-assistant">The requested revision has been applied. Review the updated proceedings on the left.</div>
+                </React.Fragment>
+              ))}
+              {isApplyingChanges && <div className="rr-chat-message rr-chat-assistant">Updating proceedings…</div>}
+            </div>
+            {/* Existing correction input and actions */}
             <textarea
-              rows={2}
+              rows={3}
+              aria-label="Instructions for RR Assistant"
               value={correctionInstruction}
               onChange={(e) => setCorrectionInstruction(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   if (correctionInstruction.trim() && !isApplyingChanges) {
                     handleApplyChanges();
                   }
                 }
               }}
-              placeholder={currentLanguage === 'en' ? "Type your instructions or question here... (Press Enter to send)" : "இங்கே உங்கள் கேள்வியை தட்டச்சு செய்யவும்... (Enter அழுத்தவும்)"}
+              placeholder={currentLanguage === 'en' ? "Describe a change to the proceedings… (Enter to send, Shift+Enter for a new line)" : "இங்கே உங்கள் கேள்வியை தட்டச்சு செய்யவும்... (Enter அழுத்தவும்)"}
               style={{
                 width: '100%',
                 padding: '16px 20px 8px 20px',
@@ -881,6 +971,7 @@ export default function RRAssistantView({
                 <Send size={13} className={isApplyingChanges ? "spinner" : ""} />
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}

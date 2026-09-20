@@ -7,6 +7,7 @@ import { ProceedingsPreviewModal, DroReceiptModal } from './components/layout/Mo
 
 import UploadLanding from './components/upload/UploadLanding.jsx';
 import ProcessingOverlay from './components/upload/ProcessingOverlay.jsx';
+import LoginPage from './components/auth/LoginPage.jsx';
 
 import DocumentEditorPreview from './components/workspace/DocumentEditorPreview.jsx';
 import DocumentViewer from './components/workspace/DocumentViewer.jsx';
@@ -15,6 +16,8 @@ import SummaryChatView from './components/workspace/SummaryChatView.jsx';
 import RRAssistantView from './components/workspace/RRAssistantView.jsx';
 
 import AuditLogView from './components/audit/AuditLogView.jsx';
+import AdminWorkspace from './components/admin/AdminWorkspace.jsx';
+import { readUsers, saveUsers } from './services/adminStore.js';
 
 import { apiService } from './services/apiService.js';
 import { DEFAULT_ENTITIES, DEFAULT_VALIDATION } from './data/schemas.js';
@@ -22,6 +25,7 @@ import { INITIAL_AUDIT_LOGS, SAMPLE_BOUNDING_BOXES } from './data/mockData.js';
 
 export default function App() {
   // Top-Level State Machine
+  const [currentUser, setCurrentUser] = useState(null); // null shows LoginPage; { role, email, name } shows app
   const [activeView, setActiveView] = useState('rrAssistant'); // 'rrAssistant' | 'workspace' | 'audit' | 'droQueue'
   const [workspaceMode, setWorkspaceMode] = useState('editor'); // 'editor' (Matching Screenshots) | 'inspection' (Side-by-side OCR & Form)
   const [currentLanguage, setLanguage] = useState('en');
@@ -86,6 +90,23 @@ export default function App() {
     checkApi();
   }, [theme]);
 
+  useEffect(() => {
+    apiService.getAuditLogs().then(setAuditLogs);
+    try {
+      const preferences = JSON.parse(localStorage.getItem('rr_preferences') || 'null');
+      if (preferences) {
+        setLanguage(preferences.language === 'ta' ? 'ta' : 'en');
+        setTheme(preferences.theme === 'light' ? 'light' : 'dark');
+      }
+    } catch (error) { console.warn('Could not load preferences:', error); }
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    try { localStorage.setItem('rr_preferences', JSON.stringify({ language: currentLanguage, theme })); }
+    catch (error) { console.warn('Could not save preferences:', error); }
+  }, [currentLanguage, theme, currentUser]);
+
   // Handle Document Ingestion (Upload Dropzone strictly for PDF / DOCX)
   const handleFileUpload = async (file) => {
     setProcessingFileName(file.name);
@@ -118,10 +139,10 @@ export default function App() {
 
   const applyPipelineResult = (result) => {
     setCurrentEntities(result.entities);
-    setValidationInsights(result.validationInsights);
-    setCurrentDocxFilename(result.generatedDocxFilename);
+    setValidationInsights(result.validation_insights);
+    setCurrentDocxFilename(result.generated_docx_filename);
     setRawOcrText(result.rawOcrText);
-    setBoundingBoxes(result.boundingBoxes || SAMPLE_BOUNDING_BOXES);
+    setBoundingBoxes(result.bounding_boxes || SAMPLE_BOUNDING_BOXES);
 
     // Format the new document content
     const initialSubject = `"உங்களைத் தேடி உங்கள் ஊரில்" திட்டம் — ${result.entities.jurisdiction.district} மாவட்டம், ${result.entities.jurisdiction.taluk} வட்டத்தில் மோட்டார் விபத்து இழப்பீட்டுத் தொகை ரூ.${Number(result.entities.financials.principal_amount).toLocaleString('en-IN')}/- ஐ வசூலித்து ஒப்படைக்க உத்தரவிடுதல்.`;
@@ -275,8 +296,22 @@ export default function App() {
     });
   };
 
+  if (!currentUser) {
+    return <LoginPage onLogin={(user) => {
+      // Local directory only: the existing login remains a frontend demo.
+      try {
+        const users = readUsers();
+        if (user.role === 'admin' && !users.length) saveUsers([{ ...user, id: crypto.randomUUID(), status: 'active', taluk: 'District administration' }]);
+      } catch (error) { console.warn('Could not initialize officer directory:', error); }
+      setCurrentUser(user);
+      setActiveSession(null);
+      setActiveView(user.role === 'admin' ? 'adminDashboard' : 'rrAssistant');
+      setMobileMenuOpen(false);
+    }} />;
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f4f8fb' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#FEFAF6' }}>
       {/* Top Application Header */}
       <AppHeader
         currentLanguage={currentLanguage}
@@ -289,12 +324,15 @@ export default function App() {
         setActiveView={setActiveView}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
+        currentUser={currentUser}
+        onLogout={() => setCurrentUser(null)}
       />
 
       {/* Main Body Area: Sidebar + Main Content */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
         {/* Left Navigation Sidebar */}
         <Sidebar
+          isAdmin={currentUser.role === 'admin'}
           activeView={activeView}
           setActiveView={(view) => {
             setActiveView(view);
@@ -332,6 +370,17 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
           {/* View Routing */}
           <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1.25rem' }}>
+            {currentUser.role === 'admin' && ['adminDashboard', 'adminUsers', 'adminBackup'].includes(activeView) && (
+              <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onNavigate={setActiveView} onRestored={() => {
+                setCurrentUser(null);
+                setActiveSession(null);
+                setActiveView('rrAssistant');
+                apiService.getAuditLogs().then(setAuditLogs);
+                const preferences = JSON.parse(localStorage.getItem('rr_preferences') || 'null');
+                setLanguage(preferences?.language || 'en');
+                setTheme(preferences?.theme || 'dark');
+              }} />
+            )}
             {(activeView === 'rrAssistant' || activeView === 'upload') && (
               <RRAssistantView
                 currentLanguage={currentLanguage}

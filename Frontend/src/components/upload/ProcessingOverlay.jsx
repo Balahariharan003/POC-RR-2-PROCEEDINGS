@@ -66,7 +66,7 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(3, 7, 18, 0.88)',
+      background: 'rgba(16, 44, 87, 0.65)',
       backdropFilter: 'blur(16px)',
       display: 'flex',
       alignItems: 'center',
@@ -74,13 +74,14 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
       zIndex: 1000,
       padding: '1.5rem'
     }}>
-      <div className="glass-panel" style={{
+      <div style={{
         width: '100%',
         maxWidth: '620px',
         padding: '2.5rem',
-        borderRadius: 'var(--radius-xl)',
-        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8)',
-        border: '1px solid rgba(56, 189, 248, 0.3)'
+        borderRadius: '16px',
+        background: '#FFFFFF',
+        border: '1px solid #DAC0A3',
+        boxShadow: '0 25px 60px rgba(16, 44, 87, 0.25)'
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -88,25 +89,25 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.2), rgba(16, 185, 129, 0.2))',
-            border: '1px solid rgba(56, 189, 248, 0.4)',
+            background: 'rgba(16, 44, 87, 0.08)',
+            border: '1px solid #DAC0A3',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 1rem auto'
           }}>
-            <Loader2 size={32} color="#38bdf8" className="spinner" />
+            <Loader2 size={32} color="#102C57" className="spinner" />
           </div>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.35rem 0', color: '#f8fafc' }}>
+          <h3 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.35rem 0', color: '#102C57' }}>
             5-Step Revenue Recovery Pipeline
           </h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-            Processing <strong style={{ color: '#38bdf8' }}>{currentFileName || "petition document"}</strong> • {elapsed}s elapsed
+          <p style={{ fontSize: '0.85rem', color: '#3A4B63', margin: 0 }}>
+            Processing <strong style={{ color: '#102C57' }}>{currentFileName || "source document"}</strong> • {elapsed}s elapsed
           </p>
         </div>
 
         {/* Steps Stepper List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {steps.map((step) => {
             const Icon = step.icon;
             const isDone = currentStep > step.id;
@@ -120,17 +121,17 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
                   alignItems: 'flex-start',
                   gap: '1rem',
                   padding: '0.85rem 1rem',
-                  borderRadius: 'var(--radius-md)',
+                  borderRadius: '10px',
                   background: isCurrent 
-                    ? 'rgba(2, 132, 199, 0.15)' 
+                    ? 'rgba(234, 219, 200, 0.4)' 
                     : isDone 
-                      ? 'rgba(16, 185, 129, 0.08)' 
-                      : 'rgba(15, 23, 42, 0.4)',
+                      ? 'rgba(234, 219, 200, 0.15)' 
+                      : '#FEFAF6',
                   border: isCurrent 
-                    ? '1px solid rgba(56, 189, 248, 0.4)' 
+                    ? '1px solid #DAC0A3' 
                     : isDone 
-                      ? '1px solid rgba(16, 185, 129, 0.2)' 
-                      : '1px solid var(--border-subtle)',
+                      ? '1px solid #EADBC8' 
+                      : '1px solid #EADBC8',
                   transition: 'all 0.3s ease'
                 }}
               >
@@ -138,11 +139,11 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: isDone ? '#10b981' : isCurrent ? '#0284c7' : 'var(--bg-tertiary)',
+                  background: isDone || isCurrent ? '#102C57' : '#EADBC8',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#ffffff',
+                  color: isDone || isCurrent ? '#ffffff' : '#3A4B63',
                   fontSize: '0.8rem',
                   fontWeight: 700,
                   flexShrink: 0
@@ -154,12 +155,12 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
                   <div style={{ 
                     fontSize: '0.9rem', 
                     fontWeight: isCurrent ? 700 : 600, 
-                    color: isCurrent ? '#38bdf8' : isDone ? '#34d399' : 'var(--text-dim)',
+                    color: isCurrent || isDone ? '#102C57' : '#687991',
                     marginBottom: '0.15rem'
                   }}>
                     {step.title}
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#3A4B63' }}>
                     {step.desc}
                   </div>
                 </div>

@@ -64,11 +64,13 @@ export default function DocumentEditorPreview({
       width: '100%'
     }}>
       {/* 1. INPUTS & AI REVISION PROMPT SECTION (MATCHING SCREENSHOT 1) */}
-      <div className="glass-panel" style={{
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid rgba(56, 189, 248, 0.25)',
+      {/* 1. INPUTS & AI REVISION PROMPT SECTION (MATCHING SCREENSHOT 1) */}
+      <div style={{
+        borderRadius: '12px',
+        border: '1px solid #DAC0A3',
         overflow: 'hidden',
-        background: 'var(--bg-card)'
+        background: '#FFFFFF',
+        boxShadow: '0 2px 10px rgba(16, 44, 87, 0.04)'
       }}>
         {/* Collapsible Header */}
         <div 
@@ -79,8 +81,8 @@ export default function DocumentEditorPreview({
             justifyContent: 'space-between',
             padding: '0.85rem 1.25rem',
             cursor: 'pointer',
-            background: 'rgba(15, 23, 42, 0.75)',
-            borderBottom: isMinimized ? 'none' : '1px solid var(--border-subtle)',
+            background: '#102C57',
+            borderBottom: isMinimized ? 'none' : '1px solid #DAC0A3',
             userSelect: 'none'
           }}
         >
@@ -90,24 +92,25 @@ export default function DocumentEditorPreview({
               margin: 0, 
               fontSize: '1rem', 
               fontWeight: 700, 
-              color: 'var(--text-main)',
+              color: '#FFFFFF',
               fontFamily: 'var(--font-tamil)'
             }}>
               செய்தி குறிப்பு / செயல்முறை ஆணை — உள்ளீடுகள் (Inputs & AI Re-generation Prompt)
             </h3>
             <span style={{
               fontSize: '0.7rem',
-              color: '#38bdf8',
-              background: 'rgba(2, 132, 199, 0.15)',
+              color: '#FEFAF6',
+              background: 'rgba(234, 219, 200, 0.25)',
+              border: '1px solid #DAC0A3',
               padding: '0.15rem 0.6rem',
-              borderRadius: 'var(--radius-full)',
+              borderRadius: '9999px',
               fontWeight: 600
             }}>
               {isMinimized ? "Click to expand" : "Click to minimize"}
             </span>
           </div>
 
-          <div style={{ color: 'var(--text-muted)' }}>
+          <div style={{ color: '#FEFAF6' }}>
             {isMinimized ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
           </div>
         </div>
@@ -118,7 +121,7 @@ export default function DocumentEditorPreview({
             {/* பொருள் (Subject) * */}
             <div className="form-group">
               <label className="form-label" style={{ 
-                color: 'var(--text-main)', 
+                color: '#102C57', 
                 fontFamily: 'var(--font-tamil)', 
                 fontSize: '0.9rem',
                 textTransform: 'none',
@@ -135,7 +138,10 @@ export default function DocumentEditorPreview({
                   fontFamily: 'var(--font-tamil)',
                   fontSize: '0.92rem',
                   lineHeight: '1.6',
-                  borderRadius: 'var(--radius-md)',
+                  borderRadius: '8px',
+                  background: '#FEFAF6',
+                  border: '1px solid #DAC0A3',
+                  color: '#102C57',
                   resize: 'vertical'
                 }}
                 placeholder='"உங்களைத் தேடி உங்கள் ஊரில்" திட்டம் — ஈரோடு மாவட்டம், பெருந்துறை வட்டத்தில் பல்வேறு வளர்ச்சித் திட்டப் பணிகளை ஆய்வு செய்தல்...'
@@ -144,14 +150,14 @@ export default function DocumentEditorPreview({
 
             {/* AI PROMPT TEXTAREA (REQUIREMENT: Prompt to generate/fix docx if wrong info) */}
             <div className="form-group" style={{
-              background: 'rgba(2, 132, 199, 0.08)',
+              background: 'rgba(234, 219, 200, 0.3)',
               padding: '1rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(2, 132, 199, 0.25)'
+              borderRadius: '10px',
+              border: '1px solid #DAC0A3'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                 <label className="form-label" style={{ 
-                  color: '#38bdf8', 
+                  color: '#102C57', 
                   fontSize: '0.85rem', 
                   fontWeight: 700, 
                   display: 'flex', 
@@ -159,10 +165,10 @@ export default function DocumentEditorPreview({
                   gap: '0.4rem',
                   textTransform: 'none'
                 }}>
-                  <Sparkles size={16} color="#38bdf8" />
+                  <Sparkles size={16} color="#102C57" />
                   <span>AI வழிகாட்டல் / திருத்தக் குறிப்பு (AI Prompt to Re-generate DOCX)</span>
                 </label>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                <span style={{ fontSize: '0.72rem', color: '#3A4B63' }}>
                   If DOCX contains wrong info, specify modifications here
                 </span>
               </div>
@@ -177,7 +183,10 @@ export default function DocumentEditorPreview({
                   fontFamily: 'var(--font-tamil)',
                   fontSize: '0.88rem',
                   lineHeight: '1.5',
-                  marginBottom: '0.65rem'
+                  marginBottom: '0.65rem',
+                  background: '#FFFFFF',
+                  border: '1px solid #DAC0A3',
+                  color: '#102C57'
                 }}
               />
 
@@ -198,10 +207,10 @@ export default function DocumentEditorPreview({
                       style={{
                         padding: '0.2rem 0.5rem',
                         fontSize: '0.7rem',
-                        borderRadius: 'var(--radius-full)',
-                        background: 'var(--bg-tertiary)',
-                        border: '1px solid var(--border-subtle)',
-                        color: 'var(--text-muted)'
+                        borderRadius: '9999px',
+                        background: '#FFFFFF',
+                        border: '1px solid #DAC0A3',
+                        color: '#3A4B63'
                       }}
                     >
                       {chip}
@@ -226,29 +235,30 @@ export default function DocumentEditorPreview({
       </div>
 
       {/* 2. SUCCESS HEADER & ACTION BAR (MATCHING SCREENSHOT 2) */}
-      <div className="glass-panel" style={{
+      <div style={{
         padding: '0.9rem 1.5rem',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: '12px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '1rem',
-        background: 'var(--bg-card)',
-        border: '1px solid rgba(16, 185, 129, 0.25)'
+        background: '#FFFFFF',
+        border: '1px solid #DAC0A3',
+        boxShadow: '0 2px 8px rgba(16, 44, 87, 0.04)'
       }}>
         {/* Left Success Message */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <div style={{
             width: '38px',
             height: '38px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: '8px',
+            background: 'rgba(16, 44, 87, 0.08)',
+            border: '1px solid #DAC0A3',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#10b981'
+            color: '#102C57'
           }}>
             <FileCheck size={22} />
           </div>
@@ -256,23 +266,31 @@ export default function DocumentEditorPreview({
             <div style={{
               fontSize: '1.05rem',
               fontWeight: 800,
-              color: '#34d399',
+              color: '#102C57',
               fontFamily: 'var(--font-tamil)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem'
             }}>
               <span>வெற்றிகரமாக உருவாக்கப்பட்டது!</span>
-              <span style={{ fontSize: '0.785rem', fontWeight: 600, color: 'var(--text-dim)' }}>
+              <span style={{ fontSize: '0.785rem', fontWeight: 600, color: '#3A4B63' }}>
                 (Successfully Created!)
               </span>
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
+            <div style={{ fontSize: '0.75rem', color: '#3A4B63', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
               <span>{refNumber}</span>
               <span>•</span>
               <span>{docDate}</span>
               <span>•</span>
-              <span className="badge badge-emerald" style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem' }}>
+              <span style={{
+                fontSize: '0.65rem',
+                padding: '0.15rem 0.5rem',
+                borderRadius: '4px',
+                background: 'rgba(234, 219, 200, 0.45)',
+                border: '1px solid #DAC0A3',
+                color: '#102C57',
+                fontWeight: 600
+              }}>
                 Template
               </span>
             </div>
@@ -288,11 +306,12 @@ export default function DocumentEditorPreview({
             style={{
               padding: '0.45rem 0.85rem',
               fontSize: '0.8rem',
-              color: isEditMode ? '#fbbf24' : 'var(--text-main)',
-              borderColor: isEditMode ? '#fbbf24' : 'var(--border-card)'
+              color: isEditMode ? '#FFFFFF' : '#102C57',
+              background: isEditMode ? '#102C57' : '#FFFFFF',
+              borderColor: '#DAC0A3'
             }}
           >
-            <Edit3 size={15} color={isEditMode ? '#fbbf24' : 'currentColor'} />
+            <Edit3 size={15} color={isEditMode ? '#FFFFFF' : '#102C57'} />
             <span>{isEditMode ? 'Done Editing' : 'Edit'}</span>
           </button>
 
@@ -300,9 +319,9 @@ export default function DocumentEditorPreview({
           <button
             onClick={handleCopy}
             className="btn btn-outline"
-            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderColor: '#DAC0A3', color: '#102C57', background: '#FFFFFF' }}
           >
-            {copied ? <Check size={15} color="#10b981" /> : <Copy size={15} />}
+            {copied ? <Check size={15} color="#102C57" /> : <Copy size={15} />}
             <span>{copied ? 'Copied!' : 'Copy'}</span>
           </button>
 
@@ -310,24 +329,20 @@ export default function DocumentEditorPreview({
           <button
             onClick={onDownloadPdf}
             className="btn btn-outline"
-            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderColor: '#DAC0A3', color: '#102C57', background: '#FFFFFF' }}
           >
             <Printer size={15} />
             <span>PDF</span>
           </button>
 
-          {/* DOCX Button (Primary Highlighted Button matching Screenshot 2) */}
+          {/* DOCX Button (Primary Highlighted Button) */}
           <button
             onClick={onDownloadDocx}
-            className="btn"
+            className="btn btn-primary"
             style={{
               padding: '0.45rem 1.15rem',
               fontSize: '0.8rem',
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-              color: '#ffffff',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              boxShadow: '0 4px 14px rgba(124, 58, 237, 0.4)'
+              fontWeight: 700
             }}
           >
             <Download size={15} />
@@ -338,7 +353,7 @@ export default function DocumentEditorPreview({
           <button
             onClick={onNewDocument}
             className="btn btn-ghost"
-            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}
+            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', color: '#3A4B63' }}
           >
             <PlusCircle size={15} />
             <span>+ New Document</span>
@@ -347,13 +362,13 @@ export default function DocumentEditorPreview({
       </div>
 
       {/* 3. DOCUMENT PREVIEW / INLINE EDITOR CONTAINER (MATCHING SCREENSHOT 2) */}
-      <div className="glass-panel" style={{
-        borderRadius: 'var(--radius-lg)',
+      <div style={{
+        borderRadius: '12px',
         overflow: 'hidden',
         background: '#ffffff',
-        color: '#0f172a',
-        boxShadow: 'var(--shadow-lg)',
-        border: '1px solid #e2e8f0'
+        color: '#102C57',
+        boxShadow: '0 4px 20px rgba(16, 44, 87, 0.06)',
+        border: '1px solid #DAC0A3'
       }}>
         {/* Document Preview Bar */}
         <div style={{
@@ -361,17 +376,17 @@ export default function DocumentEditorPreview({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0.65rem 1.25rem',
-          background: '#f8fafc',
-          borderBottom: '1px solid #e2e8f0',
+          background: '#FEFAF6',
+          borderBottom: '1px solid #EADBC8',
           fontSize: '0.785rem',
-          color: '#64748b'
+          color: '#3A4B63'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-            <FileText size={15} />
+            <FileText size={15} color="#102C57" />
             <span>Document Preview</span>
           </div>
           {isEditMode && (
-            <span style={{ color: '#d97706', fontWeight: 600 }}>
+            <span style={{ color: '#102C57', fontWeight: 600 }}>
               ✏️ Direct editing enabled — edit text below
             </span>
           )}
@@ -384,7 +399,7 @@ export default function DocumentEditorPreview({
           fontFamily: "'Noto Sans Tamil', 'Plus Jakarta Sans', serif",
           lineHeight: '1.8',
           fontSize: '0.92rem',
-          color: '#1e293b'
+          color: '#102C57'
         }}>
           {isEditMode ? (
             /* Inline Editable Textarea */
@@ -394,14 +409,14 @@ export default function DocumentEditorPreview({
               style={{
                 width: '100%',
                 minHeight: '480px',
-                border: '1px solid #cbd5e1',
+                border: '1px solid #DAC0A3',
                 borderRadius: '6px',
                 padding: '1.25rem',
                 fontFamily: "'Noto Sans Tamil', 'Plus Jakarta Sans', serif",
                 fontSize: '0.92rem',
                 lineHeight: '1.8',
-                color: '#0f172a',
-                background: '#f8fafc',
+                color: '#102C57',
+                background: '#FEFAF6',
                 outline: 'none',
                 resize: 'vertical'
               }}

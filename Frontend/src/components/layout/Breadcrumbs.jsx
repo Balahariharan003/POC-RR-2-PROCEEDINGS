@@ -14,45 +14,45 @@ export default function Breadcrumbs({
       alignItems: 'center',
       gap: '0.5rem',
       fontSize: '0.785rem',
-      color: '#64748b',
+      color: '#3A4B63',
       padding: '0.65rem 1.5rem',
-      borderBottom: '1px solid #e2e8f0',
-      background: '#eef4fa'
+      borderBottom: '1px solid #EADBC8',
+      background: '#FEFAF6'
     }}>
       <div 
         onClick={() => setActiveView('rrAssistant')}
-        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', color: '#102C57', fontWeight: 600 }}
       >
-        <Home size={14} />
+        <Home size={14} color="#102C57" />
         <span>RR Assistant</span>
       </div>
 
-      <ChevronRight size={13} color="var(--border-card)" />
+      <ChevronRight size={13} color="#DAC0A3" />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-        <Building2 size={14} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#3A4B63' }}>
+        <Building2 size={14} color="#687991" />
         <span>{district}</span>
       </div>
 
-      <ChevronRight size={13} color="var(--border-card)" />
+      <ChevronRight size={13} color="#DAC0A3" />
 
-      <span>{taluk}</span>
+      <span style={{ color: '#3A4B63' }}>{taluk}</span>
 
       {caseNumber && (
         <>
-          <ChevronRight size={13} color="var(--border-card)" />
+          <ChevronRight size={13} color="#DAC0A3" />
           <div 
             onClick={() => setActiveView('workspace')}
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
               gap: '0.35rem', 
-              color: '#38bdf8', 
-              fontWeight: '600',
+              color: '#102C57', 
+              fontWeight: '700',
               cursor: 'pointer'
             }}
           >
-            <FileText size={14} />
+            <FileText size={14} color="#102C57" />
             <span>{caseNumber}</span>
           </div>
         </>
@@ -60,15 +60,15 @@ export default function Breadcrumbs({
 
       {activeView === 'audit' && (
         <>
-          <ChevronRight size={13} color="var(--border-card)" />
-          <span style={{ color: '#a855f7', fontWeight: '600' }}>Compliance & Audit Logs</span>
+          <ChevronRight size={13} color="#DAC0A3" />
+          <span style={{ color: '#102C57', fontWeight: '700' }}>Compliance & Audit Logs</span>
         </>
       )}
 
       {activeView === 'droQueue' && (
         <>
-          <ChevronRight size={13} color="var(--border-card)" />
-          <span style={{ color: '#10b981', fontWeight: '600' }}>DRO State Portal Dispatch</span>
+          <ChevronRight size={13} color="#DAC0A3" />
+          <span style={{ color: '#102C57', fontWeight: '700' }}>DRO State Portal Dispatch</span>
         </>
       )}
     </nav>

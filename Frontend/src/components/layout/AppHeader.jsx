@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, 
+  Settings,
   ChevronDown, 
   ChevronUp, 
   LogOut, 
@@ -20,7 +21,9 @@ export default function AppHeader({
   activeView,
   setActiveView,
   mobileMenuOpen,
-  setMobileMenuOpen
+  setMobileMenuOpen,
+  currentUser,
+  onLogout
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -58,13 +61,13 @@ export default function AppHeader({
         />
         <div className="topbar-title-group">
           <span className="topbar-title">
-            <span className="topbar-title-full">AI Administrative Co-Pilot</span>
-            <span className="topbar-title-short">AI Co-Pilot</span>
+            <span className="topbar-title-full">RR Assistant</span>
+            <span className="topbar-title-short">RR Assistant</span>
           </span>
-          <span className="topbar-subtitle">
+          <span className="topbar-subtitle" style={{ color: 'var(--soft-sand, #EADBC8)' }}>
             {isTamil 
-              ? 'அரசு குறைதீர்ப்பு முன்-செயலாக்கம் (Government Grievance Pre-Processing)'
-              : 'Government Grievance Pre-Processing'}
+              ? 'வருவாய் வசூல் செயல்முறைகள் (Revenue Recovery Proceedings)'
+              : 'Revenue Recovery Proceedings'}
           </span>
         </div>
       </div>
@@ -90,19 +93,23 @@ export default function AppHeader({
         </div>
 
         {/* Officer Profile Badge */}
-        <div 
-          className="user-profile-badge" 
-          onClick={() => setProfileOpen(!profileOpen)}
-        >
-          <div className="user-pill">
+        <div className="user-profile-badge" onKeyDown={(e) => { if (e.key === 'Escape') setProfileOpen(false); }}>
+          <button type="button" className="user-pill" aria-label="Officer profile menu" aria-expanded={profileOpen} onClick={() => setProfileOpen(!profileOpen)} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'inherit' }}>
             <div className="avatar-circle">
-              <User size={17} />
+              <User size={16} />
             </div>
-            <span className="user-name">S. Ramanathan</span>
-            <span className="user-chevron">
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.15 }}>
+              <span className="user-name" style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '0.825rem' }}>
+                {currentUser?.name || 'Naveen'}
+              </span>
+              <span style={{ color: 'var(--soft-sand, #EADBC8)', fontSize: '0.685rem', fontWeight: 400 }}>
+                {currentUser?.role === 'admin' ? 'Admin' : 'User'}
+              </span>
+            </div>
+            <span className="user-chevron" style={{ color: 'var(--soft-sand, #EADBC8)', fontSize: '0.65rem', marginLeft: '3px' }}>
               {profileOpen ? '▲' : '▼'}
             </span>
-          </div>
+          </button>
 
           {/* User Profile Dropdown Card */}
           {profileOpen && (
@@ -112,8 +119,8 @@ export default function AppHeader({
                   <User size={24} />
                 </div>
                 <div className="dropdown-info">
-                  <h4>S. Ramanathan</h4>
-                  <p>Tahsildar • Grievance Cell</p>
+                  <h4>{currentUser?.name || 'S. Ramanathan'}</h4>
+                  <p>{currentUser?.role === 'admin' ? 'District Collector • Administration' : 'Tahsildar • Revenue Recovery'}</p>
                   <span className="dropdown-dept">Revenue &amp; Disaster Management</span>
                 </div>
               </div>
@@ -125,7 +132,24 @@ export default function AppHeader({
                 <span>Officer Profile</span>
               </div>
 
-              <div className="dropdown-item signout">
+              <details className="profile-settings">
+                <summary className="dropdown-item"><Settings size={16} /><span>Settings</span></summary>
+                <label htmlFor="profile-language">Language</label>
+                <select id="profile-language" value={currentLanguage} onChange={(e) => setLanguage(e.target.value)}>
+                  <option value="en">English</option>
+                  <option value="ta">தமிழ்</option>
+                </select>
+              </details>
+
+              <div 
+                className="dropdown-item signout"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProfileOpen(false);
+                  if (onLogout) onLogout();
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 <LogOut size={16} />
                 <span>Sign Out</span>
               </div>

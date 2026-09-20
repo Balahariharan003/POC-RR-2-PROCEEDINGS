@@ -516,11 +516,11 @@ export const apiService = {
     try {
       const current = await this.getAuditLogs();
       const monthYear = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date());
-
-      const updated = {
-        ...current,
-        [monthYear]: [entry, ...(current[monthYear] || [])]
-      };
+      const existingMonth = Object.keys(current).find(month => current[month].some(item => item.id === entry.id));
+      const month = existingMonth || monthYear;
+      const existing = current[month]?.find(item => item.id === entry.id);
+      const savedEntry = { ...existing, ...entry, timestamp: existing?.timestamp || entry.timestamp || new Date().toISOString() };
+      const updated = { ...current, [month]: [savedEntry, ...(current[month] || []).filter(item => item.id !== entry.id)] };
 
       localStorage.setItem('rr_audit_logs', JSON.stringify(updated));
       return updated;

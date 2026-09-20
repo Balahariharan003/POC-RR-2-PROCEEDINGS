@@ -19,7 +19,7 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(3, 7, 18, 0.85)',
+      background: 'rgba(16, 44, 87, 0.65)',
       backdropFilter: 'blur(10px)',
       display: 'flex',
       alignItems: 'center',
@@ -27,19 +27,21 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
       zIndex: 1050,
       padding: '1.5rem'
     }}>
-      <div className="glass-panel" style={{
+      <div style={{
         width: '100%',
         maxWidth: '520px',
         padding: '2rem',
-        borderRadius: 'var(--radius-xl)',
-        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8)',
+        borderRadius: '16px',
+        background: '#FFFFFF',
+        border: '1px solid #DAC0A3',
+        boxShadow: '0 25px 60px rgba(16, 44, 87, 0.25)',
         textAlign: 'center',
         position: 'relative'
       }}>
         <button 
           onClick={onClose}
           className="btn btn-ghost"
-          style={{ position: 'absolute', top: '1rem', right: '1rem', padding: '0.4rem' }}
+          style={{ position: 'absolute', top: '1rem', right: '1rem', padding: '0.4rem', color: '#687991' }}
         >
           <X size={18} />
         </button>
@@ -48,72 +50,74 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
           width: '56px',
           height: '56px',
           borderRadius: '50%',
-          background: 'rgba(56, 189, 248, 0.15)',
+          background: 'rgba(16, 44, 87, 0.08)',
+          border: '1px solid #EADBC8',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 1rem auto'
         }}>
-          <Smartphone size={28} color="#38bdf8" />
+          <Smartphone size={28} color="#102C57" />
         </div>
 
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.4rem 0', color: '#f8fafc' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.4rem 0', color: '#102C57' }}>
           Pair Smartphone for Live Document Scanning
         </h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 1.5rem 0' }}>
-          Field staff can capture physical petition sheets using mobile camera. Images stream in real-time over local Wi-Fi.
+        <p style={{ fontSize: '0.85rem', color: '#3A4B63', margin: '0 0 1.5rem 0' }}>
+          Field staff can capture source documents using mobile camera. Images stream in real-time over local Wi-Fi.
         </p>
 
         {/* Dynamic QR Code Canvas */}
         <div style={{
           background: '#ffffff',
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: '12px',
           padding: '1.25rem',
           display: 'inline-block',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+          border: '1px solid #EADBC8',
+          boxShadow: '0 4px 16px rgba(16, 44, 87, 0.08)',
           marginBottom: '1.25rem'
         }}>
           {/* Stylized QR Code SVG */}
           <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="180" height="180" fill="white"/>
             {/* Top-Left Finder */}
-            <rect x="15" y="15" width="45" height="45" rx="6" fill="#0f172a"/>
+            <rect x="15" y="15" width="45" height="45" rx="6" fill="#102C57"/>
             <rect x="23" y="23" width="29" height="29" rx="3" fill="white"/>
-            <rect x="29" y="29" width="17" height="17" rx="2" fill="#0284c7"/>
+            <rect x="29" y="29" width="17" height="17" rx="2" fill="#102C57"/>
             
             {/* Top-Right Finder */}
-            <rect x="120" y="15" width="45" height="45" rx="6" fill="#0f172a"/>
+            <rect x="120" y="15" width="45" height="45" rx="6" fill="#102C57"/>
             <rect x="128" y="23" width="29" height="29" rx="3" fill="white"/>
-            <rect x="134" y="29" width="17" height="17" rx="2" fill="#0284c7"/>
+            <rect x="134" y="29" width="17" height="17" rx="2" fill="#102C57"/>
             
             {/* Bottom-Left Finder */}
-            <rect x="15" y="120" width="45" height="45" rx="6" fill="#0f172a"/>
+            <rect x="15" y="120" width="45" height="45" rx="6" fill="#102C57"/>
             <rect x="23" y="128" width="29" height="29" rx="3" fill="white"/>
-            <rect x="29" y="134" width="17" height="17" rx="2" fill="#0284c7"/>
+            <rect x="29" y="134" width="17" height="17" rx="2" fill="#102C57"/>
             
             {/* Dynamic Code Matrix Elements */}
-            <rect x="75" y="20" width="15" height="15" fill="#1e293b"/>
-            <rect x="95" y="25" width="10" height="25" fill="#1e293b"/>
-            <rect x="20" y="75" width="20" height="15" fill="#1e293b"/>
-            <rect x="50" y="70" width="15" height="20" fill="#1e293b"/>
-            <rect x="75" y="75" width="30" height="30" rx="4" fill="#0284c7"/>
-            <rect x="115" y="80" width="20" height="15" fill="#1e293b"/>
-            <rect x="145" y="70" width="15" height="25" fill="#1e293b"/>
-            <rect x="75" y="120" width="25" height="15" fill="#1e293b"/>
-            <rect x="110" y="125" width="20" height="20" fill="#1e293b"/>
-            <rect x="140" y="135" width="25" height="25" fill="#1e293b"/>
-            <rect x="90" y="145" width="15" height="15" fill="#1e293b"/>
+            <rect x="75" y="20" width="15" height="15" fill="#3A4B63"/>
+            <rect x="95" y="25" width="10" height="25" fill="#3A4B63"/>
+            <rect x="20" y="75" width="20" height="15" fill="#3A4B63"/>
+            <rect x="50" y="70" width="15" height="20" fill="#3A4B63"/>
+            <rect x="75" y="75" width="30" height="30" rx="4" fill="#102C57"/>
+            <rect x="115" y="80" width="20" height="15" fill="#3A4B63"/>
+            <rect x="145" y="70" width="15" height="25" fill="#3A4B63"/>
+            <rect x="75" y="120" width="25" height="15" fill="#3A4B63"/>
+            <rect x="110" y="125" width="20" height="20" fill="#3A4B63"/>
+            <rect x="140" y="135" width="25" height="25" fill="#3A4B63"/>
+            <rect x="90" y="145" width="15" height="15" fill="#3A4B63"/>
           </svg>
         </div>
 
         {/* Connection Details */}
         <div style={{
-          background: 'rgba(15, 23, 42, 0.6)',
-          borderRadius: 'var(--radius-md)',
+          background: '#FEFAF6',
+          borderRadius: '8px',
           padding: '0.75rem 1rem',
-          border: '1px solid var(--border-subtle)',
+          border: '1px solid #EADBC8',
           fontSize: '0.75rem',
-          color: 'var(--text-dim)',
+          color: '#3A4B63',
           fontFamily: 'var(--font-mono)',
           wordBreak: 'break-all',
           marginBottom: '1.5rem',
@@ -122,7 +126,7 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
           justifyContent: 'center',
           gap: '0.5rem'
         }}>
-          <Wifi size={14} color="#10b981" />
+          <Wifi size={14} color="#102C57" />
           <span>{localUrl}</span>
         </div>
 
@@ -135,7 +139,7 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
         >
           {paired ? (
             <>
-              <CheckCircle2 size={18} color="#10b981" />
+              <CheckCircle2 size={18} color="#FFFFFF" />
               <span>Smartphone Paired! Ingesting Stream...</span>
             </>
           ) : (

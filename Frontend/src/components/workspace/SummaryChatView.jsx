@@ -223,7 +223,7 @@ export default function SummaryChatView({
               <Sparkles size={14} className="spinner" />
             </div>
             <div style={{ fontSize: '0.785rem', color: 'var(--text-dim)' }}>
-              Querying petition context and citing coordinates...
+              Querying RR document context and citing coordinates...
             </div>
           </div>
         )}

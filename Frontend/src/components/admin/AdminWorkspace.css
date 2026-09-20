@@ -1,0 +1,41 @@
+.rr-admin { color: #102c57; display: flex; flex-direction: column; gap: 1.1rem; width: 100%; padding: .5rem; }
+.rr-admin h1 { font-size: 1.8rem; margin: 0 0 .4rem; color: #102c57; }
+.rr-admin h2 { font-size: 1.08rem; margin: 0 0 .75rem; color: #102c57; }
+.rr-admin p { color: #687991; line-height: 1.6; margin: .4rem 0 1rem; }
+.rr-admin-heading, .rr-admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.rr-admin .rr-admin-eyebrow { font-size: .68rem; letter-spacing: .12em; margin: 0 0 .5rem; }
+.rr-admin-local { border: 1px solid #dac0a3; background: #fff; border-radius: 30px; padding: .5rem .8rem; display: flex; align-items: center; gap: .4rem; font-size: .8rem; }
+.rr-admin .rr-admin-scope { font-size: .8rem; margin: 0; }
+.rr-admin-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.rr-admin-card { background: #fff; border: 1px solid #eadbc8; border-radius: 10px; padding: 1.3rem; min-width: 0; }
+.rr-admin-metric-label { display: flex; justify-content: space-between; gap: .5rem; }
+.rr-admin-number { display: block; font-size: 2rem; margin: 1rem 0; }
+.rr-admin-metrics p { font-size: .76rem; margin: 0; }
+.rr-admin-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.rr-admin-stack { display: flex; flex-direction: column; gap: 1rem; }
+.rr-admin-tags, .rr-admin-actions, .rr-admin-filters { display: flex; gap: .6rem; flex-wrap: wrap; }
+.rr-admin-tags { margin: 1rem 0; }
+.rr-admin-tags span, .rr-admin-status { background: #f4eee6; border-radius: 5px; padding: .3rem .5rem; font-size: .75rem; }
+.rr-admin-status.active { background: #e6f4ed; color: #21684a; }
+.rr-admin-status.inactive { background: #f1f1f1; color: #636363; }
+.rr-admin-chart { height: 220px; display: flex; gap: .8rem; margin: 2rem 0 1rem; }
+.rr-admin-chart-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .5rem; font-size: .75rem; }
+.rr-admin-chart-track { flex: 1; display: flex; align-items: flex-end; width: 65%; background: #f7f3ed; border-radius: 4px; overflow: hidden; }
+.rr-admin-chart-track > div { background: #102c57; width: 100%; border-radius: 4px; }
+.rr-admin-table-scroll { overflow-x: auto; }
+.rr-admin table { width: 100%; border-collapse: collapse; text-align: left; font-size: .85rem; }
+.rr-admin td, .rr-admin th { padding: .85rem .5rem; border-bottom: 1px solid #eadbc8; }
+.rr-admin th { color: #687991; font-weight: 500; }
+.rr-admin td small { display: block; color: #687991; margin-top: .25rem; }
+.rr-admin-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }
+.rr-admin label { display: flex; flex-direction: column; gap: .5rem; font-size: .85rem; }
+.rr-admin input, .rr-admin select { background: #fff; color: #102c57; border: 1px solid #dac0a3; border-radius: 6px; padding: .65rem; min-width: 0; font: inherit; }
+.rr-admin input:focus-visible, .rr-admin select:focus-visible { outline: 2px solid #102c57; outline-offset: 2px; }
+.rr-admin-alert, .rr-admin-notice { padding: 1rem; border-radius: 6px; background: #fff0ed; color: #9c3827; }
+.rr-admin-notice { background: #e6f4ed; color: #21684a; }
+.rr-admin ul { padding-left: 1.3rem; margin: 1rem 0; line-height: 1.9; }
+.rr-admin-nav { display: flex; align-items: center; gap: 12px; padding: .8rem 1rem; border: 0; border-left: 3px solid transparent; border-radius: 6px; background: transparent; color: #eadbc8; text-align: left; cursor: pointer; font: inherit; font-size: .85rem; }
+.rr-admin-nav.active { background: rgba(255,255,255,.12); border-left-color: #dac0a3; color: #fff; }
+.app-sidebar.collapsed .rr-admin-nav { justify-content: center; padding: .8rem 0; }
+@media (max-width: 1100px) { .rr-admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .rr-admin-columns, .rr-admin-form { grid-template-columns: minmax(0, 1fr); } .rr-admin { padding: 0; } .rr-admin-card { padding: 1rem; } .rr-admin-filters { width: 100%; } .rr-admin-filters input { width: 100%; } }

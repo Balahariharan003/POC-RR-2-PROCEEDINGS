@@ -60,9 +60,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Multi-language text dictionary
   const i18n = {
     en: {
-      mainTitle: "Petition Document Assistant",
-      mainSubtitle: "Upload or scan a petition to begin AI-powered grievance processing.",
-      uploadTitle: "Upload Petition",
+      mainTitle: "RR Proceedings Assistant",
+      mainSubtitle: "Upload a source document to populate the fixed RR proceedings template.",
+      uploadTitle: "Upload Source Document",
       uploadDesc: "Drag & drop your document here or click to browse",
       browseBtn: "Browse Document",
       scanBtn: "Scan using mobile<br><small style='font-size:0.7rem; color:#64748b;'>Scan QR code and upload</small>"
