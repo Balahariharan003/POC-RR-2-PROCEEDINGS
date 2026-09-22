@@ -1,0 +1,20 @@
+.rr-user-management > .rr-admin-filters { align-items: center; }
+.rr-user-management > .rr-admin-filters input { width: 300px; max-width: 100%; }
+.rr-user-management table { min-width: 600px; }
+.rr-user-management td { overflow-wrap: anywhere; }
+.rr-user-management th:first-child { width: 35%; }
+.rr-user-management tbody tr { cursor: pointer; transition: background-color var(--transition-fast); }
+.rr-user-management tbody tr:hover, .rr-user-management tbody tr:focus-visible { background: var(--bg-card-hover); }
+.rr-user-management tbody tr:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
+.rr-user-management .rr-admin-status { white-space: nowrap; }
+.rr-officer-dialog { width: min(560px, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); margin: auto; color: var(--text-main); box-shadow: var(--shadow-lg); overflow-y: auto; }
+.rr-officer-dialog::backdrop { background: var(--bg-overlay); backdrop-filter: blur(4px); }
+.rr-officer-dialog .rr-admin-toolbar { flex-wrap: nowrap; margin-bottom: .5rem; }
+.rr-officer-dialog h2 { margin: 0; }
+.rr-officer-dialog input, .rr-officer-dialog select { width: 100%; }
+.rr-officer-full-name { grid-column: 1 / -1; }
+.rr-officer-actions { justify-content: flex-end; margin-top: 1.5rem; }
+@media (max-width: 700px) {
+  .rr-user-management > .rr-admin-filters input { width: 100%; }
+  .rr-user-management > .rr-admin-filters select { flex: 1; }
+}
