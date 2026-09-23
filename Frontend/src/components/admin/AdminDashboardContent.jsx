@@ -1,18 +1,17 @@
-import React from 'react';
-import { FileText } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { FileText, Layers } from 'lucide-react';
+import { apiService } from '../../services/apiService.js';
 
 const categories = [
-  { name: 'MCOP', color: 'var(--deep-navy)', pattern: /\bm\.?c\.?o\.?p\b/i },
-  { name: 'TNRERA', color: 'var(--slate)', pattern: /\b(?:tn\s*)?rera\b/i },
-  { name: 'Customs', color: 'var(--muted-blue-grey)', pattern: /\bcustoms\b/i },
+  { name: 'Customs', color: 'var(--deep-navy)', pattern: /\bcustoms\b/i },
+  { name: 'MCOP', color: 'var(--slate)', pattern: /\bm\.?c\.?o\.?p\b/i },
+  { name: 'TNRERA', color: 'var(--muted-blue-grey)', pattern: /\b(?:tn\s*)?rera\b/i },
   { name: 'Court Warrant', color: 'var(--tan-warm)', pattern: /\bwarrant\b/i },
-  { name: 'Employee Compensation', color: 'var(--sand-soft)', pattern: /\b(?:employees?|workmens?|workers?)[\s’']*compensation\b|\be\.?c\b/i },
+  { name: 'General Revenue', color: 'var(--sand-soft)', pattern: /\b(?:general|revenue|land)\b/i },
   { name: 'Others', color: 'var(--bg-tertiary)' },
 ];
 
 function proceedingType(record) {
-  // Older saved sessions have no type field. Use identifiable source names,
-  // leaving ambiguous records in Others instead of guessing from document prose.
   const explicitType = record.department_type || record.templateType || record.type;
   const source = String(explicitType || `${record.caseNumber || ''} ${record.fileName || ''}`).replace(/[_-]/g, ' ');
   return categories.find(category => category.pattern?.test(source))?.name || 'Others';
@@ -31,6 +30,14 @@ function savedTime(record) {
 }
 
 export default function AdminDashboardContent({ records, onNavigate }) {
+  const [templates, setTemplates] = useState([]);
+
+  useEffect(() => {
+    apiService.getTemplates().then(tpls => {
+      if (tpls && tpls.length > 0) setTemplates(tpls);
+    }).catch(err => console.warn("Failed to load templates for dashboard:", err));
+  }, []);
+
   const recentRecords = records.slice().sort((a, b) => savedTime(b) - savedTime(a)).slice(0, 5);
   const counts = new Map(categories.map(category => [category.name, 0]));
   records.forEach(record => {
@@ -87,14 +94,24 @@ export default function AdminDashboardContent({ records, onNavigate }) {
       </article>
 
       <article className="rr-admin-card rr-admin-templates" aria-labelledby="rr-templates-title">
-        <h2 id="rr-templates-title">Proceedings Templates</h2>
-        <p>Templates available for generating Revenue Recovery proceedings</p>
+        <h2 id="rr-templates-title">Proceedings Templates (PostgreSQL)</h2>
+        <p>{templates.length} templates configured for Tamil Nadu Collectorate proceedings</p>
         <ul className="rr-admin-template-list">
-          {categories.slice(0, 4).map(category => <li key={category.name}><FileText size={16} aria-hidden="true" /><span>{category.name}</span></li>)}
-          <li><FileText size={16} aria-hidden="true" /><span>Employee Compensation</span><small>Not available</small></li>
-          <li><FileText size={16} aria-hidden="true" /><span>Other supported RR templates</span><small>None available</small></li>
+          {templates.slice(0, 5).map(tpl => (
+            <li key={tpl.id}>
+              <FileText size={16} aria-hidden="true" />
+              <span>{tpl.name}</span>
+              <small>{tpl.category}</small>
+            </li>
+          ))}
+          {templates.length === 0 && (
+            <li><FileText size={16} aria-hidden="true" /><span>Loading templates from PostgreSQL...</span></li>
+          )}
         </ul>
-        <button className="btn btn-primary" onClick={() => onNavigate('rrAssistant')}>Manage Templates</button>
+        <button className="btn btn-primary" onClick={() => onNavigate('adminTemplates')}>
+          <Layers size={15} style={{ marginRight: '6px' }} />
+          Manage Templates ({templates.length})
+        </button>
       </article>
     </div>
   </>;

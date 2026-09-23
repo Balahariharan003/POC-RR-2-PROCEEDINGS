@@ -370,7 +370,7 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
           {/* View Routing */}
           <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1.25rem' }}>
-            {currentUser.role === 'admin' && ['adminDashboard', 'adminUsers', 'adminBackup'].includes(activeView) && (
+            {currentUser.role === 'admin' && ['adminDashboard', 'adminTemplates', 'adminUsers', 'adminBackup'].includes(activeView) && (
               <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onNavigate={setActiveView} onRestored={() => {
                 setCurrentUser(null);
                 setActiveSession(null);

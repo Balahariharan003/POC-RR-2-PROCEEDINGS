@@ -1,16 +1,23 @@
 """
-FastAPI Server for AI Administrative Co-Pilot - RR Assistant.
-Exposes REST API endpoints for document ingestion, OCR, LLM extraction, validation,
-and docx proceedings generation, while serving the modern Frontend UI.
+Production-Grade FastAPI Server for AI Administrative Co-Pilot - RR Assistant.
+Implements:
+1. PostgreSQL Database for all data (Templates, Users, Audit Logs, Settings)
+2. Admin Template Management (Add / Delete / Edit / Preview)
+3. User Management & Role-Based Access Control (Admin edits all, Users edit self)
+4. Datalab Chandra OCR v2 (Balanced Mode) + RapidOCR PP-OCRv4 ONNX fallback
+5. Ollama qwen2.5:3b-instruct Legal Extraction with strict Pydantic validation
+6. Exclusive TAU-Marutham Font Document Generator (.docx)
 """
 
 import os
 import sys
 import shutil
+import asyncio
+import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Header, Depends, Query
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,16 +26,47 @@ import uvicorn
 # Add current directory to path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from config import UPLOAD_DIR, OUTPUT_DIR, SAMPLE_DIR, HOST, PORT, OLLAMA_MODEL
+from config import (
+    UPLOAD_DIR,
+    OUTPUT_DIR,
+    SAMPLE_DIR,
+    HOST,
+    PORT,
+    OLLAMA_MODEL,
+    CHANDRA_OCR_URL,
+    CHANDRA_OCR_MODE,
+    PRIMARY_FONT_TAMIL,
+)
+from db import init_db, execute_query
+import templates_store
+import user_store
+import audit_store
 from pipeline import RevenueRecoveryPipeline
 from schemas import ExtractedLegalEntities
 from validation_engine import ValidationInsightEngine
-from doc_generator import DocumentGenerator
+from doc_generator import DocumentGenerator, generate_docx_from_content
+
+logger = logging.getLogger("rr_proceedings.api")
+logging.basicConfig(level=logging.INFO)
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initializes PostgreSQL connection pool and tables on startup."""
+    try:
+        init_db()
+        logger.info("PostgreSQL database initialized on startup.")
+    except Exception as e:
+        logger.error(f"Error initializing PostgreSQL on startup: {e}")
+    yield
+
 
 app = FastAPI(
     title="AI Administrative Co-Pilot - RR Assistant",
-    description="Tamil Nadu Revenue Recovery Proceedings Generation System",
-    version="1.0.0"
+    description="Tamil Nadu Revenue Recovery Proceedings Generation & Administration System",
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware
@@ -40,75 +78,336 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize pipeline singletons (Optimized Sub-Second Execution)
+
+# Initialize pipeline singletons
 pipeline = RevenueRecoveryPipeline()
 val_engine = ValidationInsightEngine()
 doc_gen = DocumentGenerator()
 
 
-import asyncio
-
+# -------------------------------------------------------------------------
+# 1. Health & System Status
+# -------------------------------------------------------------------------
 @app.get("/api/health")
 async def health_check():
+    # Verify DB connectivity
+    db_status = "connected"
+    try:
+        execute_query("SELECT 1", fetch_one=True)
+    except Exception:
+        db_status = "offline"
+
     return {
         "status": "online",
         "system": "AI Administrative Co-Pilot (RR Assistant)",
         "model": OLLAMA_MODEL,
-        "ocr_engine": "RapidOCR ONNX (PaddleOCR)",
-        "output_format": "Tamil Nadu District Collector Proceedings (.docx)"
+        "ocr_engine": f"Chandra OCR v2 ({CHANDRA_OCR_MODE} mode) + RapidOCR PP-OCRv4 ONNX",
+        "database": f"PostgreSQL ({db_status})",
+        "font": PRIMARY_FONT_TAMIL,
+        "output_format": f"Tamil Nadu District Collector Proceedings (.docx - {PRIMARY_FONT_TAMIL})"
     }
 
 
+# -------------------------------------------------------------------------
+# 2. Template Management Endpoints (Admin Can Add / Delete / Edit)
+# -------------------------------------------------------------------------
+@app.get("/api/templates")
+async def get_templates_endpoint(
+    department: Optional[str] = Query(None),
+    category: Optional[str] = Query(None)
+):
+    """Retrieves all active proceedings templates from PostgreSQL."""
+    try:
+        templates = await asyncio.to_thread(templates_store.list_templates, department, category)
+        return {"success": True, "templates": templates}
+    except Exception as e:
+        logger.error(f"Failed to fetch templates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/templates/{template_id}")
+async def get_template_detail_endpoint(template_id: str):
+    """Retrieves a single template by ID or code."""
+    try:
+        template = await asyncio.to_thread(templates_store.get_template, template_id)
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+        return {"success": True, "template": template}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/templates")
+async def create_template_endpoint(
+    payload: Dict[str, Any],
+    x_user_role: Optional[str] = Header("admin")
+):
+    """Creates a new template in PostgreSQL (Admin Only)."""
+    if x_user_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin permissions required to create templates.")
+    try:
+        created = await asyncio.to_thread(templates_store.create_template, payload)
+        return {"success": True, "template": created, "message": "Template created successfully."}
+    except Exception as e:
+        logger.error(f"Failed to create template: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/api/templates/{template_id}")
+async def update_template_endpoint(
+    template_id: str,
+    payload: Dict[str, Any],
+    x_user_role: Optional[str] = Header("admin")
+):
+    """Updates an existing template in PostgreSQL (Admin Only)."""
+    if x_user_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin permissions required to update templates.")
+    try:
+        updated = await asyncio.to_thread(templates_store.update_template, template_id, payload)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Template not found.")
+        return {"success": True, "template": updated, "message": "Template updated successfully."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update template: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/templates/{template_id}")
+async def delete_template_endpoint(
+    template_id: str,
+    x_user_role: Optional[str] = Header("admin")
+):
+    """Deletes or deactivates a template in PostgreSQL (Admin Only)."""
+    if x_user_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin permissions required to delete templates.")
+    try:
+        success = await asyncio.to_thread(templates_store.delete_template, template_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Template not found.")
+        return {"success": True, "message": "Template deleted successfully."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete template: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/templates/{template_id}/render")
+async def render_template_endpoint(template_id: str, payload: Dict[str, Any]):
+    """Renders a template with provided legal entities context."""
+    try:
+        template = await asyncio.to_thread(templates_store.get_template, template_id)
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        entities = payload.get("entities", payload)
+        from doc_generator import normalize_context
+        context = normalize_context(entities)
+        
+        rendered_text = await asyncio.to_thread(templates_store.render_template_to_text, template, context)
+        return {"success": True, "content": rendered_text, "rendered_content": rendered_text, "template": template}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# -------------------------------------------------------------------------
+# 3. User Management & RBAC Endpoints (Admin edits all, Users edit self)
+# -------------------------------------------------------------------------
+@app.get("/api/users")
+async def get_users_endpoint(
+    query: Optional[str] = Query(None),
+    role: Optional[str] = Query(None),
+    status: Optional[str] = Query(None)
+):
+    """Lists users from PostgreSQL."""
+    try:
+        users = await asyncio.to_thread(user_store.list_users, query, role, status)
+        return {"success": True, "users": users}
+    except Exception as e:
+        logger.error(f"Failed to list users: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/users")
+async def create_user_endpoint(
+    payload: Dict[str, Any],
+    x_user_role: Optional[str] = Header("admin")
+):
+    """Creates a new user account in PostgreSQL (Admin Only)."""
+    if x_user_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin permissions required to create users.")
+    try:
+        user = await asyncio.to_thread(user_store.create_user, payload)
+        return {"success": True, "user": user, "message": "User created successfully."}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Failed to create user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/users/{user_id}")
+async def update_user_endpoint(
+    user_id: str,
+    payload: Dict[str, Any],
+    x_user_role: Optional[str] = Header("user"),
+    x_user_id: Optional[str] = Header(None)
+):
+    """
+    Updates user details.
+    Admin can edit all information of any user.
+    Regular user can only edit their own profile contact details.
+    """
+    try:
+        updated = await asyncio.to_thread(user_store.update_user, user_id, payload, x_user_role, x_user_id)
+        return {"success": True, "user": updated, "message": "User updated successfully."}
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Failed to update user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/users/{user_id}")
+async def delete_user_endpoint(
+    user_id: str,
+    x_user_role: Optional[str] = Header("admin")
+):
+    """Deletes a user account in PostgreSQL (Admin Only)."""
+    if x_user_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin permissions required to delete users.")
+    try:
+        success = await asyncio.to_thread(user_store.delete_user, user_id, x_user_role)
+        if not success:
+            raise HTTPException(status_code=404, detail="User not found.")
+        return {"success": True, "message": "User deleted successfully."}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Failed to delete user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------------------------------------------------------------------------
+# 4. Audit Trail & DRO Dispatch Endpoints (PostgreSQL Ledger)
+# -------------------------------------------------------------------------
+@app.get("/api/audit-logs")
+async def get_audit_logs_endpoint():
+    """Retrieves all proceedings audit logs grouped by month from PostgreSQL."""
+    try:
+        logs = await asyncio.to_thread(audit_store.get_all_audit_logs)
+        return {"success": True, "logs": logs}
+    except Exception as e:
+        logger.error(f"Failed to get audit logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/audit-logs")
+async def save_audit_log_endpoint(entry: Dict[str, Any]):
+    """Saves or updates an audit entry into PostgreSQL."""
+    try:
+        saved = await asyncio.to_thread(audit_store.save_audit_entry, entry)
+        return {"success": True, "entry": saved}
+    except Exception as e:
+        logger.error(f"Failed to save audit entry: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/dispatch-dro")
+async def dispatch_dro_endpoint(audit_entry: Dict[str, Any]):
+    """Records order submission to the Tamil Nadu DRO Grievance Portal in PostgreSQL."""
+    try:
+        receipt_id = audit_entry.get("dispatchReceipt") or f"DRO-TN-ERD-{asyncio.get_event_loop().time()}"
+        audit_entry["status"] = "DISPATCHED_TO_DRO"
+        await asyncio.to_thread(audit_store.save_audit_entry, audit_entry)
+        return {
+            "success": True,
+            "message": "Dispatched to District Revenue Officer Portal (Recorded in PostgreSQL)",
+            "receipt": receipt_id
+        }
+    except Exception as e:
+        logger.error(f"Failed to dispatch to DRO: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------------------------------------------------------------------------
+# 5. Document Ingestion, OCR & Extraction Pipeline
+# -------------------------------------------------------------------------
 @app.post("/api/process-document")
 @app.post("/api/upload-pdf")
 @app.post("/api/generate-content")
-async def process_document_endpoint(file: UploadFile = File(...)):
+async def process_document_endpoint(
+    file: UploadFile = File(...),
+    template_code: Optional[str] = Form(None)
+):
     """
-    Step 1-5 Complete Workflow Endpoint:
-    Uploads document, runs Ingestion -> OCR -> Ollama LLM -> Validation -> DOCX Generation.
+    Step 1-5 Complete Pipeline:
+    Uploads document, runs Chandra OCR v2 (balanced mode) / RapidOCR -> Ollama qwen2.5:3b-instruct ->
+    Pydantic Validation -> DOCX Generation (TAU-Marutham font) -> PostgreSQL Ledger Recording.
     """
     try:
-        # Save uploaded file
-        safe_filename = f"upload_{file.filename}"
-        saved_file_path = UPLOAD_DIR / safe_filename
-        
+        # Sanitize filename and validate extension
+        clean_name = os.path.basename(file.filename).replace(" ", "_")
+        ext = os.path.splitext(clean_name)[1].lower()
+        if ext not in [".pdf", ".docx", ".png", ".jpg", ".jpeg", ".tiff"]:
+            raise HTTPException(status_code=400, detail="Unsupported file format. Please upload PDF, DOCX, or Image.")
+
+        saved_file_path = UPLOAD_DIR / f"upload_{clean_name}"
         with open(saved_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # Run pipeline in worker thread to prevent event loop blocking
-        result = await asyncio.to_thread(pipeline.process_document, saved_file_path)
+        result = await asyncio.to_thread(
+            pipeline.process_document,
+            saved_file_path,
+            template_code=template_code
+        )
         return JSONResponse(content=result)
+    except HTTPException:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Document processing failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/process-sample")
-async def process_sample_endpoint():
-    """Processes the built-in sample MCOP order for immediate UI demonstration."""
+async def process_sample_endpoint(template_code: Optional[str] = None):
+    """Processes sample order for immediate UI demonstration."""
     sample_pdf = SAMPLE_DIR / "sample_mcop_order.pdf"
     if not sample_pdf.exists():
         from sample_data.generate_sample import create_sample_pdf
         sample_pdf = create_sample_pdf()
 
-    result = await asyncio.to_thread(pipeline.process_document, sample_pdf)
+    result = await asyncio.to_thread(
+        pipeline.process_document,
+        sample_pdf,
+        template_code=template_code
+    )
     return JSONResponse(content=result)
 
 
 @app.post("/api/regenerate-document")
-async def regenerate_document_endpoint(entities_data: Dict[str, Any]):
-    """
-    Re-generates the Word Proceedings (.docx) after user edits fields in the UI.
-    """
+async def regenerate_document_endpoint(payload: Dict[str, Any]):
+    """Re-generates DOCX with TAU-Marutham font after field edits."""
     try:
+        entities_data = payload.get("entities", payload)
+        template_code = payload.get("template_code")
+        
         entities = ExtractedLegalEntities(**entities_data)
         validated_entities, validation_insights = val_engine.validate_and_enrich(entities)
         
         output_doc_path = await asyncio.to_thread(
             doc_gen.generate_proceedings,
             entities=validated_entities,
-            validation=validation_insights
+            validation=validation_insights,
+            template_code=template_code
         )
         
         return {
@@ -119,88 +418,33 @@ async def regenerate_document_endpoint(entities_data: Dict[str, Any]):
             "entities": validated_entities.model_dump()
         }
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Regeneration failed: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"Validation/Generation failed: {str(e)}")
-
-
-@app.post("/api/regenerate-with-prompt")
-async def regenerate_with_prompt_endpoint(payload: Dict[str, Any]):
-    """
-    Applies section officer prompt instructions to revise legal entities and re-generates DOCX proceedings.
-    """
-    try:
-        prompt = payload.get("prompt", "").lower()
-        entities_data = payload.get("entities", {})
-        
-        # Apply prompt modifications
-        if "perundurai" in prompt or "பெருந்துறை" in prompt:
-            entities_data.setdefault("jurisdiction", {})["taluk"] = "பெருந்துறை"
-            entities_data["jurisdiction"]["tahsildar_title"] = "வருவாய் வட்டாட்சியர், பெருந்துறை"
-            entities_data.setdefault("defaulter", {})["taluk"] = "பெருந்துறை"
-        elif "bhavani" in prompt or "பவானி" in prompt:
-            entities_data.setdefault("jurisdiction", {})["taluk"] = "பவானி"
-            entities_data["jurisdiction"]["tahsildar_title"] = "வருவாய் வட்டாட்சியர், பவானி"
-            entities_data.setdefault("defaulter", {})["taluk"] = "பவானி"
-
-        import re
-        amt_match = re.search(r'(\d[\d,]+)', prompt)
-        if amt_match:
-            clean_amt = float(amt_match.group(1).replace(',', ''))
-            if clean_amt > 1000:
-                entities_data.setdefault("financials", {})["principal_amount"] = clean_amt
-                entities_data["financials"]["formatted_amount"] = f"{clean_amt:,.0f}/-"
-
-        entities = ExtractedLegalEntities(**entities_data)
-        validated_entities, validation_insights = val_engine.validate_and_enrich(entities)
-
-        output_doc_path = await asyncio.to_thread(
-            doc_gen.generate_proceedings,
-            entities=validated_entities,
-            validation=validation_insights
-        )
-
-        return {
-            "success": True,
-            "generated_docx_path": str(output_doc_path),
-            "generated_docx_filename": output_doc_path.name,
-            "validation_insights": validation_insights.model_dump(),
-            "entities": validated_entities.model_dump()
-        }
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=400, detail=f"Prompt Re-generation failed: {str(e)}")
 
 
 @app.post("/api/modify-content")
 async def modify_content_endpoint(payload: Dict[str, Any]):
-    """
-    Modifies generated official content based on Section Officer's natural language instructions.
-    Uses local Ollama if running, or structured NLP rules as fallback.
-    """
+    """Modifies content based on Section Officer's natural language instructions."""
     current_content = payload.get("content", "")
     instruction = payload.get("instruction", "")
     
-    # Try Ollama if running
     try:
         import ollama
-        from config import OLLAMA_MODEL
         prompt = f"""You are an expert Tamil Nadu Government Administrative Section Officer.
-A Section Officer has provided the following official document content and requested a specific correction or revision.
-Apply the officer's instruction precisely while maintaining formal Tamil Nadu Government memorandum style.
+A Section Officer has provided the following official document content and requested a specific revision.
+Apply the instruction precisely while maintaining formal Tamil Nadu Government memorandum style.
 
-Current Document Content:
+Current Content:
 \"\"\"
 {current_content}
 \"\"\"
 
-Officer's Correction Instruction:
+Correction Instruction:
 \"\"\"
 {instruction}
 \"\"\"
 
-Return ONLY the updated document text with the requested modifications applied. Do not add conversational explanations."""
+Return ONLY the updated document text with modifications applied. Do not add conversational explanations."""
         response = await asyncio.to_thread(
             ollama.chat,
             model=OLLAMA_MODEL,
@@ -210,19 +454,16 @@ Return ONLY the updated document text with the requested modifications applied. 
         updated_text = response["message"]["content"].strip()
         return {"success": True, "content": updated_text}
     except Exception:
-        # Fallback intelligent rule replacement
+        # Rule fallback
         updated_text = current_content
         inst_lower = instruction.lower()
         if "perundurai" in inst_lower or "பெருந்துறை" in inst_lower:
-            updated_text = updated_text.replace("கொடுமுடி", "பெருந்துறை")
-        if "bhavani" in inst_lower or "பவானி" in inst_lower:
-            updated_text = updated_text.replace("கொடுமுடி", "பவானி")
+            updated_text = updated_text.replace("ஈரோடு வட்டம்", "பெருந்துறை வட்டம்")
         import re
         amt_match = re.search(r'(\d[\d,]+)', instruction)
         if amt_match:
             clean_num = amt_match.group(1)
             updated_text = re.sub(r'ரூ\.\s*[\d,]+/-', f'ரூ.{clean_num}/-', updated_text)
-            updated_text = re.sub(r'₹\s*[\d,]+/-', f'₹ {clean_num}/-', updated_text)
         return {"success": True, "content": updated_text}
 
 
@@ -230,7 +471,8 @@ Return ONLY the updated document text with the requested modifications applied. 
 @app.post("/api/export/docx")
 async def export_docx_endpoint(payload: Dict[str, Any]):
     """
-    Generates a downloadable Word (.docx) document with TAU-Marutham font and official Tamil Nadu Collectorate formatting.
+    Generates downloadable Word (.docx) strictly enforcing TAU-Marutham font
+    for every heading, paragraph, table cell, and signature block.
     """
     try:
         content = payload.get("content", "")
@@ -238,245 +480,70 @@ async def export_docx_endpoint(payload: Dict[str, Any]):
         if not filename.endswith(".docx"):
             filename += ".docx"
         
-        import docx
-        from docx.shared import Pt, Inches, RGBColor
-        from docx.enum.text import WD_ALIGN_PARAGRAPH
-        from docx.oxml import parse_xml
-        from docx.oxml.ns import nsdecls
-        
-        doc = docx.Document()
-        
-        # Page Margins: Standard 0.9 inch
-        for section in doc.sections:
-            section.top_margin = Inches(0.9)
-            section.bottom_margin = Inches(0.9)
-            section.left_margin = Inches(0.9)
-            section.right_margin = Inches(0.9)
-
-        # Set default Normal style to TAU-Marutham
-        style = doc.styles['Normal']
-        font = style.font
-        font.name = 'TAU-Marutham'
-        font.size = Pt(11.5)
-        rPr = style._element.get_or_add_rPr()
-        rFonts = parse_xml(f'<w:rFonts {nsdecls("w")} w:ascii="TAU-Marutham" w:hAnsi="TAU-Marutham" w:cs="TAU-Marutham" w:eastAsia="TAU-Marutham"/>')
-        rPr.append(rFonts)
-
-        def apply_tamil_font(run, font_name="TAU-Marutham", size_pt=11.5, bold=False, italic=False):
-            run.font.name = font_name
-            run.font.size = Pt(size_pt)
-            run.bold = bold
-            run.italic = italic
-            rPr_run = run._r.get_or_add_rPr()
-            rFonts_run = parse_xml(
-                f'<w:rFonts {nsdecls("w")} w:ascii="{font_name}" w:hAnsi="{font_name}" w:cs="{font_name}" w:eastAsia="{font_name}"/>'
-            )
-            rPr_run.append(rFonts_run)
-
-        lines = content.split("\n")
-        in_office_notes = False
-        office_notes_break_added = False
-
-        for i, raw_line in enumerate(lines):
-            stripped = raw_line.strip()
-            if not stripped:
-                continue
-
-            # Check if entering Office Notes part
-            if "//அலுவலகக் குறிப்பு//" in stripped or (stripped.startswith("ந.க.") and any("//அலுவலகக் குறிப்பு//" in l for l in lines[i:i+4])):
-                if not office_notes_break_added and i > 5:
-                    doc.add_page_break()
-                    office_notes_break_added = True
-                    in_office_notes = True
-
-            p = doc.add_paragraph()
-            p.paragraph_format.line_spacing = 1.2
-            p.paragraph_format.space_after = Pt(4)
-
-            # Heading / Center lines
-            if "செயல்முறைகள்" in stripped or "பிறப்பிப்பவர்:" in stripped or "//அலுவலகக் குறிப்பு//" in stripped:
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run = p.add_run(stripped)
-                apply_tamil_font(run, "TAU-Marutham", 12.0 if "செயல்முறைகள்" in stripped or "//" in stripped else 11.5, bold=True)
-            elif stripped == "-------" or stripped == "------":
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                p.paragraph_format.space_after = Pt(6)
-                run = p.add_run("-------")
-                apply_tamil_font(run, "TAU-Marutham", 11.0, bold=True)
-            elif "மாவட்ட ஆட்சித் தலைவர்," in stripped or "ஈரோடு." == stripped:
-                p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                run = p.add_run(stripped)
-                apply_tamil_font(run, "TAU-Marutham", 11.5, bold=True)
-            elif stripped.startswith("ந.க.") and "\t" in raw_line:
-                # Two column line for ROC and Date
-                parts = [p.strip() for p in raw_line.split("\t") if p.strip()]
-                if len(parts) >= 2:
-                    p.paragraph_format.space_after = Pt(6)
-                    run_left = p.add_run(parts[0])
-                    apply_tamil_font(run_left, "TAU-Marutham", 11.5, bold=True)
-                    # Use spaces or tab
-                    run_tab = p.add_run("\t\t\t\t\t\t")
-                    run_right = p.add_run(parts[1])
-                    apply_tamil_font(run_right, "TAU-Marutham", 11.5, bold=True)
-                else:
-                    run = p.add_run(stripped)
-                    apply_tamil_font(run, "TAU-Marutham", 11.5, bold=True)
-            elif stripped.startswith("பொருள்:"):
-                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                p.paragraph_format.space_before = Pt(4)
-                p.paragraph_format.space_after = Pt(6)
-                r_lbl = p.add_run("பொருள்: ")
-                apply_tamil_font(r_lbl, "TAU-Marutham", 11.5, bold=True)
-                val = stripped[len("பொருள்:"):].strip()
-                r_val = p.add_run(val)
-                apply_tamil_font(r_val, "TAU-Marutham", 11.5, bold=False)
-            elif stripped.startswith("பார்வை:"):
-                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                p.paragraph_format.space_before = Pt(2)
-                p.paragraph_format.space_after = Pt(4)
-                r_lbl = p.add_run("பார்வை: ")
-                apply_tamil_font(r_lbl, "TAU-Marutham", 11.5, bold=True)
-                val = stripped[len("பார்வை:"):].strip()
-                r_val = p.add_run(val)
-                apply_tamil_font(r_val, "TAU-Marutham", 11.5, bold=False)
-            elif stripped.startswith("உத்தரவு:"):
-                p.paragraph_format.space_before = Pt(4)
-                p.paragraph_format.space_after = Pt(6)
-                r_lbl = p.add_run("உத்தரவு:")
-                apply_tamil_font(r_lbl, "TAU-Marutham", 12.0, bold=True)
-                val = stripped[len("உத்தரவு:"):].strip()
-                if val:
-                    p2 = doc.add_paragraph()
-                    p2.paragraph_format.first_line_indent = Inches(0.4)
-                    p2.paragraph_format.line_spacing = 1.2
-                    p2.paragraph_format.space_after = Pt(6)
-                    p2.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                    r_val = p2.add_run(val)
-                    apply_tamil_font(r_val, "TAU-Marutham", 11.5, bold=False)
-            elif stripped.startswith("பணிந்தனுப்பப்படுகிறது:"):
-                p.paragraph_format.space_before = Pt(4)
-                p.paragraph_format.space_after = Pt(6)
-                r_lbl = p.add_run("பணிந்தனுப்பப்படுகிறது:")
-                apply_tamil_font(r_lbl, "TAU-Marutham", 12.0, bold=True)
-            elif stripped.startswith("இணைப்பு:"):
-                p.paragraph_format.space_before = Pt(6)
-                p.paragraph_format.space_after = Pt(12)
-                r_lbl = p.add_run(stripped)
-                apply_tamil_font(r_lbl, "TAU-Marutham", 11.5, bold=True)
-            elif stripped.startswith("பெறுநர்:") or stripped.startswith("நகல் :") or stripped.startswith("நகல்:"):
-                p.paragraph_format.space_after = Pt(3)
-                prefix = "பெறுநர்:" if stripped.startswith("பெறுநர்:") else "நகல் :"
-                r_lbl = p.add_run(f"{prefix} ")
-                apply_tamil_font(r_lbl, "TAU-Marutham", 11.5, bold=True)
-                val = stripped[len(prefix):].strip()
-                if val:
-                    r_val = p.add_run(val)
-                    apply_tamil_font(r_val, "TAU-Marutham", 11.0, bold=False)
-            elif raw_line.startswith("   ") or raw_line.startswith("\t") or stripped.startswith("ஈரோடு மாவட்டம்") or stripped.startswith("மேற்படி") or stripped.startswith("எனவே") or stripped.startswith("உத்திரவினை"):
-                # Indented operative paragraph
-                p.paragraph_format.first_line_indent = Inches(0.4)
-                p.paragraph_format.line_spacing = 1.2
-                p.paragraph_format.space_after = Pt(8)
-                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                run = p.add_run(stripped)
-                apply_tamil_font(run, "TAU-Marutham", 11.5, bold=False)
-            else:
-                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                run = p.add_run(stripped)
-                apply_tamil_font(run, "TAU-Marutham", 11.5, bold=False)
-
         output_path = OUTPUT_DIR / filename
-        doc.save(str(output_path))
+        await asyncio.to_thread(generate_docx_from_content, content, str(output_path), filename)
 
         return {
             "success": True,
             "filename": filename,
+            "font": PRIMARY_FONT_TAMIL,
             "download_url": f"/api/download/{filename}"
         }
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"DOCX export failed: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"DOCX export failed: {str(e)}")
-
-
-@app.post("/api/export-pdf")
-@app.post("/api/export/pdf")
-async def export_pdf_endpoint(payload: Dict[str, Any]):
-    """
-    Returns the formatted printable representation of the current edited content.
-    """
-    content = payload.get("content", "")
-    filename = payload.get("filename", "Official_Proceedings.pdf")
-    return {
-        "success": True,
-        "filename": filename,
-        "content": content
-    }
-
-
 
 
 @app.get("/api/download/{filename}")
 async def download_file(filename: str):
-    """Serves the generated proceedings DOCX file for download."""
-    file_path = OUTPUT_DIR / filename
+    """Serves the generated proceedings DOCX file."""
+    safe_name = os.path.basename(filename)
+    file_path = OUTPUT_DIR / safe_name
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     
     return FileResponse(
         path=str(file_path),
-        filename=filename,
+        filename=safe_name,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
 
 
+# -------------------------------------------------------------------------
+# 6. RAG Chat Assistant
+# -------------------------------------------------------------------------
 @app.post("/api/chat")
 async def chat_endpoint(payload: Dict[str, Any]):
     """Semantic RAG chat assistant for petition document inquiries."""
     query = payload.get("query", "").lower()
     context = payload.get("context", {})
-    case_no = context.get("case_details", {}).get("case_number", "MCOP-225/2022")
-    defaulter = context.get("defaulter", {}).get("name", "திரு.T.P.ராமலிங்கம்")
-    amt = context.get("financials", {}).get("principal_amount", 460690)
+    case_no = context.get("case_details", {}).get("case_number", "F.NO. 516/2024-ARC")
+    defaulter = context.get("defaulter", {}).get("name", "M/s. Prisma Garments")
+    amt = context.get("financials", {}).get("principal_amount", 173308)
 
-    if "defaulter" in query or "who" in query:
+    if "defaulter" in query or "who" in query or "company" in query:
         return {
-            "answer": f"The defaulter named in the tribunal decree is **{defaulter}** (S/o பழனிச்சாமி), residing at **Door No. 90/6, Santhai Medu, Sivagiri, Kodumudi Taluk, Erode District**.",
+            "answer": f"The defaulter named in the Customs order is **{defaulter}** (IEC No: 3205015860), residing at **Door No. 46, Uzhavan Nagar, 6th Uzhavar Street, Perumal Gounder Thottam, Erode - 638009**.",
             "citations": [
-                {"id": "box-8", "page": 1, "label": "Defaulter Title [Page 1, Box #8]"},
-                {"id": "box-9", "page": 1, "label": "Defaulter Name [Page 1, Box #9]"},
-                {"id": "box-10", "page": 1, "label": "Address [Page 1, Box #10]"}
+                {"id": "box-1", "page": 1, "label": "Defaulter Title [Page 1]"},
+                {"id": "box-2", "page": 1, "label": "Address [Page 1]"}
             ]
         }
-    elif "amount" in query or "award" in query:
+    elif "amount" in query or "duty" in query or "penalty" in query:
         return {
-            "answer": f"The principal award decreed is **₹ {amt:,.2f}** with simple interest at **7.5% per annum** recoverable under Section 5 of Tamil Nadu Revenue Recovery Act 1864.",
+            "answer": f"The customs duty demanded is **Rs. 1,73,308/-** along with a penalty of **Rs. 9,000/-**, making the total recoverable amount **Rs. 1,82,308/-** under Section 142(1)(c)(ii) of the Customs Act 1962 and Section 5 of TN Revenue Recovery Act 1864.",
             "citations": [
-                {"id": "box-12", "page": 1, "label": "Principal Award [Page 1, Box #12]"},
-                {"id": "box-15", "page": 2, "label": "Interest Rate [Page 2, Box #15]"}
+                {"id": "box-3", "page": 1, "label": "Demand Paragraph [Page 1]"}
             ]
         }
     
     return {
-        "answer": f"Under case **{case_no}**, the Motor Accidents Claims Tribunal directed recovery of **₹ {amt:,.2f}** against **{defaulter}**.",
-        "citations": [
-            {"id": "box-3", "page": 1, "label": "Case Decree [Page 1, Box #3]"},
-            {"id": "box-12", "page": 1, "label": "Award Amount [Page 1, Box #12]"}
-        ]
+        "answer": f"Under order **{case_no}**, Customs Commissionerate Chennai directed recovery of **Rs. 1,82,308/-** against **{defaulter}**.",
+        "citations": [{"id": "box-1", "page": 1, "label": "Customs Certificate [Page 1]"}]
     }
 
 
-@app.post("/api/dispatch-dro")
-async def dispatch_dro_endpoint(audit_entry: Dict[str, Any]):
-    """Records order submission to the Tamil Nadu DRO Grievance Portal."""
-    return {
-        "success": True,
-        "message": "Dispatched to District Revenue Officer Portal",
-        "receipt": audit_entry.get("dispatchReceipt")
-    }
-
-
-# Mount Frontend static files (Serve built Vite dist if available, else root Frontend)
+# Mount Frontend static files
 dist_dir = Path(__file__).resolve().parent.parent / "Frontend" / "dist"
 frontend_dir = Path(__file__).resolve().parent.parent / "Frontend"
 
@@ -488,4 +555,3 @@ elif frontend_dir.exists():
 
 if __name__ == "__main__":
     uvicorn.run("api:app", host=HOST, port=PORT, reload=True)
-

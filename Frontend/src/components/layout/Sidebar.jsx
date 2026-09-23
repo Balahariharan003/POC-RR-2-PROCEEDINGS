@@ -3,6 +3,7 @@ import {
   FileText, 
   History, 
   LayoutDashboard,
+  Layers,
   Users,
   DatabaseBackup,
   ChevronLeft, 
@@ -64,6 +65,7 @@ export default function Sidebar({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: (isCollapsed && !mobileOpen) ? '0' : '0 0.75rem' }}>
           {isAdmin && [
             ['adminDashboard', 'Dashboard', LayoutDashboard],
+            ['adminTemplates', 'Templates', Layers],
             ['adminUsers', 'User Management', Users],
             ['adminBackup', 'Backup', DatabaseBackup]
           ].map(([view, label, Icon]) => (

@@ -215,68 +215,90 @@ class ValidationInsightEngine:
         Converts integer Indian rupee amount into authentic Tamil words.
         e.g., 460690 -> 'நான்கு இலட்சத்து அறுபதாயிரத்து அறுநூற்றி தொண்ணூறு'
         """
-        if n == 0:
-            return "பூஜ்ஜியம்"
+        return convert_number_to_tamil_words(n)
 
-        parts = []
+    def convert_number_to_tamil_words(self, n: int) -> str:
+        """Alias for convert_amount_to_tamil_words."""
+        return convert_number_to_tamil_words(n)
 
-        crores = n // 10000000
-        remainder = n % 10000000
 
-        lakhs = remainder // 100000
-        remainder = remainder % 100000
-
-        thousands = remainder // 1000
-        remainder = remainder % 1000
-
-        hundreds = remainder // 100
-        tens_units = remainder % 100
-
-        if crores > 0:
-            c_text = "ஒரு" if crores == 1 else self._two_digits_to_tamil(crores)
-            if remainder > 0 or lakhs > 0 or thousands > 0 or hundreds > 0 or tens_units > 0:
-                parts.append(f"{c_text} கோடியே")
-            else:
-                parts.append(f"{c_text} கோடி")
-
-        if lakhs > 0:
-            l_text = "ஒரு" if lakhs == 1 else self._two_digits_to_tamil(lakhs)
-            if remainder > 0 or thousands > 0 or hundreds > 0 or tens_units > 0:
-                parts.append(f"{l_text} இலட்சத்து")
-            else:
-                parts.append(f"{l_text} இலட்சம்")
-
-        if thousands > 0:
-            has_remainder = (hundreds > 0 or tens_units > 0)
-            if thousands in TAMIL_THOUSANDS_COMPOUND and has_remainder:
-                parts.append(TAMIL_THOUSANDS_COMPOUND[thousands])
-            elif thousands in TAMIL_THOUSANDS_EXACT and not has_remainder:
-                parts.append(TAMIL_THOUSANDS_EXACT[thousands])
-            else:
-                th_text = self._two_digits_to_tamil(thousands)
-                parts.append(f"{th_text} ஆயிரத்து" if has_remainder else f"{th_text} ஆயிரம்")
-
-        if hundreds > 0:
-            if tens_units > 0:
-                parts.append(TAMIL_HUNDREDS_COMBINED[hundreds])
-            else:
-                parts.append(TAMIL_HUNDREDS[hundreds])
-
-        if tens_units > 0:
-            parts.append(self._two_digits_to_tamil(tens_units))
-
-        return " ".join(parts).strip()
-
-    def _two_digits_to_tamil(self, n: int) -> str:
-        """Helper for 1-99 in Tamil."""
-        if n < 10:
-            return TAMIL_ONES[n]
-        elif 10 <= n < 20:
-            return TAMIL_TEENS[n - 10]
+def _two_digits_to_tamil(n: Any) -> str:
+    """Helper for 1-99 in Tamil."""
+    try:
+        n = int(round(float(n)))
+    except Exception:
+        return ""
+    if n < 10:
+        return TAMIL_ONES[n]
+    elif 10 <= n < 20:
+        return TAMIL_TEENS[n - 10]
+    else:
+        ten = int(n // 10)
+        unit = int(n % 10)
+        if unit == 0:
+            return TAMIL_TENS[ten]
         else:
-            ten = n // 10
-            unit = n % 10
-            if unit == 0:
-                return TAMIL_TENS[ten]
-            else:
-                return f"{TAMIL_TENS_COMBINED[ten]} {TAMIL_ONES[unit]}"
+            return f"{TAMIL_TENS_COMBINED[ten]} {TAMIL_ONES[unit]}"
+
+
+def convert_number_to_tamil_words(n: Any) -> str:
+    """
+    Converts integer or float Indian rupee amount into authentic Tamil words.
+    e.g., 460690 -> 'நான்கு இலட்சத்து அறுபதாயிரத்து அறுநூற்றி தொண்ணூறு'
+    """
+    try:
+        n = int(round(float(n)))
+    except Exception:
+        return ""
+
+    if n == 0:
+        return "பூஜ்ஜியம்"
+
+    parts = []
+
+    crores = int(n // 10000000)
+    remainder = int(n % 10000000)
+
+    lakhs = int(remainder // 100000)
+    remainder = int(remainder % 100000)
+
+    thousands = int(remainder // 1000)
+    remainder = int(remainder % 1000)
+
+    hundreds = int(remainder // 100)
+    tens_units = int(remainder % 100)
+
+    if crores > 0:
+        c_text = "ஒரு" if crores == 1 else _two_digits_to_tamil(crores)
+        if remainder > 0 or lakhs > 0 or thousands > 0 or hundreds > 0 or tens_units > 0:
+            parts.append(f"{c_text} கோடியே")
+        else:
+            parts.append(f"{c_text} கோடி")
+
+    if lakhs > 0:
+        l_text = "ஒரு" if lakhs == 1 else _two_digits_to_tamil(lakhs)
+        if remainder > 0 or thousands > 0 or hundreds > 0 or tens_units > 0:
+            parts.append(f"{l_text} இலட்சத்து")
+        else:
+            parts.append(f"{l_text} இலட்சம்")
+
+    if thousands > 0:
+        has_remainder = (hundreds > 0 or tens_units > 0)
+        if thousands in TAMIL_THOUSANDS_COMPOUND and has_remainder:
+            parts.append(TAMIL_THOUSANDS_COMPOUND[thousands])
+        elif thousands in TAMIL_THOUSANDS_EXACT and not has_remainder:
+            parts.append(TAMIL_THOUSANDS_EXACT[thousands])
+        else:
+            th_text = _two_digits_to_tamil(thousands)
+            parts.append(f"{th_text} ஆயிரத்து" if has_remainder else f"{th_text} ஆயிரம்")
+
+    if hundreds > 0:
+        if tens_units > 0:
+            parts.append(TAMIL_HUNDREDS_COMBINED[hundreds])
+        else:
+            parts.append(TAMIL_HUNDREDS[hundreds])
+
+    if tens_units > 0:
+        parts.append(_two_digits_to_tamil(tens_units))
+
+    return " ".join(parts).strip()

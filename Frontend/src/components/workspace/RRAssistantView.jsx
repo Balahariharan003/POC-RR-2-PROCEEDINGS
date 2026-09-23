@@ -45,8 +45,28 @@ export default function RRAssistantView({
   const [lastUpdatedMessage, setLastUpdatedMessage] = useState('');
   const [promptHistory, setPromptHistory] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [availableTemplates, setAvailableTemplates] = useState([]);
+  const [selectedTemplateCode, setSelectedTemplateCode] = useState('CUSTOMS_PROCEEDINGS');
+  const [extractedEntities, setExtractedEntities] = useState(null);
 
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const tpls = await apiService.getTemplates();
+        if (tpls && tpls.length > 0) {
+          setAvailableTemplates(tpls);
+          if (!tpls.some(t => t.template_code === selectedTemplateCode)) {
+            setSelectedTemplateCode(tpls[0].template_code);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch templates from backend:', err);
+      }
+    };
+    fetchTemplates();
+  }, []);
 
   useEffect(() => {
     if (activeSession) return;
@@ -156,15 +176,31 @@ export default function RRAssistantView({
 
       let result;
       if (selectedFile) {
-        result = await apiService.uploadDocument(selectedFile);
+        result = await apiService.uploadDocument(selectedFile, selectedTemplateCode);
       } else {
-        result = await apiService.loadSampleDocument();
+        result = await apiService.loadSampleDocument(selectedTemplateCode);
       }
 
       clearTimeout(t1);
       clearTimeout(t2);
 
-      const formattedDoc = apiService.formatDocumentSheet(result.entities);
+      const entities = result.entities || {};
+      setExtractedEntities(entities);
+
+      // Render with dynamic template if selected
+      let formattedDoc = '';
+      const matchedTpl = availableTemplates.find(t => t.template_code === selectedTemplateCode);
+      if (matchedTpl) {
+        try {
+          const rendered = await apiService.renderTemplate(matchedTpl.id, entities);
+          formattedDoc = rendered.rendered_content || apiService.formatDocumentSheet(entities);
+        } catch (e) {
+          formattedDoc = apiService.formatDocumentSheet(entities);
+        }
+      } else {
+        formattedDoc = apiService.formatDocumentSheet(entities);
+      }
+
       setGeneratedContent(formattedDoc);
       
       const newSessionId = `AUD-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100 + Math.random() * 900)}`;
@@ -177,16 +213,19 @@ export default function RRAssistantView({
       setPromptHistory([initialPrompt]);
       setCurrentSessionId(newSessionId);
 
-      // Auto-save to Audit Log Trail
+      // Auto-save to Audit Log Trail in PostgreSQL
+      const principalAmt = Number(entities?.financials?.principal_amount || 0);
+      const formattedTotal = principalAmt > 0 ? `₹ ${principalAmt.toLocaleString('en-IN')}/-` : '₹ 0/-';
+
       await apiService.saveAuditLog({
         id: newSessionId,
-        caseNumber: result.entities?.case_details?.case_number || fileInfo.name.replace(/\.[^/.]+$/, ""),
+        caseNumber: entities?.case_details?.case_number || fileInfo.name.replace(/\.[^/.]+$/, ""),
         fileName: fileInfo.name || "order.pdf",
         fileSize: fileInfo.sizeFormatted || "1.45 MB",
-        defaulter: result.entities?.defaulter?.name || "திரு.T.P.ராமலிங்கம்",
-        taluk: result.entities?.jurisdiction?.taluk || "கொடுமுடி",
-        district: result.entities?.jurisdiction?.district || "ஈரோடு",
-        amount: `₹ ${Number(result.entities?.financials?.principal_amount || 460690).toLocaleString('en-IN')}/-`,
+        defaulter: entities?.defaulter?.name || "Unknown Defaulter",
+        taluk: entities?.jurisdiction?.taluk || "வட்டம்",
+        district: entities?.jurisdiction?.district || "ஈரோடு",
+        amount: formattedTotal,
         status: "DRAFT",
         groundingScore: result.validation_insights?.grounding_score ?? 0.96,
         hallucinationScore: result.validation_insights?.hallucination_score ?? 0.04,
@@ -200,6 +239,26 @@ export default function RRAssistantView({
     } catch (err) {
       alert("Error processing document: " + err.message);
       setWorkflowState('file_selected');
+    }
+  };
+
+  // Switch template dynamically on generated document
+  const handleSwitchTemplate = async (templateCode) => {
+    setSelectedTemplateCode(templateCode);
+    if (!extractedEntities) return;
+
+    const matchedTpl = availableTemplates.find(t => t.template_code === templateCode);
+    if (matchedTpl) {
+      try {
+        const rendered = await apiService.renderTemplate(matchedTpl.id, extractedEntities);
+        if (rendered.rendered_content) {
+          setGeneratedContent(rendered.rendered_content);
+          setLastUpdatedMessage(`Switched template to ${matchedTpl.name}`);
+          setTimeout(() => setLastUpdatedMessage(''), 3000);
+        }
+      } catch (err) {
+        console.warn("Failed to render switched template:", err);
+      }
     }
   };
 
@@ -603,6 +662,45 @@ export default function RRAssistantView({
               [ Change Document ]
             </button>
 
+            {/* Template Selector Dropdown */}
+            {availableTemplates.length > 0 && (
+              <div style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: '#64748b',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  marginBottom: '0.4rem'
+                }}>
+                  Selected Template (PostgreSQL)
+                </label>
+                <select
+                  value={selectedTemplateCode}
+                  onChange={(e) => setSelectedTemplateCode(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.875rem',
+                    color: '#0e2942',
+                    fontWeight: 600,
+                    backgroundColor: '#f8fafc',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  {availableTemplates.map(t => (
+                    <option key={t.id} value={t.template_code}>
+                      {t.name} ({t.category || t.department})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <button
                 onClick={handleGenerateContent}
@@ -711,13 +809,37 @@ export default function RRAssistantView({
                 Generated RR Proceedings
               </h2>
               <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>Document Information:</span>
+                <span>Document:</span>
                 <strong style={{ color: '#0e2942' }}>{fileInfo.name}</strong>
               </div>
             </div>
 
-            {/* Download Options (Section 8) */}
+            {/* Template Selector & Download Options */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {availableTemplates.length > 0 && (
+                <select
+                  value={selectedTemplateCode}
+                  onChange={(e) => handleSwitchTemplate(e.target.value)}
+                  style={{
+                    padding: '0.45rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    color: '#0e2942',
+                    backgroundColor: '#f8fafc',
+                    cursor: 'pointer'
+                  }}
+                  title="Switch template"
+                >
+                  {availableTemplates.map(t => (
+                    <option key={t.id} value={t.template_code}>
+                      📄 {t.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
               <button
                 onClick={handleCopy}
                 className="btn btn-outline"

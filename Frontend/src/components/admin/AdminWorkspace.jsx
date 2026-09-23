@@ -5,10 +5,16 @@ import AdminDashboardContent from './AdminDashboardContent.jsx';
 import UserManagement from './UserManagement.jsx';
 import './AdminWorkspace.css';
 
+import TemplateManagement from './TemplateManagement.jsx';
+
 export default function AdminWorkspace(props) {
-  return props.view === 'adminUsers'
-    ? <UserManagement currentUser={props.currentUser} />
-    : <AdminWorkspaceContent {...props} />;
+  if (props.view === 'adminTemplates') {
+    return <TemplateManagement currentUser={props.currentUser} />;
+  }
+  if (props.view === 'adminUsers') {
+    return <UserManagement currentUser={props.currentUser} />;
+  }
+  return <AdminWorkspaceContent {...props} />;
 }
 
 function AdminWorkspaceContent({ view, currentUser, onNavigate, onRestored }) {
@@ -20,14 +26,23 @@ function AdminWorkspaceContent({ view, currentUser, onNavigate, onRestored }) {
   const [busy, setBusy] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
 
-  function refresh() {
-    setUsers(readUsers());
-    const backup = createBackup();
-    setLogs(backup.data.rr_audit_logs || {});
-    setHasDraft(Boolean(backup.data.rr_draft));
+  async function refresh() {
+    try {
+      const [dbUsers, dbLogs] = await Promise.all([
+        apiService.getUsers(),
+        apiService.getAuditLogs()
+      ]);
+      setUsers(dbUsers || []);
+      setLogs(dbLogs || {});
+      const draft = JSON.parse(localStorage.getItem('rr_draft') || 'null');
+      setHasDraft(Boolean(draft && draft.content));
+    } catch (e) {
+      console.warn("Failed to fetch admin stats from PostgreSQL:", e);
+    }
   }
+
   useEffect(() => {
-    try { refresh(); } catch (e) { setError(e.message); }
+    refresh();
   }, [view]);
 
   const records = [...new Map(Object.values(logs).flat().map(row => [row.id, row])).values()];
