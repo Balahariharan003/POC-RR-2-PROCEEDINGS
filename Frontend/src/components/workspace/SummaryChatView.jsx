@@ -85,7 +85,7 @@ export default function SummaryChatView({
       <div style={{
         padding: '0.75rem 1.25rem',
         borderBottom: '1px solid var(--border-card)',
-        background: 'rgba(15, 23, 42, 0.75)',
+        background: 'rgba(16, 44, 87, 0.75)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
@@ -95,7 +95,7 @@ export default function SummaryChatView({
             width: '28px',
             height: '28px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0284c7, #10b981)',
+            background: 'linear-gradient(135deg, #102C57, #102C57)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -142,12 +142,12 @@ export default function SummaryChatView({
                 width: '28px',
                 height: '28px',
                 borderRadius: '50%',
-                background: isBot ? 'rgba(2, 132, 199, 0.2)' : 'var(--bg-tertiary)',
-                border: isBot ? '1px solid rgba(2, 132, 199, 0.4)' : '1px solid var(--border-card)',
+                background: isBot ? 'rgba(16, 44, 87, 0.2)' : 'var(--bg-tertiary)',
+                border: isBot ? '1px solid rgba(16, 44, 87, 0.4)' : '1px solid var(--border-card)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: isBot ? '#38bdf8' : 'var(--text-muted)',
+                color: isBot ? '#DAC0A3' : 'var(--text-muted)',
                 flexShrink: 0
               }}>
                 {isBot ? <Sparkles size={14} /> : <User size={14} />}
@@ -159,7 +159,7 @@ export default function SummaryChatView({
                 padding: '0.75rem 1rem',
                 fontSize: '0.85rem',
                 lineHeight: '1.5',
-                background: isBot ? 'rgba(15, 23, 42, 0.75)' : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                background: isBot ? 'rgba(16, 44, 87, 0.75)' : 'linear-gradient(135deg, #102C57 0%, #102C57 100%)',
                 color: '#ffffff',
                 border: isBot ? '1px solid var(--border-card)' : 'none',
                 boxShadow: 'var(--shadow-sm)'
@@ -174,7 +174,7 @@ export default function SummaryChatView({
                 {isBot && m.citations && m.citations.length > 0 && (
                   <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginBottom: '0.35rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <BookOpen size={11} color="#38bdf8" />
+                      <BookOpen size={11} color="#DAC0A3" />
                       <span>VERIFIED SOURCE CITATIONS (CLICK TO HIGHLIGHT):</span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
@@ -187,9 +187,9 @@ export default function SummaryChatView({
                             padding: '0.15rem 0.5rem',
                             fontSize: '0.7rem',
                             borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(2, 132, 199, 0.15)',
-                            border: '1px solid rgba(2, 132, 199, 0.35)',
-                            color: '#38bdf8',
+                            background: 'rgba(16, 44, 87, 0.15)',
+                            border: '1px solid rgba(16, 44, 87, 0.35)',
+                            color: '#DAC0A3',
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -214,11 +214,11 @@ export default function SummaryChatView({
               width: '28px',
               height: '28px',
               borderRadius: '50%',
-              background: 'rgba(2, 132, 199, 0.2)',
+              background: 'rgba(16, 44, 87, 0.2)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#38bdf8'
+              color: '#DAC0A3'
             }}>
               <Sparkles size={14} className="spinner" />
             </div>
@@ -234,7 +234,7 @@ export default function SummaryChatView({
       {/* Suggested Prompt Chips */}
       <div style={{
         padding: '0.5rem 1rem',
-        background: 'rgba(15, 23, 42, 0.5)',
+        background: 'rgba(16, 44, 87, 0.5)',
         borderTop: '1px solid var(--border-subtle)',
         display: 'flex',
         gap: '0.4rem',
@@ -264,7 +264,7 @@ export default function SummaryChatView({
       <div style={{
         padding: '0.75rem 1rem',
         borderTop: '1px solid var(--border-card)',
-        background: 'rgba(15, 23, 42, 0.85)',
+        background: 'rgba(16, 44, 87, 0.85)',
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem'

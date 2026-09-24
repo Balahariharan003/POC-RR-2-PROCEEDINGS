@@ -41,7 +41,7 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
         <button 
           onClick={onClose}
           className="btn btn-ghost"
-          style={{ position: 'absolute', top: '1rem', right: '1rem', padding: '0.4rem', color: '#687991' }}
+          style={{ position: 'absolute', top: '1rem', right: '1rem', padding: '0.4rem', color: '#102C57' }}
         >
           <X size={18} />
         </button>
@@ -63,7 +63,7 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.4rem 0', color: '#102C57' }}>
           Pair Smartphone for Live Document Scanning
         </h3>
-        <p style={{ fontSize: '0.85rem', color: '#3A4B63', margin: '0 0 1.5rem 0' }}>
+        <p style={{ fontSize: '0.85rem', color: '#102C57', margin: '0 0 1.5rem 0' }}>
           Field staff can capture source documents using mobile camera. Images stream in real-time over local Wi-Fi.
         </p>
 
@@ -96,17 +96,17 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
             <rect x="29" y="134" width="17" height="17" rx="2" fill="#102C57"/>
             
             {/* Dynamic Code Matrix Elements */}
-            <rect x="75" y="20" width="15" height="15" fill="#3A4B63"/>
-            <rect x="95" y="25" width="10" height="25" fill="#3A4B63"/>
-            <rect x="20" y="75" width="20" height="15" fill="#3A4B63"/>
-            <rect x="50" y="70" width="15" height="20" fill="#3A4B63"/>
+            <rect x="75" y="20" width="15" height="15" fill="#102C57"/>
+            <rect x="95" y="25" width="10" height="25" fill="#102C57"/>
+            <rect x="20" y="75" width="20" height="15" fill="#102C57"/>
+            <rect x="50" y="70" width="15" height="20" fill="#102C57"/>
             <rect x="75" y="75" width="30" height="30" rx="4" fill="#102C57"/>
-            <rect x="115" y="80" width="20" height="15" fill="#3A4B63"/>
-            <rect x="145" y="70" width="15" height="25" fill="#3A4B63"/>
-            <rect x="75" y="120" width="25" height="15" fill="#3A4B63"/>
-            <rect x="110" y="125" width="20" height="20" fill="#3A4B63"/>
-            <rect x="140" y="135" width="25" height="25" fill="#3A4B63"/>
-            <rect x="90" y="145" width="15" height="15" fill="#3A4B63"/>
+            <rect x="115" y="80" width="20" height="15" fill="#102C57"/>
+            <rect x="145" y="70" width="15" height="25" fill="#102C57"/>
+            <rect x="75" y="120" width="25" height="15" fill="#102C57"/>
+            <rect x="110" y="125" width="20" height="20" fill="#102C57"/>
+            <rect x="140" y="135" width="25" height="25" fill="#102C57"/>
+            <rect x="90" y="145" width="15" height="15" fill="#102C57"/>
           </svg>
         </div>
 
@@ -117,7 +117,7 @@ export default function MobileQrModal({ isOpen, onClose, onSimulateMobileUpload 
           padding: '0.75rem 1rem',
           border: '1px solid #EADBC8',
           fontSize: '0.75rem',
-          color: '#3A4B63',
+          color: '#102C57',
           fontFamily: 'var(--font-mono)',
           wordBreak: 'break-all',
           marginBottom: '1.5rem',

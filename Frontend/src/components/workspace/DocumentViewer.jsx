@@ -105,7 +105,7 @@ export default function DocumentViewer({
                 borderRadius: '4px',
                 background: 'transparent',
                 border: 'none',
-                color: currentPage === 1 ? '#687991' : '#FEFAF6',
+                color: currentPage === 1 ? '#102C57' : '#FEFAF6',
                 cursor: currentPage === 1 ? 'default' : 'pointer'
               }}
             >
@@ -122,7 +122,7 @@ export default function DocumentViewer({
                 borderRadius: '4px',
                 background: 'transparent',
                 border: 'none',
-                color: currentPage === 2 ? '#687991' : '#FEFAF6',
+                color: currentPage === 2 ? '#102C57' : '#FEFAF6',
                 cursor: currentPage === 2 ? 'default' : 'pointer'
               }}
             >
@@ -234,7 +234,7 @@ export default function DocumentViewer({
           >
             {/* Scanned Document Header Graphic */}
             <div style={{ textAlign: 'center', borderBottom: '1px solid #DAC0A3', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.72rem', letterSpacing: '0.1em', color: '#687991', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '0.72rem', letterSpacing: '0.1em', color: '#102C57', textTransform: 'uppercase' }}>
                 State of Tamil Nadu • Judiciary Records
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#102C57', marginTop: '0.25rem' }}>
@@ -242,7 +242,7 @@ export default function DocumentViewer({
                   ? "மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம், ஈரோடு" 
                   : "சான்றிதழ் மற்றும் தீர்ப்பு விவரக் குறிப்பு - பக்கம் 2"}
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#3A4B63' }}>
+              <div style={{ fontSize: '0.8rem', color: '#102C57' }}>
                 வழக்கு எண்: {currentCaseNumber} • உத்தரவு நகல்
               </div>
             </div>

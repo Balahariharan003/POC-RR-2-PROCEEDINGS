@@ -60,7 +60,7 @@ export default function FullDetailsForm({
       <div style={{
         padding: '1rem 1.25rem',
         borderBottom: '1px solid var(--border-card)',
-        background: 'rgba(15, 23, 42, 0.75)'
+        background: 'rgba(16, 44, 87, 0.75)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
           <div>
@@ -77,14 +77,14 @@ export default function FullDetailsForm({
             <div style={{
               padding: '0.35rem 0.75rem',
               borderRadius: 'var(--radius-full)',
-              background: isHighRisk ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-              border: isHighRisk ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+              background: isHighRisk ? 'rgba(16, 44, 87, 0.15)' : 'rgba(16, 44, 87, 0.15)',
+              border: isHighRisk ? '1px solid rgba(16, 44, 87, 0.3)' : '1px solid rgba(16, 44, 87, 0.3)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
               fontSize: '0.75rem',
               fontWeight: 600,
-              color: isHighRisk ? '#fb7185' : '#34d399'
+              color: isHighRisk ? '#DAC0A3' : '#DAC0A3'
             }}>
               {isHighRisk ? <ShieldAlert size={14} /> : <ShieldCheck size={14} />}
               <span>Grounding: {Math.round(groundingScore * 100)}%</span>
@@ -99,9 +99,9 @@ export default function FullDetailsForm({
           <div style={{
             padding: '0.65rem 0.85rem',
             borderRadius: 'var(--radius-md)',
-            background: 'rgba(245, 158, 11, 0.12)',
-            border: '1px solid rgba(245, 158, 11, 0.35)',
-            color: '#fbbf24',
+            background: 'rgba(16, 44, 87, 0.12)',
+            border: '1px solid rgba(16, 44, 87, 0.35)',
+            color: '#DAC0A3',
             fontSize: '0.785rem',
             display: 'flex',
             alignItems: 'center',
@@ -127,7 +127,7 @@ export default function FullDetailsForm({
       }}>
         {/* Section 1: Court & Case Information */}
         <div className="glass-panel" style={{ padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#38bdf8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#DAC0A3' }}>
             <Scale size={16} />
             <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>1. Court & Case Reference</h4>
           </div>
@@ -140,7 +140,7 @@ export default function FullDetailsForm({
                 className="form-input"
                 value={entities.case_details?.court_name || ''}
                 onChange={(e) => handleFieldChange('case_details', 'court_name', e.target.value)}
-                style={{ borderColor: isFieldFocused('case_details.court_name') ? '#0284c7' : undefined }}
+                style={{ borderColor: isFieldFocused('case_details.court_name') ? '#102C57' : undefined }}
               />
             </div>
 
@@ -151,7 +151,7 @@ export default function FullDetailsForm({
                 className="form-input"
                 value={entities.case_details?.case_number || ''}
                 onChange={(e) => handleFieldChange('case_details', 'case_number', e.target.value)}
-                style={{ borderColor: isFieldFocused('case_details.case_number') ? '#0284c7' : undefined }}
+                style={{ borderColor: isFieldFocused('case_details.case_number') ? '#102C57' : undefined }}
               />
             </div>
 
@@ -162,7 +162,7 @@ export default function FullDetailsForm({
                 className="form-input"
                 value={entities.case_details?.ia_number || ''}
                 onChange={(e) => handleFieldChange('case_details', 'ia_number', e.target.value)}
-                style={{ borderColor: isFieldFocused('case_details.ia_number') ? '#0284c7' : undefined }}
+                style={{ borderColor: isFieldFocused('case_details.ia_number') ? '#102C57' : undefined }}
               />
             </div>
 
@@ -173,7 +173,7 @@ export default function FullDetailsForm({
                 className="form-input"
                 value={entities.case_details?.court_order_date || ''}
                 onChange={(e) => handleFieldChange('case_details', 'court_order_date', e.target.value)}
-                style={{ borderColor: isFieldFocused('case_details.court_order_date') ? '#0284c7' : undefined }}
+                style={{ borderColor: isFieldFocused('case_details.court_order_date') ? '#102C57' : undefined }}
               />
             </div>
 
@@ -191,7 +191,7 @@ export default function FullDetailsForm({
 
         {/* Section 2: Defaulter Information */}
         <div className="glass-panel" style={{ padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#10b981' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#102C57' }}>
             <User size={16} />
             <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>2. Defaulter / Respondent Particulars</h4>
           </div>
@@ -204,7 +204,7 @@ export default function FullDetailsForm({
                 className="form-input"
                 value={entities.defaulter?.name || ''}
                 onChange={(e) => handleFieldChange('defaulter', 'name', e.target.value)}
-                style={{ borderColor: isFieldFocused('defaulter.name') ? '#0284c7' : undefined }}
+                style={{ borderColor: isFieldFocused('defaulter.name') ? '#102C57' : undefined }}
               />
             </div>
 
@@ -235,7 +235,7 @@ export default function FullDetailsForm({
                 className="form-input"
                 value={entities.defaulter?.village || ''}
                 onChange={(e) => handleFieldChange('defaulter', 'village', e.target.value)}
-                style={{ borderColor: isFieldFocused('defaulter.village') ? '#0284c7' : undefined }}
+                style={{ borderColor: isFieldFocused('defaulter.village') ? '#102C57' : undefined }}
               />
             </div>
 
@@ -263,7 +263,7 @@ export default function FullDetailsForm({
 
         {/* Section 3: Beneficiary Details */}
         <div className="glass-panel" style={{ padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#a855f7' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#102C57' }}>
             <Building size={16} />
             <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>3. Beneficiary & Remittance Mode</h4>
           </div>
@@ -276,7 +276,7 @@ export default function FullDetailsForm({
                 className="form-input"
                 value={entities.beneficiary?.name || ''}
                 onChange={(e) => handleFieldChange('beneficiary', 'name', e.target.value)}
-                style={{ borderColor: isFieldFocused('beneficiary.name') ? '#0284c7' : undefined }}
+                style={{ borderColor: isFieldFocused('beneficiary.name') ? '#102C57' : undefined }}
               />
             </div>
 
@@ -294,7 +294,7 @@ export default function FullDetailsForm({
 
         {/* Section 4: Financials & Math Validation */}
         <div className="glass-panel" style={{ padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#f59e0b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#DAC0A3' }}>
             <Coins size={16} />
             <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>4. Financial Award & Math Validation</h4>
           </div>
@@ -308,9 +308,9 @@ export default function FullDetailsForm({
                 value={entities.financials?.principal_amount || 0}
                 onChange={(e) => handleFieldChange('financials', 'principal_amount', parseFloat(e.target.value) || 0)}
                 style={{ 
-                  borderColor: isFieldFocused('financials.principal_amount') ? '#0284c7' : undefined,
+                  borderColor: isFieldFocused('financials.principal_amount') ? '#102C57' : undefined,
                   fontWeight: 700,
-                  color: '#38bdf8'
+                  color: '#DAC0A3'
                 }}
               />
             </div>
@@ -340,7 +340,7 @@ export default function FullDetailsForm({
 
         {/* Section 5: Jurisdiction Routing */}
         <div className="glass-panel" style={{ padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#06b6d4' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#102C57' }}>
             <MapPin size={16} />
             <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>5. Revenue Jurisdiction Routing</h4>
           </div>
@@ -363,7 +363,7 @@ export default function FullDetailsForm({
                 className="form-input"
                 value={entities.jurisdiction?.taluk || ''}
                 onChange={(e) => handleFieldChange('jurisdiction', 'taluk', e.target.value)}
-                style={{ borderColor: isFieldFocused('jurisdiction.taluk') ? '#0284c7' : undefined }}
+                style={{ borderColor: isFieldFocused('jurisdiction.taluk') ? '#102C57' : undefined }}
               />
             </div>
 
@@ -384,7 +384,7 @@ export default function FullDetailsForm({
       <div style={{
         padding: '0.85rem 1.25rem',
         borderTop: '1px solid var(--border-card)',
-        background: 'rgba(15, 23, 42, 0.85)',
+        background: 'rgba(16, 44, 87, 0.85)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

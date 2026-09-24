@@ -86,7 +86,7 @@ export default function UploadLanding({
         </h2>
         <p style={{
           fontSize: '0.95rem',
-          color: '#3A4B63',
+          color: '#102C57',
           lineHeight: '1.6'
         }}>
           {isTamil
@@ -137,7 +137,7 @@ export default function UploadLanding({
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.4rem', color: '#102C57' }}>
           {isTamil ? 'PDF அல்லது DOCX ஆவணத்தை இங்கு பதிவேற்றவும்' : 'Upload PDF or DOCX Source Document'}
         </h3>
-        <p style={{ fontSize: '0.875rem', color: '#3A4B63', marginBottom: '1.5rem' }}>
+        <p style={{ fontSize: '0.875rem', color: '#102C57', marginBottom: '1.5rem' }}>
           Drag & drop your <strong>.pdf</strong> or <strong>.docx</strong> file here, or click to browse
         </p>
 
@@ -186,7 +186,7 @@ export default function UploadLanding({
             <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#102C57' }}>
               {isTamil ? 'மாதிரி ஆவணம் மூலம் உடனடியாக இயக்கவும்' : 'Instant Evaluation: Built-in MCOP Sample'}
             </h4>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: '#3A4B63' }}>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#102C57' }}>
               Test the end-to-end pipeline and edit the generated proceedings document immediately.
             </p>
           </div>
@@ -219,7 +219,7 @@ export default function UploadLanding({
             <Cpu size={18} color="#102C57" />
             <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>OCR & Entity Extraction</h4>
           </div>
-          <p style={{ margin: 0, fontSize: '0.8rem', color: '#3A4B63', lineHeight: '1.5' }}>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#102C57', lineHeight: '1.5' }}>
             Rapid extraction of parties, tribunal case numbers, award principal, and jurisdiction taluk.
           </p>
         </div>
@@ -235,7 +235,7 @@ export default function UploadLanding({
             <Sparkles size={18} color="#102C57" />
             <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>AI Prompt Re-generation</h4>
           </div>
-          <p style={{ margin: 0, fontSize: '0.8rem', color: '#3A4B63', lineHeight: '1.5' }}>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#102C57', lineHeight: '1.5' }}>
             If the generated document has wrong information, give a prompt to immediately revise and re-create the DOCX.
           </p>
         </div>
@@ -251,7 +251,7 @@ export default function UploadLanding({
             <FileType size={18} color="#102C57" />
             <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>DOCX & PDF Export</h4>
           </div>
-          <p style={{ margin: 0, fontSize: '0.8rem', color: '#3A4B63', lineHeight: '1.5' }}>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#102C57', lineHeight: '1.5' }}>
             Edit content inline and download formatted Word (.docx) proceedings and printable PDF documents.
           </p>
         </div>

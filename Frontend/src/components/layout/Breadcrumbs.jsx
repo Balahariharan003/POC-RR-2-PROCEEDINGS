@@ -14,7 +14,7 @@ export default function Breadcrumbs({
       alignItems: 'center',
       gap: '0.5rem',
       fontSize: '0.785rem',
-      color: '#3A4B63',
+      color: '#102C57',
       padding: '0.65rem 1.5rem',
       borderBottom: '1px solid #EADBC8',
       background: '#FEFAF6'
@@ -29,14 +29,14 @@ export default function Breadcrumbs({
 
       <ChevronRight size={13} color="#DAC0A3" />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#3A4B63' }}>
-        <Building2 size={14} color="#687991" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#102C57' }}>
+        <Building2 size={14} color="#102C57" />
         <span>{district}</span>
       </div>
 
       <ChevronRight size={13} color="#DAC0A3" />
 
-      <span style={{ color: '#3A4B63' }}>{taluk}</span>
+      <span style={{ color: '#102C57' }}>{taluk}</span>
 
       {caseNumber && (
         <>

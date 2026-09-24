@@ -1,0 +1,18 @@
+.rr-audit-filters { background: #fff; border: 1px solid #EADBC8; border-radius: 12px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,.04); color: #102C57; }
+.rr-audit-filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rr-audit-search { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-width: 190px; }
+.rr-audit-search input { border: 0; outline: none; width: 100%; min-width: 0; background: transparent; font-size: .85rem; color: inherit; padding: 6px 0; }
+.rr-audit-search > svg { flex-shrink: 0; }
+.rr-audit-filters select { border: 1px solid #DAC0A3; border-radius: 6px; padding: 6px 10px; font-size: .825rem; color: inherit; background: #fff; cursor: pointer; max-width: 190px; }
+.rr-audit-date-range { display: flex; align-items: center; gap: 6px; border: 1px solid #DAC0A3; border-radius: 6px; padding: 5px 8px; }
+.rr-audit-date-field { display: flex; align-items: center; gap: 5px; font-size: .75rem; }
+.rr-audit-date-field > input { width: 86px; min-width: 0; border: 0; padding: 0; background: transparent; color: inherit; font-size: .775rem; font-variant-numeric: tabular-nums; box-shadow: none; }
+.rr-audit-calendar { position: relative; display: grid; place-items: center; width: 18px; height: 22px; }
+.rr-audit-calendar input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; padding: 0; border: 0; cursor: pointer; }
+.rr-audit-calendar input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; cursor: pointer; }
+.rr-audit-filters button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 6px; font: inherit; font-size: .825rem; }
+.rr-audit-filters :is(button, select, input):focus-visible { outline: 2px solid #102C57; outline-offset: 2px; }
+.rr-audit-calendar:focus-within { outline: 2px solid #102C57; border-radius: 3px; }
+.rr-audit-filters > p { margin: 8px 0 0; font-size: .775rem; }
+@media (min-width: 1250px) { .rr-audit-filter-row { flex-wrap: nowrap; } }
+@media (max-width: 600px) { .rr-audit-search { flex-basis: 100%; } .rr-audit-date-range { flex-wrap: wrap; max-width: 100%; } }

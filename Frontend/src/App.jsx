@@ -1,7 +1,9 @@
+import { recordActivity, setActivityActor } from './services/activityStore.js';
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 
 import AppHeader from './components/layout/AppHeader.jsx';
+import MyProfile from './components/layout/MyProfile.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
 import { ProceedingsPreviewModal, DroReceiptModal } from './components/layout/Modals.jsx';
 
@@ -17,7 +19,6 @@ import RRAssistantView from './components/workspace/RRAssistantView.jsx';
 
 import AuditLogView from './components/audit/AuditLogView.jsx';
 import AdminWorkspace from './components/admin/AdminWorkspace.jsx';
-import { readUsers, saveUsers } from './services/adminStore.js';
 
 import { apiService } from './services/apiService.js';
 import { DEFAULT_ENTITIES, DEFAULT_VALIDATION } from './data/schemas.js';
@@ -138,6 +139,7 @@ export default function App() {
   };
 
   const applyPipelineResult = (result) => {
+    recordActivity('Proceedings generated', { reference: result.entities?.case_details?.case_number || result.generated_docx_filename });
     setCurrentEntities(result.entities);
     setValidationInsights(result.validation_insights);
     setCurrentDocxFilename(result.generated_docx_filename);
@@ -158,6 +160,7 @@ export default function App() {
     setIsRegenerating(true);
     try {
       const res = await apiService.regenerateWithPrompt(prompt, currentEntities, subjectText);
+      recordActivity('Proceedings updated', { reference: res.entities?.case_details?.case_number || '' });
       setCurrentEntities(res.entities);
       setDocumentContent(res.documentContent);
       if (res.generated_docx_filename) {
@@ -176,6 +179,7 @@ export default function App() {
     setIsRecalculating(true);
     try {
       const res = await apiService.regenerateDocument(currentEntities);
+      recordActivity('Proceedings updated', { reference: res.entities?.case_details?.case_number || '' });
       setCurrentEntities(res.entities);
       setValidationInsights(res.validation_insights || validationInsights);
       if (res.generated_docx_filename) {
@@ -193,12 +197,14 @@ export default function App() {
   // Download Proceedings DOCX
   const handleDownloadDocx = () => {
     if (!currentDocxFilename) return;
+    recordActivity('Proceedings download requested', { reference: currentDocxFilename });
     const url = apiService.getDownloadUrl(currentDocxFilename);
     window.open(url, '_blank');
   };
 
   // Download / Print as PDF
   const handleDownloadPdf = () => {
+    recordActivity('Proceedings print requested', { reference: currentEntities?.case_details?.case_number || '' });
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       window.print();
@@ -261,6 +267,7 @@ export default function App() {
         [currentMonth]: [response.auditEntry, ...(prev[currentMonth] || [])]
       }));
 
+      recordActivity('Proceedings dispatched', { reference: currentEntities?.case_details?.case_number || '', status: 'DISPATCHED' });
       setDroReceiptData(response);
     } catch (err) {
       alert("Dispatch error: " + err.message);
@@ -298,11 +305,8 @@ export default function App() {
 
   if (!currentUser) {
     return <LoginPage onLogin={(user) => {
-      // Local directory only: the existing login remains a frontend demo.
-      try {
-        const users = readUsers();
-        if (user.role === 'admin' && !users.length) saveUsers([{ ...user, id: crypto.randomUUID(), status: 'active', taluk: 'District administration' }]);
-      } catch (error) { console.warn('Could not initialize officer directory:', error); }
+      setActivityActor(user);
+      recordActivity('Signed in');
       setCurrentUser(user);
       setActiveSession(null);
       setActiveView(user.role === 'admin' ? 'adminDashboard' : 'rrAssistant');
@@ -325,7 +329,7 @@ export default function App() {
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         currentUser={currentUser}
-        onLogout={() => setCurrentUser(null)}
+        onLogout={() => { recordActivity('Signed out'); setActivityActor(null); setCurrentUser(null); }}
       />
 
       {/* Main Body Area: Sidebar + Main Content */}
@@ -370,8 +374,13 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
           {/* View Routing */}
           <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1.25rem' }}>
-            {currentUser.role === 'admin' && ['adminDashboard', 'adminTemplates', 'adminUsers', 'adminBackup'].includes(activeView) && (
-              <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onNavigate={setActiveView} onRestored={() => {
+            {activeView === 'myProfile' && <MyProfile currentUser={currentUser} currentLanguage={currentLanguage}
+              onUserUpdated={user => { setActivityActor(user); setCurrentUser(user); }}
+              setLanguage={setLanguage}
+              onBack={() => setActiveView(currentUser.role === 'admin' ? 'adminDashboard' : 'rrAssistant')} />}
+            {currentUser.role === 'admin' && ['adminDashboard', 'adminUsers', 'adminBackup'].includes(activeView) && (
+              <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onUserUpdated={user => { setActivityActor(user); setCurrentUser(user); }} onNavigate={setActiveView} onRestored={() => {
+                setActivityActor(null);
                 setCurrentUser(null);
                 setActiveSession(null);
                 setActiveView('rrAssistant');
@@ -383,6 +392,7 @@ export default function App() {
             )}
             {(activeView === 'rrAssistant' || activeView === 'upload') && (
               <RRAssistantView
+                currentUser={currentUser}
                 currentLanguage={currentLanguage}
                 activeSession={activeSession}
                 onSaveAuditLog={async () => {
@@ -501,6 +511,7 @@ export default function App() {
 
             {(activeView === 'audit' || activeView === 'droQueue') && (
               <AuditLogView
+                isAdmin={currentUser.role === 'admin'}
                 onRestoreSession={handleRestoreSession}
                 onNavigateToAssistant={() => {
                   setActiveSession(null);

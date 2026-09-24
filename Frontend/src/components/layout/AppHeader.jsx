@@ -1,7 +1,8 @@
+import AdminNotifications from './AdminNotifications.jsx';
 import React, { useState, useEffect } from 'react';
 import { 
+  Languages,
   User, 
-  Settings,
   ChevronDown, 
   ChevronUp, 
   LogOut, 
@@ -41,6 +42,7 @@ export default function AppHeader({
   const isTamil = currentLanguage === 'ta';
 
   return (
+    <>
     <header className="topbar">
       {/* Topbar Left: Hamburger + Emblem & Title Group */}
       <div className="topbar-left">
@@ -74,21 +76,28 @@ export default function AppHeader({
 
       {/* Topbar Right: Language Switcher & Officer Profile Menu */}
       <div className="topbar-right">
+        {currentUser?.role === 'admin' && <AdminNotifications key={currentUser.id} user={currentUser} onViewActivity={() => { setActiveView('adminDashboard'); setProfileOpen(false); }} />}
         {/* Language Switcher */}
         <div className="lang-switch">
           <button 
             type="button"
             className={`lang-btn ${currentLanguage === 'en' ? 'active' : ''}`}
+            aria-label="Switch to English"
+            title="English"
+            aria-pressed={currentLanguage === 'en'}
             onClick={() => setLanguage('en')}
           >
-            English
+            {currentLanguage === 'en' ? 'English' : <Languages size={18} aria-hidden="true" />}
           </button>
           <button 
             type="button"
             className={`lang-btn ${currentLanguage === 'ta' ? 'active' : ''}`}
+            aria-label="Switch to Tamil"
+            title="Tamil"
+            aria-pressed={currentLanguage === 'ta'}
             onClick={() => setLanguage('ta')}
           >
-            தமிழ்
+            {currentLanguage === 'ta' ? 'தமிழ்' : <Languages size={18} aria-hidden="true" />}
           </button>
         </div>
 
@@ -120,28 +129,18 @@ export default function AppHeader({
                 </div>
                 <div className="dropdown-info">
                   <h4>{currentUser?.name || 'S. Ramanathan'}</h4>
-                  <p>{currentUser?.role === 'admin' ? 'District Collector • Administration' : 'Tahsildar • Revenue Recovery'}</p>
+                  <p>{currentUser?.section || currentUser?.taluk || (currentUser?.role === 'admin' ? 'Administrator' : 'Officer')}</p>
                   <span className="dropdown-dept">Revenue &amp; Disaster Management</span>
                 </div>
               </div>
 
               <div className="dropdown-divider"></div>
 
-              <div className="dropdown-item">
-                <User size={16} />
-                <span>Officer Profile</span>
-              </div>
+              <button type="button" className="dropdown-item" onClick={() => { setProfileOpen(false); setActiveView('myProfile'); setMobileMenuOpen?.(false); }}>
+                <User size={16} /><span>My Profile</span>
+              </button>
 
-              <details className="profile-settings">
-                <summary className="dropdown-item"><Settings size={16} /><span>Settings</span></summary>
-                <label htmlFor="profile-language">Language</label>
-                <select id="profile-language" value={currentLanguage} onChange={(e) => setLanguage(e.target.value)}>
-                  <option value="en">English</option>
-                  <option value="ta">தமிழ்</option>
-                </select>
-              </details>
-
-              <div 
+              <button type="button"
                 className="dropdown-item signout"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -152,12 +151,13 @@ export default function AppHeader({
               >
                 <LogOut size={16} />
                 <span>Sign Out</span>
-              </div>
+              </button>
             </div>
           )}
         </div>
       </div>
     </header>
+    </>
   );
 }
 
