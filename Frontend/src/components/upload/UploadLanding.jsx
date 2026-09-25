@@ -14,7 +14,6 @@ import {
 
 export default function UploadLanding({ 
   onFileUpload, 
-  onLoadSample, 
   currentLanguage 
 }) {
   const fileInputRef = useRef(null);
@@ -153,53 +152,6 @@ export default function UploadLanding({
             <span>Browse PDF / DOCX</span>
           </button>
         </div>
-      </div>
-
-      {/* Instant Demo Shortcut Bar */}
-      <div style={{
-        padding: '1.25rem 1.75rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        borderRadius: '12px',
-        background: '#FFFFFF',
-        border: '1px solid #DAC0A3',
-        borderLeft: '5px solid #102C57',
-        boxShadow: '0 2px 10px rgba(16, 44, 87, 0.04)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '8px',
-            background: 'rgba(16, 44, 87, 0.08)',
-            border: '1px solid #EADBC8',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <FileCheck size={22} color="#102C57" />
-          </div>
-          <div>
-            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#102C57' }}>
-              {isTamil ? 'மாதிரி ஆவணம் மூலம் உடனடியாக இயக்கவும்' : 'Instant Evaluation: Built-in MCOP Sample'}
-            </h4>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: '#102C57' }}>
-              Test the end-to-end pipeline and edit the generated proceedings document immediately.
-            </p>
-          </div>
-        </div>
-
-        <button 
-          onClick={onLoadSample}
-          className="btn btn-primary"
-          style={{ padding: '0.65rem 1.25rem', fontSize: '0.875rem' }}
-        >
-          <span>Run Sample Pipeline</span>
-          <ArrowRight size={16} />
-        </button>
       </div>
 
       {/* Feature Badges Grid */}

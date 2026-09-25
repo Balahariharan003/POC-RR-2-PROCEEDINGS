@@ -36,6 +36,7 @@ export default function AuditLogView({
   const [auditLogs, setAuditLogs] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState('');
 
   const [filters, setFilters] = useState(emptyAuditFilters);
 
@@ -45,11 +46,13 @@ export default function AuditLogView({
   // Load audit logs on mount (Phase 1)
   const loadLogs = async () => {
     setIsLoading(true);
+    setError('');
     try {
       const logs = await apiService.getAuditLogs();
       setAuditLogs(logs || {});
     } catch (err) {
-      console.error("Error loading audit logs:", err);
+      setAuditLogs({});
+      setError(err?.message || 'Unable to load saved audit records.');
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +60,22 @@ export default function AuditLogView({
 
   useEffect(() => {
     loadLogs();
+    window.addEventListener('storage', loadLogs);
+    window.addEventListener('rr-audit-logs-updated', loadLogs);
+    return () => {
+      window.removeEventListener('storage', loadLogs);
+      window.removeEventListener('rr-audit-logs-updated', loadLogs);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!selectedLog) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setSelectedLog(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedLog]);
 
   // Handle Refresh Button
   const handleRefresh = async () => {
@@ -196,6 +214,13 @@ export default function AuditLogView({
         </div>
       </div>
 
+      {error && (
+        <div className="rr-admin-alert" role="alert" style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #DAC0A3' }}>
+          <AlertTriangle size={18} aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      )}
+
       <AuditFilters filters={filters} onChange={setFilters} officers={officers} />
 
       {/* Showing Count Indicator */}
@@ -210,7 +235,7 @@ export default function AuditLogView({
       {/* =========================================================================
           EMPTY STATE (Exact Match to Screenshot)
           ========================================================================= */}
-      {totalFilteredCount === 0 && (
+      {!error && totalFilteredCount === 0 && (
         <div style={{
           width: '100%',
           background: '#ffffff',
@@ -283,21 +308,31 @@ export default function AuditLogView({
         <div style={{ background: '#ffffff', border: '1px solid #EADBC8', borderRadius: '16px', boxShadow: '0 2px 10px rgba(16, 44, 87, 0.05)', overflow: 'hidden' }}>
                 {/* Table of Records */}
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', minWidth: isAdmin ? '760px' : undefined, borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                  <table aria-label="Audit logs" style={{ width: '100%', minWidth: isAdmin ? '760px' : undefined, borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ background: '#FEFAF6', color: '#102C57', borderBottom: '1px solid #EADBC8' }}>
                         <th style={{ padding: '12px 20px', fontWeight: 600 }}>{isAdmin ? 'Order ID' : 'Order ID & Defaulter'}</th>
-                        {isAdmin ? <><th style={{ padding: '12px 16px', fontWeight: 600 }}>Officer ID</th><th style={{ padding: '12px 16px', fontWeight: 600, width: '40%' }}>Details</th></> : <th style={{ padding: '12px 16px', fontWeight: 600 }}>Amount Awarded</th>}
-                        <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Timestamp</th>
+                        {isAdmin ? <><th style={{ padding: '12px 16px', fontWeight: 600 }}>Officer ID</th><th style={{ padding: '12px 16px', fontWeight: 600, width: '34%' }}>Details</th></> : <th style={{ padding: '12px 16px', fontWeight: 600 }}>Amount Awarded</th>}
+                        <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>Timestamp</th>
+                        <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {entries.map((entry) => {
+                        const orderLabel = entry.orderId || entry.order_id || entry.caseNumber || entry.caseId || entry.id;
                         return (
                           <tr 
                             key={entry.id}
-                            onClick={() => onRestoreSession(entry)}
-                            title="Click to open this order in RR Assistant chat"
+                            tabIndex={0}
+                            aria-label={`Audit entry ${orderLabel}`}
+                            onClick={() => setSelectedLog(entry)}
+                            onKeyDown={(e) => {
+                              if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+                                e.preventDefault();
+                                setSelectedLog(entry);
+                              }
+                            }}
+                            title="Press Enter or click to view audit details and receipt"
                             style={{
                               borderBottom: '1px solid #FEFAF6',
                               cursor: 'pointer',
@@ -305,11 +340,13 @@ export default function AuditLogView({
                             }}
                             onMouseEnter={(e) => e.currentTarget.style.background = '#FEFAF6'}
                             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            onFocus={(e) => e.currentTarget.style.background = '#FEFAF6'}
+                            onBlur={(e) => e.currentTarget.style.background = 'transparent'}
                           >
                             {/* Order & Defaulter */}
                             <td style={{ padding: '14px 20px' }}>
                               <div style={{ fontWeight: 700, color: '#102C57', fontSize: '0.92rem' }}>
-                                {entry.orderId || entry.order_id || entry.caseNumber || entry.caseId || entry.id}
+                                {orderLabel}
                               </div>
                               {!isAdmin && <div style={{ color: '#102C57', fontSize: '0.785rem', marginTop: '2px' }}>
                                 {entry.defaulter} • {entry.taluk}
@@ -328,8 +365,44 @@ export default function AuditLogView({
                             </td>}
 
                             {/* Timestamp */}
-                            <td style={{ padding: '14px 20px', color: '#102C57', fontSize: '0.785rem', textAlign: 'right' }}>
+                            <td style={{ padding: '14px 16px', color: '#102C57', fontSize: '0.785rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {entry.timestamp || 'Not recorded'}
+                            </td>
+
+                            {/* Actions */}
+                            <td style={{ padding: '14px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-outline"
+                                  aria-label={`View details for ${orderLabel}`}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedLog(entry); }}
+                                  style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#102C57', borderColor: '#DAC0A3', background: '#ffffff' }}
+                                >
+                                  <Eye size={14} />
+                                  <span>Details</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-outline"
+                                  aria-label={`Print receipt for ${orderLabel}`}
+                                  onClick={(e) => { e.stopPropagation(); handlePrintAuditReceipt(entry); }}
+                                  style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#102C57', borderColor: '#DAC0A3', background: '#ffffff' }}
+                                >
+                                  <Printer size={14} />
+                                  <span>Receipt</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-primary"
+                                  aria-label={`Open ${orderLabel} in RR Assistant`}
+                                  onClick={(e) => { e.stopPropagation(); onRestoreSession(entry); }}
+                                  style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#102C57', color: '#ffffff', border: 'none', borderRadius: '6px' }}
+                                >
+                                  <MessageSquare size={14} />
+                                  <span>Open</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -344,7 +417,12 @@ export default function AuditLogView({
           PHASE 3 & 4: SIDE-BY-SIDE VERIFICATION & INSPECTION MODAL
           ========================================================================= */}
       {selectedLog && (
-        <div style={{
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rr-audit-modal-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedLog(null); }}
+          style={{
           position: 'fixed',
           inset: 0,
           background: 'rgba(16, 44, 87, 0.75)',
@@ -379,10 +457,10 @@ export default function AuditLogView({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <ShieldCheck size={22} color="#DAC0A3" />
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+                  <h3 id="rr-audit-modal-title" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>
                     Audit Verification: {selectedLog.caseNumber || selectedLog.id}
                   </h3>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#102C57' }}>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#EADBC8' }}>
                     Officer: {selectedLog.officerName} • Timestamp: {selectedLog.timestamp}
                   </p>
                 </div>
@@ -433,11 +511,12 @@ export default function AuditLogView({
 
                 <button
                   type="button"
+                  aria-label="Close audit details"
                   onClick={() => setSelectedLog(null)}
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    color: '#102C57',
+                    color: '#ffffff',
                     cursor: 'pointer',
                     padding: '4px'
                   }}
@@ -527,7 +606,7 @@ export default function AuditLogView({
                       Source Document
                     </span>
                     <p style={{ margin: '2px 0 8px 0', fontSize: '0.825rem', fontWeight: 600, color: '#102C57' }}>
-                      📄 {selectedLog.fileName || `${selectedLog.caseNumber}.pdf`} ({selectedLog.fileSize || '1.45 MB'})
+                      📄 {selectedLog.fileName || `${selectedLog.caseNumber}.pdf`} ({selectedLog.fileSize || 'Size not recorded'})
                     </p>
                   </div>
 

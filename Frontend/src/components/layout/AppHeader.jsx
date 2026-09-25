@@ -109,7 +109,7 @@ export default function AppHeader({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.15 }}>
               <span className="user-name" style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '0.825rem' }}>
-                {currentUser?.name || 'Naveen'}
+                {currentUser?.name || 'Officer'}
               </span>
               <span style={{ color: 'var(--soft-sand, #EADBC8)', fontSize: '0.685rem', fontWeight: 400 }}>
                 {currentUser?.role === 'admin' ? 'Admin' : 'User'}
@@ -128,7 +128,7 @@ export default function AppHeader({
                   <User size={24} />
                 </div>
                 <div className="dropdown-info">
-                  <h4>{currentUser?.name || 'S. Ramanathan'}</h4>
+                  <h4>{currentUser?.name || 'Officer'}</h4>
                   <p>{currentUser?.section || currentUser?.taluk || (currentUser?.role === 'admin' ? 'Administrator' : 'Officer')}</p>
                   <span className="dropdown-dept">Revenue &amp; Disaster Management</span>
                 </div>

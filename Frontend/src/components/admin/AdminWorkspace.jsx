@@ -1,3 +1,5 @@
+import { readSavedAuditLogs } from '../../services/auditStore.js';
+import { ACTIVITY_EVENT } from '../../services/activityStore.js';
 import React, { useEffect, useState } from 'react';
 import { Users, FileText, CheckCircle2, CircleX } from 'lucide-react';
 import { readUsers } from '../../services/adminStore.js';
@@ -17,13 +19,31 @@ function AdminWorkspaceContent({ currentUser, onNavigate }) {
   const [logs, setLogs] = useState({});
   const [error, setError] = useState('');
   useEffect(() => {
-    try {
-      setUsers(readUsers());
-      // Dashboard reads must not depend on validating unrelated backup data.
-      const saved = JSON.parse(localStorage.getItem('rr_audit_logs') || '{}');
-      if (!saved || typeof saved !== 'object' || Array.isArray(saved) || Object.values(saved).some(rows => !Array.isArray(rows))) throw new Error('Invalid proceedings.');
-      setLogs(saved);
-    } catch { setError('Unable to load dashboard data. Please reload the page to try again.'); }
+    const refresh = () => {
+      try {
+        setUsers(readUsers());
+        // Dashboard reads must not depend on validating unrelated backup data.
+        const saved = readSavedAuditLogs();
+        setLogs(saved);
+        setError('');
+      } catch {
+        setError('Unable to load dashboard data. Please reload the page to try again.');
+      }
+    };
+    refresh();
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('storage', refresh);
+    window.addEventListener(ACTIVITY_EVENT, refresh);
+    window.addEventListener('rr-audit-logs-updated', refresh);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener(ACTIVITY_EVENT, refresh);
+      window.removeEventListener('rr-audit-logs-updated', refresh);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
   const records = [...new Map(Object.values(logs).flat().filter(row => row && typeof row.id === 'string').map(row => [row.id, row])).values()];
 

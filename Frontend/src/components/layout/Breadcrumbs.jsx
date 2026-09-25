@@ -4,7 +4,7 @@ import { ChevronRight, Home, Building2, FileText, CheckCircle } from 'lucide-rea
 export default function Breadcrumbs({ 
   district = "ஈரோடு (Erode)", 
   taluk = "கொடுமுடி (Kodumudi)", 
-  caseNumber = "MCOP-225/2022",
+  caseNumber = "",
   activeView,
   setActiveView
 }) {

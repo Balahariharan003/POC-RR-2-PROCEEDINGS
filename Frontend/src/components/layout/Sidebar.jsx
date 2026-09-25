@@ -73,7 +73,10 @@ export default function Sidebar({
             }}><Icon size={19} style={{ flexShrink: 0 }} />{showLabels && <span>{label}</span>}</button>
           ))}
           {/* Primary RR Assistant Item */}
-          <div
+          <button
+            type="button"
+            aria-label="RR Assistant"
+            aria-current={isRRActive ? 'page' : undefined}
             onClick={() => {
               setActiveView('rrAssistant');
               if (mobileOpen && setMobileOpen) setMobileOpen(false);
@@ -84,11 +87,15 @@ export default function Sidebar({
               gap: '12px',
               padding: showLabels ? '0.75rem 1rem' : '0.75rem 0',
               justifyContent: showLabels ? 'flex-start' : 'center',
+              width: '100%',
               borderRadius: '6px',
               backgroundColor: isRRActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              border: 'none',
               borderLeft: isRRActive ? '3px solid #DAC0A3' : '3px solid transparent',
               color: '#ffffff',
               cursor: 'pointer',
+              textAlign: 'left',
+              font: 'inherit',
               transition: 'all 0.2s ease'
             }}
             title={!showLabels ? "RR Assistant" : undefined}
@@ -106,7 +113,7 @@ export default function Sidebar({
                 </span>
               </div>
             )}
-          </div>
+          </button>
         </div>
 
         {/* Bottom Sidebar Menu */}
@@ -119,7 +126,10 @@ export default function Sidebar({
           paddingTop: '0.75rem'
         }}>
           {/* Audit Logs */}
-          <div
+          <button
+            type="button"
+            aria-label="Audit Logs"
+            aria-current={isAuditActive ? 'page' : undefined}
             onClick={() => {
               setActiveView('audit');
               if (mobileOpen && setMobileOpen) setMobileOpen(false);
@@ -130,10 +140,14 @@ export default function Sidebar({
               gap: '12px',
               padding: showLabels ? '0.6rem 1rem' : '0.6rem 0',
               justifyContent: showLabels ? 'flex-start' : 'center',
+              width: '100%',
               borderRadius: '6px',
+              border: 'none',
               color: isAuditActive ? '#ffffff' : '#EADBC8',
               backgroundColor: isAuditActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               cursor: 'pointer',
+              textAlign: 'left',
+              font: 'inherit',
               fontSize: '0.85rem',
               fontWeight: 500
             }}
@@ -141,10 +155,12 @@ export default function Sidebar({
           >
             <History size={18} />
             {showLabels && <span>Audit Logs</span>}
-          </div>
+          </button>
 
           {/* Collapse / Close Menu Button */}
-          <div
+          <button
+            type="button"
+            aria-label={mobileOpen ? "Close Menu" : (isCollapsed ? "Expand" : "Collapse")}
             onClick={() => {
               if (mobileOpen && setMobileOpen) {
                 setMobileOpen(false);
@@ -158,9 +174,14 @@ export default function Sidebar({
               gap: '12px',
               padding: showLabels ? '0.6rem 1rem' : '0.6rem 0',
               justifyContent: showLabels ? 'flex-start' : 'center',
+              width: '100%',
               borderRadius: '6px',
+              border: 'none',
+              backgroundColor: 'transparent',
               color: '#EADBC8',
               cursor: 'pointer',
+              textAlign: 'left',
+              font: 'inherit',
               fontSize: '0.85rem',
               fontWeight: 500
             }}
@@ -177,7 +198,7 @@ export default function Sidebar({
                 {!isCollapsed && <span>Collapse</span>}
               </>
             )}
-          </div>
+          </button>
         </div>
       </aside>
     </>

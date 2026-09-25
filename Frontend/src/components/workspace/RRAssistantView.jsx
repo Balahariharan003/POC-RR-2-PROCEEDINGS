@@ -48,8 +48,15 @@ export default function RRAssistantView({
   const [lastUpdatedMessage, setLastUpdatedMessage] = useState('');
   const [promptHistory, setPromptHistory] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [auditError, setAuditError] = useState('');
 
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    apiService.getAuditLogs().catch(err => {
+      setAuditError(err?.message || 'Unable to load saved audit records.');
+    });
+  }, []);
 
   useEffect(() => {
     if (activeSession) return;
@@ -62,14 +69,14 @@ export default function RRAssistantView({
         setCurrentSessionId(draft.sessionId || null);
         setWorkflowState('generated');
       }
-    } catch (error) { console.warn('Could not load saved draft:', error); }
+    } catch (error) { setAuditError('Unable to load saved draft from browser storage.'); }
   }, []);
 
   useEffect(() => {
     if (workflowState !== 'generated') return;
     try {
       localStorage.setItem('rr_draft', JSON.stringify({ content: generatedContent, fileName: fileInfo.name, fileSize: fileInfo.sizeFormatted, promptHistory, sessionId: currentSessionId }));
-    } catch (error) { setLastUpdatedMessage('Draft could not be saved locally. Export the document to keep your changes.'); }
+    } catch (error) { setAuditError('Draft could not be saved locally. Export the document to keep your changes.'); }
   }, [workflowState, generatedContent, fileInfo, promptHistory, currentSessionId]);
 
   // Restore session when activeSession prop changes (ChatGPT & Gemini style restore)
@@ -78,7 +85,7 @@ export default function RRAssistantView({
       setSelectedFile(null);
       setFileInfo({
         name: activeSession.fileName || activeSession.caseNumber || 'restored_order.pdf',
-        sizeFormatted: activeSession.fileSize || '1.45 MB'
+        sizeFormatted: activeSession.fileSize || 'Size not recorded'
       });
       setGeneratedContent(activeSession.documentContent);
       setPromptHistory(activeSession.promptHistory || []);
@@ -129,17 +136,6 @@ export default function RRAssistantView({
     }
   };
 
-  // Load sample demonstration PDF
-  const handleLoadSample = async () => {
-    const mockFile = {
-      name: "sample_mcop_order.pdf",
-      sizeFormatted: "1.45 MB"
-    };
-    setSelectedFile(null);
-    setFileInfo(mockFile);
-    setWorkflowState('file_selected');
-  };
-
   // Trigger processing
   const handleGenerateContent = async () => {
     setWorkflowState('processing');
@@ -161,7 +157,7 @@ export default function RRAssistantView({
       if (selectedFile) {
         result = await apiService.uploadDocument(selectedFile);
       } else {
-        result = await apiService.loadSampleDocument();
+        throw new Error('Select a source document first.');
       }
 
       clearTimeout(t1);
@@ -180,28 +176,33 @@ export default function RRAssistantView({
       setPromptHistory([initialPrompt]);
       setCurrentSessionId(newSessionId);
 
-      // Auto-save to Audit Log Trail
-      await apiService.saveAuditLog({
-        id: newSessionId,
-        officerId: currentUser?.officerId || currentUser?.id,
-        officerName: currentUser?.name,
-        caseNumber: result.entities?.case_details?.case_number || fileInfo.name.replace(/\.[^/.]+$/, ""),
-        fileName: fileInfo.name || "order.pdf",
-        fileSize: fileInfo.sizeFormatted || "1.45 MB",
-        defaulter: result.entities?.defaulter?.name || "திரு.T.P.ராமலிங்கம்",
-        taluk: result.entities?.jurisdiction?.taluk || "கொடுமுடி",
-        district: result.entities?.jurisdiction?.district || "ஈரோடு",
-        amount: `₹ ${Number(result.entities?.financials?.principal_amount || 460690).toLocaleString('en-IN')}/-`,
-        status: "DRAFT",
-        groundingScore: result.validation_insights?.grounding_score ?? 0.96,
-        hallucinationScore: result.validation_insights?.hallucination_score ?? 0.04,
-        promptHistory: [initialPrompt],
-        documentContent: formattedDoc,
-        notes: "Automated OCR extraction and draft generation completed in RR Assistant."
-      });
-
-      if (onSaveAuditLog) onSaveAuditLog();
       setWorkflowState('generated');
+
+      // Auto-save to Audit Log Trail
+      try {
+        await apiService.saveAuditLog({
+          id: newSessionId,
+          officerId: currentUser?.officerId || currentUser?.id,
+          officerName: currentUser?.name,
+          caseNumber: result.entities?.case_details?.case_number || fileInfo.name.replace(/\.[^/.]+$/, ""),
+          fileName: fileInfo.name || "order.pdf",
+          fileSize: fileInfo.sizeFormatted || "",
+          defaulter: result.entities?.defaulter?.name || "",
+          taluk: result.entities?.jurisdiction?.taluk || "",
+          district: result.entities?.jurisdiction?.district || "",
+          amount: `₹ ${Number(result.entities?.financials?.principal_amount || 0).toLocaleString('en-IN')}/-`,
+          status: "DRAFT",
+          groundingScore: result.validation_insights?.grounding_score ?? 0,
+          hallucinationScore: result.validation_insights?.hallucination_score ?? 0,
+          promptHistory: [initialPrompt],
+          documentContent: formattedDoc,
+          notes: "Automated OCR extraction and draft generation completed in RR Assistant."
+        });
+        if (onSaveAuditLog) await onSaveAuditLog();
+        setAuditError('');
+      } catch (saveErr) {
+        setAuditError(saveErr?.message || 'Unable to save audit record.');
+      }
     } catch (err) {
       alert("Error processing document: " + err.message);
       setWorkflowState('file_selected');
@@ -232,16 +233,20 @@ export default function RRAssistantView({
       setTimeout(() => setLastUpdatedMessage(''), 4000);
 
       // Update Audit Log Trail
-      await apiService.saveAuditLog({
-        id: currentSessionId,
-        caseNumber: fileInfo.name.replace(/\.[^/.]+$/, "") || "MCOP-225/2022",
-        fileName: fileInfo.name || "order.pdf",
-        promptHistory: updatedHistory,
-        documentContent: updatedText,
-        status: "VERIFIED"
-      });
-
-      if (onSaveAuditLog) onSaveAuditLog();
+      try {
+        await apiService.saveAuditLog({
+          id: currentSessionId || `AUD-${Date.now()}`,
+          caseNumber: fileInfo.name.replace(/\.[^/.]+$/, "") || "",
+          fileName: fileInfo.name || "order.pdf",
+          promptHistory: updatedHistory,
+          documentContent: updatedText,
+          status: "VERIFIED"
+        });
+        if (onSaveAuditLog) await onSaveAuditLog();
+        setAuditError('');
+      } catch (saveErr) {
+        setAuditError(saveErr?.message || 'Unable to save audit record.');
+      }
     } catch (err) {
       alert("Failed to apply changes: " + err.message);
     } finally {
@@ -346,6 +351,17 @@ export default function RRAssistantView({
               accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf"
               style={{ display: 'none' }}
             />
+      {auditError && (
+        <div className="rr-admin-alert" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', border: '1px solid #DAC0A3' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={18} aria-hidden="true" />
+            <span>{auditError}</span>
+          </div>
+          <button type="button" aria-label="Dismiss error" className="btn btn-ghost" onClick={() => setAuditError('')}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {/* =========================================================================
           STEP 1 & 4: INITIAL CENTERED UPLOAD WORKSPACE (RR ASSISTANT DESIGN)
           ========================================================================= */}
@@ -528,7 +544,6 @@ export default function RRAssistantView({
       <MobileQrModal 
         isOpen={showMobileQr} 
         onClose={() => setShowMobileQr(false)} 
-        onSimulateMobileUpload={handleLoadSample} 
       />
 
       {/* =========================================================================
@@ -780,7 +795,7 @@ export default function RRAssistantView({
                 style={{ fontSize: '0.785rem', color: '#102C57' }}
               >
                 <PlusCircle size={15} />
-                <span>Upload Docs</span>
+                <span>New Upload</span>
               </button>
             </div>
           </div>

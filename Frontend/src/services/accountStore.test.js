@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import { authenticate, canInitializeAdministrator, initializeAdministrator, saveOfficerAccount, changeOwnPassword, INITIAL_ADMIN_LOGIN, CREDENTIAL_KEY } from './accountStore.js';
 import { readUsers, saveUsers, createBackup } from './adminStore.js';
+import { TEMPORARY_LOGIN } from './temporaryLogin.js';
 
 let values;
 beforeEach(() => {
@@ -15,6 +16,21 @@ beforeEach(() => {
   };
 });
 const fields = { name: 'Test Officer', identifier: 'officer.test', mobileNumber: '9876543210', section: 'Revenue' };
+
+test('temporary login requires correct credentials and preserves existing accounts and changed passwords', async () => {
+  const existing = await initializeAdministrator('Existing-admin-123');
+  assert.equal(await authenticate(TEMPORARY_LOGIN.email, 'incorrect', 'admin'), null);
+  assert.equal(await authenticate(TEMPORARY_LOGIN.email, TEMPORARY_LOGIN.password, 'user'), null);
+  assert.equal(readUsers().length, 1);
+  const temporary = await authenticate(TEMPORARY_LOGIN.email, TEMPORARY_LOGIN.password, 'admin');
+  assert.equal(temporary.role, 'admin');
+  assert.equal(readUsers().length, 2);
+  assert.equal((await authenticate(INITIAL_ADMIN_LOGIN, 'Existing-admin-123', 'admin')).id, existing.id);
+  await changeOwnPassword(temporary, TEMPORARY_LOGIN.password, 'Changed-admin-456');
+  assert.equal(await authenticate(TEMPORARY_LOGIN.email, TEMPORARY_LOGIN.password, 'admin'), null);
+  assert.equal((await authenticate(TEMPORARY_LOGIN.email, 'Changed-admin-456', 'admin')).id, temporary.id);
+  assert.equal(readUsers().length, 2);
+});
 
 test('initializes only the designated admin and verifies credentials and selected role', async () => {
   const admin = await initializeAdministrator('Admin-test-123');

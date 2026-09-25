@@ -4,7 +4,7 @@ import { Send, Bot, User, Sparkles, CornerDownRight, Tag, BookOpen } from 'lucid
 export default function SummaryChatView({ 
   onSelectCitation, 
   onSendQuery,
-  currentCaseNumber = "MCOP-225/2022" 
+  currentCaseNumber = ""
 }) {
   const [messages, setMessages] = useState([
     {

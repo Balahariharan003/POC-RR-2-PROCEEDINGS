@@ -21,8 +21,13 @@ export default function UserManagement({ currentUser, onUserUpdated }) {
   const [formError, setFormError] = useState('');
   const [message, setMessage] = useState('');
   useEffect(() => {
-    try { setUsers(readUsers()); }
-    catch { setLoadError('Unable to load officers. Please reload this page to try again.'); }
+    const load = () => {
+      try { setUsers(readUsers()); setLoadError(''); }
+      catch { setLoadError('Unable to load officers. Please reload this page to try again.'); }
+    };
+    load();
+    window.addEventListener('storage', load);
+    return () => window.removeEventListener('storage', load);
   }, []);
 
   function openOfficer(user) {
@@ -79,9 +84,9 @@ export default function UserManagement({ currentUser, onUserUpdated }) {
         {formError && <div className="rr-admin-alert" role="alert">{formError}</div>}
         <fieldset disabled={busy} className="rr-officer-fields">
           <h3 className="rr-officer-full-name">Official Identity &amp; Contact</h3>
-          <label className="rr-officer-full-name">Full Name (English)<input required name="name" autoComplete="name" placeholder="e.g. S. Ramanathan" maxLength={160} value={editing.name} onChange={update} /></label>
+          <label className="rr-officer-full-name">Full Name (English)<input required name="name" autoComplete="name" placeholder="Enter full name" maxLength={160} value={editing.name} onChange={update} /></label>
           <label className="rr-officer-full-name">Full Name (Tamil - optional)<input name="nameTamil" lang="ta" maxLength={160} value={editing.nameTamil} onChange={update} /></label>
-          <label>Mobile Number<input required name="mobileNumber" type="tel" autoComplete="tel" placeholder="9842011001" maxLength={24} value={editing.mobileNumber} onChange={update} /></label>
+          <label>Mobile Number<input required name="mobileNumber" type="tel" autoComplete="tel" placeholder="Enter mobile number" maxLength={24} value={editing.mobileNumber} onChange={update} /></label>
           <label>Official Email / Username<input required name="identifier" autoComplete="username" placeholder="officer@tn.gov.in" maxLength={160} value={editing.identifier} onChange={update} /></label>
           <label className="rr-officer-full-name">Department / Section<input required name="section" placeholder="Revenue Administration" maxLength={160} value={editing.section} onChange={update} /></label>
           {editing.id && <div className="rr-officer-security rr-officer-full-name"><div><h3>Account Security</h3><p>Reset or change this official's password.</p></div><button type="button" className="btn btn-outline" aria-expanded={changePassword} onClick={() => { setChangePassword(!changePassword); setPassword(''); setConfirmation(''); setFormError(''); }}><KeyRound size={16} />{changePassword ? 'Cancel Password Change' : 'Edit Password'}</button></div>}

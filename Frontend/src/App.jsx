@@ -22,7 +22,6 @@ import AdminWorkspace from './components/admin/AdminWorkspace.jsx';
 
 import { apiService } from './services/apiService.js';
 import { DEFAULT_ENTITIES, DEFAULT_VALIDATION } from './data/schemas.js';
-import { INITIAL_AUDIT_LOGS, SAMPLE_BOUNDING_BOXES } from './data/mockData.js';
 
 export default function App() {
   // Top-Level State Machine
@@ -43,16 +42,12 @@ export default function App() {
   // Document & Extracted Entities
   const [currentEntities, setCurrentEntities] = useState(DEFAULT_ENTITIES);
   const [validationInsights, setValidationInsights] = useState(DEFAULT_VALIDATION);
-  const [currentDocxFilename, setCurrentDocxFilename] = useState('proceedings_MCOP-225_2022.docx');
-  const [rawOcrText, setRawOcrText] = useState(
-    "ஈரோடு, மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம் / சிறப்பு சார்பு நீதிமன்றம்\nவழக்கு எண்: MCOP-225/2022\nமனு எண்: I.A.No.08/2026\nஉத்தரவு நாள்: 26.03.2026\nமனுதாரர்: Cholamandalam MS General Insurance Co. Ltd., Erode\nஎதிர்மனுதாரர்: திரு.T.P.ராமலிங்கம், த/பெ.பழனிச்சாமி, கதவு எண் 90/6, சந்தை மேடு, சிவகிரி, கொடுமுடி வட்டம், ஈரோடு மாவட்டம் - 638 109\nஇழப்பீட்டுத் தொகை: ரூ. 4,60,690/-"
-  );
-  const [boundingBoxes, setBoundingBoxes] = useState(SAMPLE_BOUNDING_BOXES);
+  const [currentDocxFilename, setCurrentDocxFilename] = useState('');
+  const [rawOcrText, setRawOcrText] = useState('');
+  const [boundingBoxes, setBoundingBoxes] = useState([]);
 
   // Editable Document Content & Subject (Matching Screenshots 1 & 2)
-  const [subjectText, setSubjectText] = useState(
-    '"உங்களைத் தேடி உங்கள் ஊரில்" திட்டம் — ஈரோடு மாவட்டம், கொடுமுடி வட்டத்தில் பல்வேறு வளர்ச்சித் திட்டப் பணிகளை மாவட்ட ஆட்சித்தலைவர் ஆய்வு செய்தல் மற்றும் ரூ.4,60,690/- இழப்பீட்டுத் தொகையை வசூலித்து ஒப்படைக்க உத்தரவிடுதல்.'
-  );
+  const [subjectText, setSubjectText] = useState('');
   const [documentContent, setDocumentContent] = useState('');
 
   // Cross-Component Interaction
@@ -65,7 +60,7 @@ export default function App() {
 
   // Active Restored Session & Audit Logs
   const [activeSession, setActiveSession] = useState(null);
-  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
+  const [auditLogs, setAuditLogs] = useState({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Handle restoring a session from Audit Logs (ChatGPT / Gemini style)
@@ -92,7 +87,7 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    apiService.getAuditLogs().then(setAuditLogs);
+    apiService.getAuditLogs().then(setAuditLogs).catch(error => console.warn('Unable to load saved audit logs:', error));
     try {
       const preferences = JSON.parse(localStorage.getItem('rr_preferences') || 'null');
       if (preferences) {
@@ -123,28 +118,13 @@ export default function App() {
     }
   };
 
-  // Handle Sample MCOP Order Click
-  const handleLoadSample = async () => {
-    setProcessingFileName("sample_mcop_order.pdf");
-    setIsProcessing(true);
-
-    try {
-      const result = await apiService.loadSampleDocument();
-      applyPipelineResult(result);
-    } catch (err) {
-      alert("Sample pipeline error: " + err.message);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const applyPipelineResult = (result) => {
     recordActivity('Proceedings generated', { reference: result.entities?.case_details?.case_number || result.generated_docx_filename });
     setCurrentEntities(result.entities);
     setValidationInsights(result.validation_insights);
     setCurrentDocxFilename(result.generated_docx_filename);
     setRawOcrText(result.rawOcrText);
-    setBoundingBoxes(result.bounding_boxes || SAMPLE_BOUNDING_BOXES);
+    setBoundingBoxes(result.bounding_boxes || []);
 
     // Format the new document content
     const initialSubject = `"உங்களைத் தேடி உங்கள் ஊரில்" திட்டம் — ${result.entities.jurisdiction.district} மாவட்டம், ${result.entities.jurisdiction.taluk} வட்டத்தில் மோட்டார் விபத்து இழப்பீட்டுத் தொகை ரூ.${Number(result.entities.financials.principal_amount).toLocaleString('en-IN')}/- ஐ வசூலித்து ஒப்படைக்க உத்தரவிடுதல்.`;
@@ -346,27 +326,9 @@ export default function App() {
           setIsCollapsed={setSidebarCollapsed}
           mobileOpen={mobileMenuOpen}
           setMobileOpen={setMobileMenuOpen}
-          onSelectRecent={(caseNum) => {
-            setMobileMenuOpen(false);
-            if (caseNum === 'MCOP-225/2022') {
-              setCurrentEntities(DEFAULT_ENTITIES);
-              setValidationInsights(DEFAULT_VALIDATION);
-              setDocumentContent(apiService.formatDocumentSheet(DEFAULT_ENTITIES, subjectText));
-            } else if (caseNum === 'MCOP-118/2023') {
-              const updated = {
-                ...DEFAULT_ENTITIES,
-                case_details: { ...DEFAULT_ENTITIES.case_details, case_number: "MCOP-118/2023" },
-                financials: { ...DEFAULT_ENTITIES.financials, principal_amount: 892400 },
-                jurisdiction: { ...DEFAULT_ENTITIES.jurisdiction, taluk: "பெருந்துறை" }
-              };
-              setCurrentEntities(updated);
-              setValidationInsights({
-                ...DEFAULT_VALIDATION,
-                grounding_score: 0.78,
-                hallucination_score: 0.22
-              });
-              setDocumentContent(apiService.formatDocumentSheet(updated, subjectText));
-            }
+          onSelectRecent={caseNum => {
+            const record = Object.values(auditLogs).flat().find(row => row.caseNumber === caseNum);
+            if (record) handleRestoreSession(record);
           }}
         />
 
@@ -384,7 +346,7 @@ export default function App() {
                 setCurrentUser(null);
                 setActiveSession(null);
                 setActiveView('rrAssistant');
-                apiService.getAuditLogs().then(setAuditLogs);
+                apiService.getAuditLogs().then(setAuditLogs).catch(error => console.warn('Unable to load saved audit logs:', error));
                 const preferences = JSON.parse(localStorage.getItem('rr_preferences') || 'null');
                 setLanguage(preferences?.language || 'en');
                 setTheme(preferences?.theme || 'dark');

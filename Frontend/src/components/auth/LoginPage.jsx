@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { authenticate, canInitializeAdministrator, initializeAdministrator, INITIAL_ADMIN_LOGIN } from '../../services/accountStore.js';
+import { authenticate } from '../../services/accountStore.js';
 import './LoginPage.css';
 
 const MOTTO_VARIANTS = [
@@ -21,11 +21,8 @@ export default function LoginPage({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [setup, setSetup] = useState(false);
-  const [setupAvailable] = useState(() => { try { return canInitializeAdministrator(); } catch { return false; } });
   // Motto variant 1 (English) matches the reference screenshot on initial mount
   const [mottoIndex, setMottoIndex] = useState(1);
   const [isFading, setIsFading] = useState(false);
@@ -46,13 +43,12 @@ export default function LoginPage({ onLogin }) {
     event.preventDefault();
     if (busy) return;
     setError('');
-    if (setup && password !== confirmation) { setError('Passwords do not match.'); return; }
     setBusy(true);
     try {
-      const user = setup ? await initializeAdministrator(password) : await authenticate(email, password, role);
+      const user = await authenticate(email, password, role);
       if (!user) { setError('Invalid username or password'); return; }
       onLogin?.(user);
-    } catch (e) { setError(setup ? e.message : 'Invalid username or password'); }
+    } catch { setError('Invalid username or password'); }
     finally { setBusy(false); }
   }
 
@@ -87,12 +83,12 @@ export default function LoginPage({ onLogin }) {
       <div className="login-content">
         <section className="login-card" aria-labelledby="login-title">
           <div className="login-heading">
-            <h1 id="login-title">{setup ? 'Set administrator password' : 'Sign in'}</h1>
-            <p>{setup ? 'Set the initial password for your administrator account.' : 'Enter your account details to continue.'}</p>
+            <h1 id="login-title">Sign in</h1>
+            <p>Enter your account details to continue.</p>
           </div>
 
           <form onSubmit={handleSubmit}>
-            {!setup && <fieldset className="login-roles" disabled={busy}>
+            <fieldset className="login-roles" disabled={busy}>
               <legend className="visually-hidden">Sign in as</legend>
               {[
                 { value: 'user', label: 'User' },
@@ -109,7 +105,7 @@ export default function LoginPage({ onLogin }) {
                   <span>{label}</span>
                 </label>
               ))}
-            </fieldset>}
+            </fieldset>
 
             <div className="login-field">
               <label htmlFor="login-email">Username / Email</label>
@@ -117,7 +113,6 @@ export default function LoginPage({ onLogin }) {
                 id="login-email"
                 name="email"
                 type="text"
-                readOnly={setup}
                 disabled={busy}
                 placeholder="Username or email"
                 autoComplete="username"
@@ -135,8 +130,7 @@ export default function LoginPage({ onLogin }) {
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter password"
-                  autoComplete={setup ? 'new-password' : 'current-password'}
-                  minLength={setup ? 8 : undefined}
+                  autoComplete="current-password"
                   maxLength={128}
                   disabled={busy}
                   value={password}
@@ -154,14 +148,11 @@ export default function LoginPage({ onLogin }) {
               </div>
             </div>
 
-            {setup && <div className="login-field"><label htmlFor="login-confirm-password">Confirm Password</label><input id="login-confirm-password" type="password" autoComplete="new-password" required minLength={8} maxLength={128} disabled={busy} value={confirmation} onChange={event => setConfirmation(event.target.value)} /></div>}
             {error && <p className="login-error" role="alert">{error}</p>}
             <button className="login-submit" type="submit" disabled={busy}>
-              <span>{busy ? 'Please wait...' : setup ? 'Set Password & Sign In' : 'Sign In'}</span><ArrowRight size={18} aria-hidden="true" />
+              <span>{busy ? 'Please wait...' : 'Sign In'}</span><ArrowRight size={18} aria-hidden="true" />
             </button>
-            {setupAvailable && <button className="login-setup-toggle" type="button" disabled={busy} onClick={() => {
-              setSetup(!setup); setRole('admin'); setEmail(setup ? '' : INITIAL_ADMIN_LOGIN); setPassword(''); setConfirmation(''); setError('');
-            }}>{setup ? 'Back to sign in' : 'Set initial administrator password'}</button>}
+
           </form>
         </section>
       </div>

@@ -17,6 +17,7 @@ export function dateRangeError({ from, to }) {
 }
 
 export function periodRange(period, now = new Date()) {
+  if (!period || period === 'custom') return { from: '', to: '' };
   const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const to = new Date(from);
   if (period === 'week') {
