@@ -23,6 +23,7 @@
   display: grid;
   grid-template-columns: 60% 40%;
   overflow-y: auto;
+  border-top: none !important;
   background: var(--bg-surface, #ffffff);
   font-family: var(--font-sans, 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif);
 }
@@ -35,6 +36,7 @@
   min-height: 640px;
   padding: 40px clamp(32px, 4vw, 72px);
   overflow: hidden;
+  border-top: none !important;
   background: #102C57;
   color: var(--text-white, #ffffff);
 }
@@ -166,7 +168,7 @@
   place-items: center;
   min-width: 0;
   padding: 64px clamp(24px, 3.5vw, 64px);
-  border-top: 4px solid var(--tan-warm, #c5a880);
+  border-top: none !important;
   background: #ffffff;
 }
 

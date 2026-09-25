@@ -55,9 +55,9 @@ export default function Sidebar({
         flexDirection: 'column',
         justifyContent: 'space-between',
         padding: (isCollapsed && !mobileOpen) ? '1rem 0.5rem' : '1.25rem 0',
-        height: 'calc(100vh - 64px)',
-        position: 'sticky',
-        top: '64px',
+        height: '100%',
+        position: 'relative',
+        top: 0,
         flexShrink: 0,
         zIndex: 50
       }}>

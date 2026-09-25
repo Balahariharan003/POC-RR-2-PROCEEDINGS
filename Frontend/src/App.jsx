@@ -7,8 +7,9 @@ import { ProceedingsPreviewModal, DroReceiptModal } from './components/layout/Mo
 
 import UploadLanding from './components/upload/UploadLanding.jsx';
 import ProcessingOverlay from './components/upload/ProcessingOverlay.jsx';
+import MobileQrModal from './components/upload/MobileQrModal.jsx';
 import LoginPage from './components/auth/LoginPage.jsx';
-
+import MobileCapturePage from './components/mobile/MobileCapturePage';
 import DocumentEditorPreview from './components/workspace/DocumentEditorPreview.jsx';
 import DocumentViewer from './components/workspace/DocumentViewer.jsx';
 import FullDetailsForm from './components/workspace/FullDetailsForm.jsx';
@@ -17,11 +18,13 @@ import RRAssistantView from './components/workspace/RRAssistantView.jsx';
 
 import AuditLogView from './components/audit/AuditLogView.jsx';
 import AdminWorkspace from './components/admin/AdminWorkspace.jsx';
+import OfficialProfile from './components/profile/OfficialProfile.jsx';
 import { readUsers, saveUsers } from './services/adminStore.js';
 
 import { apiService } from './services/apiService.js';
 import { DEFAULT_ENTITIES, DEFAULT_VALIDATION } from './data/schemas.js';
 import { INITIAL_AUDIT_LOGS, SAMPLE_BOUNDING_BOXES } from './data/mockData.js';
+
 
 export default function App() {
   // Top-Level State Machine
@@ -61,6 +64,7 @@ export default function App() {
   // Modals
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [droReceiptData, setDroReceiptData] = useState(null);
+  const [isMobileQrModalOpen, setIsMobileQrModalOpen] = useState(false);
 
   // Active Restored Session & Audit Logs
   const [activeSession, setActiveSession] = useState(null);
@@ -122,14 +126,23 @@ export default function App() {
     }
   };
 
-  // Handle Sample MCOP Order Click
-  const handleLoadSample = async () => {
-    setProcessingFileName("sample_mcop_order.pdf");
+  // Handle Sample MCOP Order Click or Mobile Petition Upload
+  const handleLoadSample = async (uploadedDoc) => {
+    const incomingFileName = (uploadedDoc && (uploadedDoc.fileName || uploadedDoc.name)) 
+      ? (uploadedDoc.fileName || uploadedDoc.name) 
+      : "sample_mcop_order.pdf";
+
+    setProcessingFileName(incomingFileName);
     setIsProcessing(true);
 
     try {
-      const result = await apiService.loadSampleDocument();
-      applyPipelineResult(result);
+      let result;
+      if (uploadedDoc && uploadedDoc.file) {
+        result = await apiService.uploadDocument(uploadedDoc.file);
+      } else {
+        result = await apiService.loadSampleDocument();
+      }
+      applyPipelineResult(result, incomingFileName);
     } catch (err) {
       alert("Sample pipeline error: " + err.message);
     } finally {
@@ -137,10 +150,10 @@ export default function App() {
     }
   };
 
-  const applyPipelineResult = (result) => {
+  const applyPipelineResult = (result, fileNameOverride) => {
     setCurrentEntities(result.entities);
     setValidationInsights(result.validation_insights);
-    setCurrentDocxFilename(result.generated_docx_filename);
+    setCurrentDocxFilename(fileNameOverride || result.generated_docx_filename);
     setRawOcrText(result.rawOcrText);
     setBoundingBoxes(result.bounding_boxes || SAMPLE_BOUNDING_BOXES);
 
@@ -296,22 +309,41 @@ export default function App() {
     });
   };
 
-  if (!currentUser) {
-    return <LoginPage onLogin={(user) => {
-      // Local directory only: the existing login remains a frontend demo.
-      try {
-        const users = readUsers();
-        if (user.role === 'admin' && !users.length) saveUsers([{ ...user, id: crypto.randomUUID(), status: 'active', taluk: 'District administration' }]);
-      } catch (error) { console.warn('Could not initialize officer directory:', error); }
-      setCurrentUser(user);
-      setActiveSession(null);
-      setActiveView(user.role === 'admin' ? 'adminDashboard' : 'rrAssistant');
-      setMobileMenuOpen(false);
-    }} />;
-  }
+ // Mobile capture route must work without login
+if (window.location.pathname.startsWith('/capture/')) {
+  const sessionId = window.location.pathname.split('/capture/')[1];
+
+  return <MobileCapturePage sessionId={sessionId} />;
+}
+
+if (!currentUser) {
+  return <LoginPage onLogin={(user) => {
+    // Local directory only: the existing login remains a frontend demo.
+    try {
+      const users = readUsers();
+      if (user.role === 'admin' && !users.length) {
+        saveUsers([
+          {
+            ...user,
+            id: crypto.randomUUID(),
+            status: 'active',
+            taluk: 'District administration'
+          }
+        ]);
+      }
+    } catch (error) {
+      console.warn('Could not initialize officer directory:', error);
+    }
+
+    setCurrentUser(user);
+    setActiveSession(null);
+    setActiveView(user.role === 'admin' ? 'adminDashboard' : 'rrAssistant');
+    setMobileMenuOpen(false);
+  }} />;
+}
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#FEFAF6' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh', overflow: 'hidden', backgroundColor: '#FEFAF6' }}>
       {/* Top Application Header */}
       <AppHeader
         currentLanguage={currentLanguage}
@@ -329,7 +361,7 @@ export default function App() {
       />
 
       {/* Main Body Area: Sidebar + Main Content */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
+      <div style={{ display: 'flex', flex: 1, height: 'calc(100vh - 64px)', minHeight: 0, position: 'relative', overflow: 'hidden' }}>
         {/* Left Navigation Sidebar */}
         <Sidebar
           isAdmin={currentUser.role === 'admin'}
@@ -367,9 +399,9 @@ export default function App() {
         />
 
         {/* Dynamic Center Work Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, height: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
           {/* View Routing */}
-          <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1.25rem' }}>
+          <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1rem', height: '100%' }}>
             {currentUser.role === 'admin' && ['adminDashboard', 'adminTemplates', 'adminUsers', 'adminBackup'].includes(activeView) && (
               <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onNavigate={setActiveView} onRestored={() => {
                 setCurrentUser(null);
@@ -381,7 +413,19 @@ export default function App() {
                 setTheme(preferences?.theme || 'dark');
               }} />
             )}
-            {(activeView === 'rrAssistant' || activeView === 'upload') && (
+            {activeView === 'profile' && (
+              <OfficialProfile currentUser={currentUser} />
+            )}
+
+            {activeView === 'upload' && (
+              <UploadLanding
+                onFileUpload={handleFileUpload}
+                onLoadSample={handleLoadSample}
+                onScanMobile={() => setIsMobileQrModalOpen(true)}
+                currentLanguage={currentLanguage}
+              />
+            )}
+            {activeView === 'rrAssistant' && (
               <RRAssistantView
                 currentLanguage={currentLanguage}
                 activeSession={activeSession}
@@ -501,6 +545,7 @@ export default function App() {
 
             {(activeView === 'audit' || activeView === 'droQueue') && (
               <AuditLogView
+                currentUser={currentUser}
                 onRestoreSession={handleRestoreSession}
                 onNavigateToAssistant={() => {
                   setActiveSession(null);
@@ -531,6 +576,14 @@ export default function App() {
         isOpen={!!droReceiptData}
         onClose={() => setDroReceiptData(null)}
         receiptData={droReceiptData}
+      />
+
+      {/* Mobile QR Intake Modal */}
+      <MobileQrModal
+        isOpen={isMobileQrModalOpen}
+        onClose={() => setIsMobileQrModalOpen(false)}
+        onDocumentUploaded={handleLoadSample}
+        onSimulateMobileUpload={handleLoadSample}
       />
     </div>
   );

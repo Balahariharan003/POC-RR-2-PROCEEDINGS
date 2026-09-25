@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, 
-  Settings,
   ChevronDown, 
   ChevronUp, 
   LogOut, 
@@ -127,19 +126,18 @@ export default function AppHeader({
 
               <div className="dropdown-divider"></div>
 
-              <div className="dropdown-item">
+              <div 
+                className="dropdown-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProfileOpen(false);
+                  if (setActiveView) setActiveView('profile');
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 <User size={16} />
                 <span>Officer Profile</span>
               </div>
-
-              <details className="profile-settings">
-                <summary className="dropdown-item"><Settings size={16} /><span>Settings</span></summary>
-                <label htmlFor="profile-language">Language</label>
-                <select id="profile-language" value={currentLanguage} onChange={(e) => setLanguage(e.target.value)}>
-                  <option value="en">English</option>
-                  <option value="ta">தமிழ்</option>
-                </select>
-              </details>
 
               <div 
                 className="dropdown-item signout"

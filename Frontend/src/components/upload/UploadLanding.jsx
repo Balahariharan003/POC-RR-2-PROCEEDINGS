@@ -9,13 +9,15 @@ import {
   ShieldCheck,
   Cpu,
   Layers,
-  FileType
+  FileType,
+  Smartphone
 } from 'lucide-react';
 
 export default function UploadLanding({ 
   onFileUpload, 
   onLoadSample, 
-  currentLanguage 
+  currentLanguage,
+  onScanMobile
 }) {
   const fileInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -141,8 +143,8 @@ export default function UploadLanding({
           Drag & drop your <strong>.pdf</strong> or <strong>.docx</strong> file here, or click to browse
         </p>
 
-        {/* Action Button */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button 
             type="button" 
             className="btn btn-primary"
@@ -151,6 +153,25 @@ export default function UploadLanding({
           >
             <FileType size={18} />
             <span>Browse PDF / DOCX</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onScanMobile) onScanMobile();
+            }}
+            style={{ 
+              padding: '0.7rem 1.75rem', 
+              fontSize: '0.9rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Smartphone size={18} />
+            <span>Scan using mobile</span>
           </button>
         </div>
       </div>

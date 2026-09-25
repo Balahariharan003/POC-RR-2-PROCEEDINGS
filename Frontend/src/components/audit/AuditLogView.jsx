@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   History, 
   Search, 
@@ -25,22 +25,43 @@ import {
   FileCheck
 } from 'lucide-react';
 import { apiService } from '../../services/apiService.js';
+import { INITIAL_AUDIT_LOGS } from '../../data/mockData.js';
 
 export default function AuditLogView({ 
+  currentUser,
   onRestoreSession, 
   onNavigateToAssistant 
 }) {
-  const [auditLogs, setAuditLogs] = useState({});
+  const isAdmin = !currentUser || currentUser.role === 'admin';
+  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filters State (Matching exact screenshot controls)
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedOfficer, setSelectedOfficer] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedYear, setSelectedYear] = useState('ALL');
   const [selectedMonth, setSelectedMonth] = useState('ALL');
   const [selectedDay, setSelectedDay] = useState('ALL');
+
+  // Dynamic list of unique officers from audit logs
+  const officerOptions = useMemo(() => {
+    const names = new Set();
+    if (auditLogs && typeof auditLogs === 'object') {
+      Object.values(auditLogs).forEach(monthEntries => {
+        if (Array.isArray(monthEntries)) {
+          monthEntries.forEach(entry => {
+            if (entry && entry.officerName) {
+              names.add(entry.officerName);
+            }
+          });
+        }
+      });
+    }
+    return Array.from(names).sort();
+  }, [auditLogs]);
 
   // Modal State for Side-by-Side Comparison & Inspection (Phase 3 & 4)
   const [selectedLog, setSelectedLog] = useState(null);
@@ -50,9 +71,10 @@ export default function AuditLogView({
     setIsLoading(true);
     try {
       const logs = await apiService.getAuditLogs();
-      setAuditLogs(logs || {});
+      setAuditLogs((logs && typeof logs === 'object' && Object.keys(logs).length > 0) ? logs : INITIAL_AUDIT_LOGS);
     } catch (err) {
       console.error("Error loading audit logs:", err);
+      setAuditLogs(INITIAL_AUDIT_LOGS);
     } finally {
       setIsLoading(false);
     }
@@ -70,20 +92,27 @@ export default function AuditLogView({
   };
 
   // Flatten and filter entries across all partitions (Phase 2)
-  const allMonths = Object.keys(auditLogs);
+  const allMonths = auditLogs && typeof auditLogs === 'object' ? Object.keys(auditLogs) : [];
   
   const filterEntries = (entries) => {
+    if (!Array.isArray(entries)) return [];
     return entries.filter(e => {
+      if (!e || typeof e !== 'object') return false;
+
       // 1. Text Search Filter (Officer, Case/Source ID, Prompt)
-      const queryLower = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery || 
-        (e.caseNumber && e.caseNumber.toLowerCase().includes(queryLower)) ||
-        (e.id && e.id.toLowerCase().includes(queryLower)) ||
-        (e.defaulter && e.defaulter.toLowerCase().includes(queryLower)) ||
-        (e.officerName && e.officerName.toLowerCase().includes(queryLower)) ||
-        (e.taluk && e.taluk.toLowerCase().includes(queryLower)) ||
-        (e.notes && e.notes.toLowerCase().includes(queryLower)) ||
-        (e.promptHistory && e.promptHistory.some(p => p.prompt.toLowerCase().includes(queryLower)));
+      const queryLower = (searchQuery || '').toLowerCase();
+      const matchesSearch = !queryLower || 
+        (e.caseNumber && typeof e.caseNumber === 'string' && e.caseNumber.toLowerCase().includes(queryLower)) ||
+        (e.id && typeof e.id === 'string' && e.id.toLowerCase().includes(queryLower)) ||
+        (e.defaulter && typeof e.defaulter === 'string' && e.defaulter.toLowerCase().includes(queryLower)) ||
+        (e.officerName && typeof e.officerName === 'string' && e.officerName.toLowerCase().includes(queryLower)) ||
+        (e.taluk && typeof e.taluk === 'string' && e.taluk.toLowerCase().includes(queryLower)) ||
+        (e.notes && typeof e.notes === 'string' && e.notes.toLowerCase().includes(queryLower)) ||
+        (Array.isArray(e.promptHistory) && e.promptHistory.some(p => {
+          if (!p) return false;
+          if (typeof p === 'string') return p.toLowerCase().includes(queryLower);
+          return p.prompt && typeof p.prompt === 'string' && p.prompt.toLowerCase().includes(queryLower);
+        }));
 
       // 2. Status Filter
       const matchesStatus = selectedStatus === 'ALL' || 
@@ -92,15 +121,18 @@ export default function AuditLogView({
         (selectedStatus === 'VERIFIED' && e.status === 'VERIFIED') ||
         (selectedStatus === 'DRAFT' && e.status === 'DRAFT');
 
-      // 3. Date Input Filter
-      const matchesDate = !selectedDate || (e.timestamp && e.timestamp.startsWith(selectedDate));
+      // 3. Officer Filter
+      const matchesOfficer = selectedOfficer === 'ALL' || e.officerName === selectedOfficer;
 
-      // 4. Year / Month / Day Dropdowns
+      // 4. Date Input Filter
+      const matchesDate = !selectedDate || (e.timestamp && typeof e.timestamp === 'string' && e.timestamp.startsWith(selectedDate));
+
+      // 5. Year / Month / Day Dropdowns
       let matchesYear = true;
       let matchesMonth = true;
       let matchesDay = true;
 
-      if (e.timestamp) {
+      if (e.timestamp && typeof e.timestamp === 'string') {
         const [datePart] = e.timestamp.split(' ');
         if (datePart) {
           const [yr, mo, dy] = datePart.split('-');
@@ -110,7 +142,7 @@ export default function AuditLogView({
         }
       }
 
-      return matchesSearch && matchesStatus && matchesDate && matchesYear && matchesMonth && matchesDay;
+      return matchesSearch && matchesStatus && matchesOfficer && matchesDate && matchesYear && matchesMonth && matchesDay;
     });
   };
 
@@ -287,6 +319,58 @@ export default function AuditLogView({
             />
           )}
         </div>
+
+        {/* Officer Dropdown (Admin Login -> Audit Logs) */}
+        {isAdmin && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            padding: '0 8px 0 10px',
+            background: '#ffffff',
+            position: 'relative',
+            cursor: 'pointer',
+            boxSizing: 'border-box'
+          }}>
+            <User size={14} color="#64748b" style={{ flexShrink: 0 }} />
+            <select
+              value={selectedOfficer}
+              onChange={(e) => setSelectedOfficer(e.target.value)}
+              style={{
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontSize: '0.825rem',
+                color: selectedOfficer === 'ALL' ? '#334155' : '#0f243c',
+                fontWeight: selectedOfficer === 'ALL' ? 400 : 500,
+                cursor: 'pointer',
+                padding: '5px 18px 5px 0',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                appearance: 'none'
+              }}
+            >
+              <option value="ALL">Officer</option>
+              {officerOptions.map((officer) => (
+                <option key={officer} value={officer}>
+                  {officer}
+                </option>
+              ))}
+            </select>
+            <ChevronDown 
+              size={14} 
+              color="#64748b" 
+              style={{ 
+                position: 'absolute', 
+                right: '8px', 
+                pointerEvents: 'none',
+                flexShrink: 0 
+              }} 
+            />
+          </div>
+        )}
 
         {/* Date Picker Input */}
         <input
