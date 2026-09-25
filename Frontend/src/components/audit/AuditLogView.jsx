@@ -27,15 +27,15 @@ import {
 import AuditFilters from './AuditFilters.jsx';
 import { emptyAuditFilters, availableOfficerIds, matchesAuditFilters, officerId } from './auditFilters.js';
 import { apiService } from '../../services/apiService.js';
-import { INITIAL_AUDIT_LOGS } from '../../data/mockData.js';
+import { INITIAL_AUDIT_LOGS } from '../../data/adminMockData.js';
 
 export default function AuditLogView({ 
   currentUser,
-  isAdmin = false,
+  isAdmin: isAdminProp = false,
   onRestoreSession, 
   onNavigateToAssistant 
 }) {
-  const isAdmin = !currentUser || currentUser.role === 'admin';
+  const isUserAdmin = isAdminProp || !currentUser || currentUser.role === 'admin';
   const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -169,9 +169,9 @@ export default function AuditLogView({
     });
   };
   const officers = availableOfficerIds(Object.values(auditLogs).flat());
-  const filterEntries = entries => entries.filter(entry => matchesAuditFilters(entry, filters));
+  const filterByAuditFilters = entries => entries.filter(entry => matchesAuditFilters(entry, filters));
 
-  const entries = filterEntries(Object.values(auditLogs).flat()).sort((a, b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0));
+  const entries = filterEntries(filterByAuditFilters(Object.values(auditLogs).flat())).sort((a, b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0));
   const totalFilteredCount = entries.length;
 
   // Export Audit Ledger to JSON (Phase 4)
@@ -302,147 +302,7 @@ export default function AuditLogView({
         </div>
       )}
 
-        {/* Officer Dropdown (Admin Login -> Audit Logs) */}
-        {isAdmin && (
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '0 8px 0 10px',
-            background: '#ffffff',
-            position: 'relative',
-            cursor: 'pointer',
-            boxSizing: 'border-box'
-          }}>
-            <User size={14} color="#64748b" style={{ flexShrink: 0 }} />
-            <select
-              value={selectedOfficer}
-              onChange={(e) => setSelectedOfficer(e.target.value)}
-              style={{
-                border: 'none',
-                outline: 'none',
-                background: 'transparent',
-                fontSize: '0.825rem',
-                color: selectedOfficer === 'ALL' ? '#334155' : '#0f243c',
-                fontWeight: selectedOfficer === 'ALL' ? 400 : 500,
-                cursor: 'pointer',
-                padding: '5px 18px 5px 0',
-                WebkitAppearance: 'none',
-                MozAppearance: 'none',
-                appearance: 'none'
-              }}
-            >
-              <option value="ALL">Officer</option>
-              {officerOptions.map((officer) => (
-                <option key={officer} value={officer}>
-                  {officer}
-                </option>
-              ))}
-            </select>
-            <ChevronDown 
-              size={14} 
-              color="#64748b" 
-              style={{ 
-                position: 'absolute', 
-                right: '8px', 
-                pointerEvents: 'none',
-                flexShrink: 0 
-              }} 
-            />
-          </div>
-        )}
 
-        {/* Date Picker Input */}
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          style={{
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '5px 10px',
-            fontSize: '0.825rem',
-            color: '#334155',
-            background: '#ffffff',
-            cursor: 'pointer',
-            outline: 'none'
-          }}
-        />
-
-        {/* Year Dropdown */}
-        <select
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(e.target.value)}
-          style={{
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '6px 10px',
-            fontSize: '0.825rem',
-            color: '#334155',
-            background: '#ffffff',
-            cursor: 'pointer',
-            outline: 'none'
-          }}
-        >
-          <option value="ALL">All Years</option>
-          <option value="2026">2026</option>
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-        </select>
-
-        {/* Month Dropdown */}
-        <select
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          style={{
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '6px 10px',
-            fontSize: '0.825rem',
-            color: '#334155',
-            background: '#ffffff',
-            cursor: 'pointer',
-            outline: 'none'
-          }}
-        >
-          <option value="ALL">All Months</option>
-          <option value="1">January</option>
-          <option value="2">February</option>
-          <option value="3">March</option>
-          <option value="4">April</option>
-          <option value="5">May</option>
-          <option value="6">June</option>
-          <option value="7">July</option>
-          <option value="8">August</option>
-          <option value="9">September</option>
-          <option value="10">October</option>
-          <option value="11">November</option>
-          <option value="12">December</option>
-        </select>
-
-        {/* Day Dropdown */}
-        <select
-          value={selectedDay}
-          onChange={(e) => setSelectedDay(e.target.value)}
-          style={{
-            border: '1px solid #cbd5e1',
-            borderRadius: '6px',
-            padding: '6px 10px',
-            fontSize: '0.825rem',
-            color: '#334155',
-            background: '#ffffff',
-            cursor: 'pointer',
-            outline: 'none'
-          }}
-        >
-          <option value="ALL">All Days</option>
-          {Array.from({ length: 31 }, (_, i) => (
-            <option key={i + 1} value={i + 1}>{i + 1}</option>
-          ))}
-        </select>
-      </div>
       <AuditFilters filters={filters} onChange={setFilters} officers={officers} records={Object.values(auditLogs).flat()} />
 
       {/* Showing Count Indicator */}
@@ -530,11 +390,12 @@ export default function AuditLogView({
         <div style={{ background: '#ffffff', border: '1px solid #EADBC8', borderRadius: '16px', boxShadow: '0 2px 10px rgba(16, 44, 87, 0.05)', overflow: 'hidden' }}>
                 {/* Table of Records */}
                 <div style={{ overflowX: 'auto' }}>
-                  <table aria-label="Audit logs" style={{ width: '100%', minWidth: isAdmin ? '760px' : undefined, borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                  <table aria-label="Audit logs" style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ background: '#FEFAF6', color: '#102C57', borderBottom: '1px solid #EADBC8' }}>
-                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>{isAdmin ? 'Order ID' : 'Order ID & Defaulter'}</th>
-                        {isAdmin ? <><th style={{ padding: '12px 16px', fontWeight: 600 }}>Officer ID</th><th style={{ padding: '12px 16px', fontWeight: 600, width: '40%' }}>Details</th></> : <th style={{ padding: '12px 16px', fontWeight: 600 }}>Amount Awarded</th>}
+                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>{isUserAdmin ? 'Order ID' : 'Order ID & Defaulter'}</th>
+                        {isUserAdmin && <th style={{ padding: '12px 16px', fontWeight: 600 }}>Officer ID</th>}
+                        <th style={{ padding: '12px 16px', fontWeight: 600, width: '45%' }}>Details</th>
                         <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Timestamp</th>
                       </tr>
                     </thead>
@@ -569,21 +430,27 @@ export default function AuditLogView({
                               <div style={{ fontWeight: 700, color: '#102C57', fontSize: '0.92rem' }}>
                                 {orderLabel}
                               </div>
-                              {!isAdmin && <div style={{ color: '#102C57', fontSize: '0.785rem', marginTop: '2px' }}>
+                              {!isUserAdmin && <div style={{ color: '#102C57', fontSize: '0.785rem', marginTop: '2px' }}>
                                 {entry.defaulter} • {entry.taluk}
                               </div>}
                             </td>
 
-                            {/* Amount */}
-                            {isAdmin ? <>
-                              <td style={{ padding: '14px 16px', color: '#102C57', overflowWrap: 'anywhere' }}>{officerId(entry) || 'Not recorded'}</td>
-                              <td style={{ padding: '14px 16px', color: '#102C57', lineHeight: 1.5, overflowWrap: 'anywhere' }}>
-                                <div style={{ fontWeight: 600 }}>{({ DRAFT: 'Draft proceedings generated', VERIFIED: 'Proceedings verified', DISPATCHED: 'Proceedings dispatched', DISPATCHED_TO_DRO: 'Proceedings dispatched to DRO', FLAGGED: 'Proceedings flagged for review', FLAGGED_FOR_REVIEW: 'Proceedings flagged for review' })[entry.status] || 'RR proceedings recorded'}</div>
-                                <div style={{ fontSize: '0.785rem', marginTop: '3px' }}>{entry.promptHistory?.at(-1)?.prompt || entry.notes || entry.fileName || 'No further details recorded.'}</div>
+                            {/* Officer ID (Admin Only) */}
+                            {isUserAdmin && (
+                              <td style={{ padding: '14px 16px', color: '#102C57', overflowWrap: 'anywhere' }}>
+                                {officerId(entry) || 'Not recorded'}
                               </td>
-                            </> : <td style={{ padding: '14px 16px', fontWeight: 700, color: '#102C57' }}>
-                              {entry.amount || '—'}
-                            </td>}
+                            )}
+
+                            {/* Details (User & Admin) */}
+                            <td style={{ padding: '14px 16px', color: '#102C57', lineHeight: 1.5, overflowWrap: 'anywhere' }}>
+                              <div style={{ fontWeight: 600 }}>
+                                {({ DRAFT: 'Draft proceedings generated', VERIFIED: 'Proceedings verified', DISPATCHED: 'Proceedings dispatched', DISPATCHED_TO_DRO: 'Proceedings dispatched to DRO', FLAGGED: 'Proceedings flagged for review', FLAGGED_FOR_REVIEW: 'Proceedings flagged for review' })[entry.status] || 'RR proceedings recorded'}
+                              </div>
+                              <div style={{ fontSize: '0.785rem', marginTop: '3px' }}>
+                                {entry.promptHistory?.at(-1)?.prompt || entry.notes || entry.fileName || 'No further details recorded.'}
+                              </div>
+                            </td>
 
                             {/* Timestamp */}
                             <td style={{ padding: '14px 20px', color: '#102C57', fontSize: '0.785rem', textAlign: 'right' }}>

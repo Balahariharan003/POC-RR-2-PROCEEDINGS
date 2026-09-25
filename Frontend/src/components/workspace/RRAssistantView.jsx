@@ -87,21 +87,12 @@ export default function RRAssistantView({
     fetchTemplates();
   }, []);
 
- useEffect(() => {
-  try {
-    localStorage.removeItem('rr_draft');
-  } catch (error) {
-    console.warn('Could not clear saved draft:', error);
-  }
-}, []);
-
   useEffect(() => {
-  try {
-    localStorage.removeItem('rr_draft');
-  } catch (error) {
-    console.warn('Could not clear saved draft:', error);
-  }
-}, []);
+    try {
+      localStorage.removeItem('rr_draft');
+    } catch (error) {
+      console.warn('Could not clear saved draft:', error);
+    }
     apiService.getAuditLogs().catch(err => {
       setAuditError(err?.message || 'Unable to load saved audit records.');
     });
@@ -419,24 +410,24 @@ export default function RRAssistantView({
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      gap: '1rem',
+      gap: '1.25rem',
       flex: 1,
       minHeight: 0,
-      height: '100%'
-      gap: '1.25rem',
+      height: '100%',
       paddingBottom: '2.5rem'
     }}>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={(e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                  handleFile(e.target.files[0]);
-                }
-              }}
-              accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf"
-              style={{ display: 'none' }}
-            />
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+          }
+        }}
+        accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf"
+        style={{ display: 'none' }}
+      />
+
       {auditError && (
         <div className="rr-admin-alert" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', border: '1px solid #DAC0A3' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -448,6 +439,7 @@ export default function RRAssistantView({
           </button>
         </div>
       )}
+
       {/* =========================================================================
           STEP 1 & 4: INITIAL CENTERED UPLOAD WORKSPACE (RR ASSISTANT DESIGN)
           ========================================================================= */}
@@ -468,9 +460,6 @@ export default function RRAssistantView({
             src="/assets/tn_emblem.svg" 
             alt="Tamil Nadu Government" 
             style={{ 
-              width: '64px',
-              height: '64px',
-              margin: '0 auto 12px auto',
               width: '66px',
               height: '66px',
               margin: '0 auto 18px auto', 
@@ -495,13 +484,12 @@ export default function RRAssistantView({
             color: '#102C57',
             maxWidth: '490px',
             lineHeight: 1.5,
-            margin: '0 auto 20px auto'
             margin: '0 auto 24px auto'
           }}>
             Upload a source document to generate RR proceedings in the fixed template.
           </p>
 
-          {/* Centered White Upload Card (Exact Match to Reference Screenshot) */}
+          {/* Centered White Upload Card */}
           <div
             onDrop={handleDrop}
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
@@ -509,11 +497,6 @@ export default function RRAssistantView({
             onClick={() => fileInputRef.current?.click()}
             style={{
               width: '100%',
-              maxWidth: '500px',
-              backgroundColor: isDragOver ? '#FEFAF6' : '#FFFFFF',
-              border: isDragOver ? '2px dashed #102C57' : '2px dashed #DAC0A3',
-              borderRadius: '16px',
-              padding: '32px 28px',
               maxWidth: '490px',
               backgroundColor: isDragOver ? '#FEFAF6' : '#FFFFFF',
               border: isDragOver ? '2px dashed #102C57' : '2px dashed #DAC0A3',
@@ -528,8 +511,6 @@ export default function RRAssistantView({
               transition: 'all 0.25s ease'
             }}
           >
-
-
             {/* Upload Icon Circle */}
             <div style={{
               width: '56px',
@@ -557,8 +538,6 @@ export default function RRAssistantView({
             </h3>
             <p style={{
               fontSize: '0.875rem',
-              color: '#687991',
-              margin: '0 0 16px 0'
               color: '#102C57',
               margin: '0 0 22px 0'
             }}>
@@ -591,8 +570,6 @@ export default function RRAssistantView({
             {/* Supported Formats */}
             <p style={{
               fontSize: '0.775rem',
-              color: '#687991',
-              marginTop: '14px',
               color: '#102C57',
               marginTop: '18px',
               marginBottom: 0,
@@ -801,7 +778,7 @@ export default function RRAssistantView({
                 {processingStageNum > 1 ? <Check size={16} color="#102C57" /> : <RefreshCw size={14} className="spinner" color="#102C57" />}
                 <span>Extracting document content</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 2 ? (processingStageNum > 2 ? '#102C57' : '#102C57') : '#102C57', fontWeight: processingStageNum === 2 ? 600 : 400 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 2 ? '#102C57' : '#102C57', fontWeight: processingStageNum === 2 ? 600 : 400 }}>
                 {processingStageNum > 2 ? <Check size={16} color="#102C57" /> : processingStageNum === 2 ? <RefreshCw size={14} className="spinner" color="#102C57" /> : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
                 <span>Analyzing structure</span>
               </div>
@@ -819,7 +796,6 @@ export default function RRAssistantView({
           ========================================================================= */}
       {workflowState === 'generated' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, minHeight: 0, height: '100%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Top Title & Action Bar */}
           <div style={{
             background: '#ffffff',
@@ -845,7 +821,7 @@ export default function RRAssistantView({
               </div>
             </div>
 
-            {/* Download Options (Section 8) */}
+            {/* Download Options */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 onClick={handleCopy}
@@ -914,509 +890,400 @@ export default function RRAssistantView({
             minHeight: 0,
             height: '100%'
           }}>
-          {/* Editable proceedings: 60% of the workspace */}
-          <div className="rr-document-panel" style={{
-            background: '#ffffff',
-            border: '1px solid #EADBC8',
-            borderRadius: '10px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            minHeight: 0
-          }}>
-            <div style={{
-              padding: '0.75rem 1.25rem',
-              background: '#FEFAF6',
-              borderBottom: '1px solid #EADBC8',
+            {/* Editable proceedings: 60% of the workspace */}
+            <div className="rr-document-panel" style={{
+              background: '#ffffff',
+              border: '1px solid #EADBC8',
+              borderRadius: '10px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+              overflow: 'hidden',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.8rem',
-              flexShrink: 0
+              flexDirection: 'column',
+              height: '100%',
+              minHeight: 0
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#102C57' }}>
-                <Edit3 size={15} color="#102C57" />
-                <span>Generated Content (Editable)</span>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: '#102C57' }}>
-                Click directly in the area below to edit text, dates, names, or paragraphs
-              </span>
-            </div>
-
-            {/* Official Document Textarea Editor */}
-            <div className="rr-document-editor" style={{ padding: '1rem', flex: 1, minHeight: 0, display: 'flex' }}>
-              <textarea
-                aria-label="Editable RR proceedings"
-                value={generatedContent}
-                onFocus={() => { editStart.current = generatedContent; }}
-                onBlur={() => {
-                  if (editStart.current !== generatedContent) {
-                    recordActivity('Proceedings draft edited', { reference: fileInfo.name, recordId: currentSessionId || '', status: 'DRAFT' });
-                    editStart.current = generatedContent;
-                  }
-                }}
-                onChange={(e) => setGeneratedContent(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  minHeight: '0',
-                  padding: '1.25rem 1.5rem',
-                  border: '1px solid #e2e8f0',
-                  padding: '1.25rem',
-                  border: '1px solid #EADBC8',
-                  borderRadius: '8px',
-                  background: '#ffffff',
-                  color: '#102C57',
-                  fontFamily: "'TAU-Marutham', 'Noto Sans Tamil', 'Latha', 'Plus Jakarta Sans', sans-serif",
-                  fontSize: '0.94rem',
-                  lineHeight: '1.85',
-                  outline: 'none',
-                  resize: 'none',
-                  overflowY: 'auto',
-                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Right Panel: Chat or Original Scanned Document Viewer (40% of workspace) */}
-          <div style={{ position: 'relative', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            {!showOriginalDoc ? (
-              /* State 1: RR Assistant Chat Panel (Image 1) */
-              <div className="rr-chat-panel" style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
-                overflow: 'hidden',
+              <div style={{
+                padding: '0.75rem 1.25rem',
+                background: '#FEFAF6',
+                borderBottom: '1px solid #EADBC8',
                 display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                minHeight: 0
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.8rem',
+                flexShrink: 0
               }}>
-                <div className="rr-chat-heading" style={{
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <MessageSquare size={18} />
-                    <div><h3>RR Assistant</h3><p>Request changes to your proceedings</p></div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowOriginalDoc(true)}
-                    style={{
-                      backgroundColor: '#DAC0A3',
-                      color: '#102C57',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '5px 11px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
-                    }}
-                    title="View Original Scanned Document"
-                  >
-                    <FileText size={13} />
-                    <span>Original Petition ◀</span>
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#102C57' }}>
+                  <Edit3 size={15} color="#102C57" />
+                  <span>Generated Content (Editable)</span>
                 </div>
-                <div className="rr-chat-history" role="log" aria-label="Proceedings conversation" aria-live="polite" style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto'
-                }}>
-                  <div className="rr-chat-message rr-chat-assistant">Your proceedings are ready in the fixed template. Review the document on the left, or send an instruction to revise it.</div>
-                  {promptHistory.slice(1).map((item) => (
-                    <React.Fragment key={item.id}>
-                      <div className="rr-chat-message rr-chat-user">{item.prompt}</div>
-                      <div className="rr-chat-message rr-chat-assistant">The requested revision has been applied. Review the updated proceedings on the left.</div>
-                    </React.Fragment>
-                  ))}
-                  {isApplyingChanges && <div className="rr-chat-message rr-chat-assistant">Updating proceedings…</div>}
-                </div>
-                {/* Existing correction input and actions */}
+                <span style={{ fontSize: '0.72rem', color: '#102C57' }}>
+                  Click directly in the area below to edit text, dates, names, or paragraphs
+                </span>
+              </div>
+
+              {/* Official Document Textarea Editor */}
+              <div className="rr-document-editor" style={{ padding: '1rem', flex: 1, minHeight: 0, display: 'flex' }}>
                 <textarea
-                  rows={2}
-                  aria-label="Instructions for RR Assistant"
-                  value={correctionInstruction}
-                  onChange={(e) => setCorrectionInstruction(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                      e.preventDefault();
-                      if (correctionInstruction.trim() && !isApplyingChanges) {
-                        handleApplyChanges();
-                      }
+                  aria-label="Editable RR proceedings"
+                  value={generatedContent}
+                  onFocus={() => { editStart.current = generatedContent; }}
+                  onBlur={() => {
+                    if (editStart.current !== generatedContent) {
+                      recordActivity('Proceedings draft edited', { reference: fileInfo.name, recordId: currentSessionId || '', status: 'DRAFT' });
+                      editStart.current = generatedContent;
                     }
-          {/* Proceedings chat: 40% of the workspace */}
-          <div className="rr-chat-panel" style={{
-            background: '#ffffff',
-            border: '1px solid #EADBC8',
-            borderRadius: '12px',
-            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div className="rr-chat-heading">
-              <MessageSquare size={18} />
-              <div><h3>RR Assistant</h3><p>Request changes to your proceedings</p></div>
-            </div>
-            <div className="rr-chat-history" role="log" aria-label="Proceedings conversation" aria-live="polite">
-              <div className="rr-chat-message rr-chat-assistant">Your proceedings are ready in the fixed template. Review the document on the left, or send an instruction to revise it.</div>
-              {promptHistory.slice(1).map((item) => (
-                <React.Fragment key={item.id}>
-                  <div className="rr-chat-message rr-chat-user">{item.prompt}</div>
-                  <div className="rr-chat-message rr-chat-assistant">The requested revision has been applied. Review the updated proceedings on the left.</div>
-                </React.Fragment>
-              ))}
-              {isApplyingChanges && <div className="rr-chat-message rr-chat-assistant">Updating proceedings…</div>}
-            </div>
-            {/* Existing correction input and actions */}
-            <textarea
-              rows={3}
-              aria-label="Instructions for RR Assistant"
-              value={correctionInstruction}
-              onChange={(e) => setCorrectionInstruction(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  if (correctionInstruction.trim() && !isApplyingChanges) {
-                    handleApplyChanges();
-                  }
-                }
-              }}
-              placeholder={currentLanguage === 'en' ? "Describe a change to the proceedings… (Enter to send, Shift+Enter for a new line)" : "இங்கே உங்கள் கேள்வியை தட்டச்சு செய்யவும்... (Enter அழுத்தவும்)"}
-              style={{
-                width: '100%',
-                padding: '16px 20px 8px 20px',
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.92rem',
-                fontFamily: "'Noto Sans Tamil', 'Plus Jakarta Sans', sans-serif",
-                color: '#102C57',
-                resize: 'none',
-                background: 'transparent',
-                lineHeight: '1.6'
-              }}
-            />
-
-            {/* Bottom Bar: Action buttons & Send button */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '8px 16px 12px 16px',
-              borderTop: '1px solid #FEFAF6',
-              flexWrap: 'wrap',
-              gap: '8px'
-            }}>
-              {/* Left Action Buttons: Attachment & Voice Input */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '5px 12px',
-                    fontSize: '0.825rem',
-                    color: '#102C57',
-                    background: '#ffffff',
-                    border: '1px solid #EADBC8',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
                   }}
-                  title="Attach file"
-                >
-                  <Paperclip size={14} color="#102C57" />
-                  <span>{currentLanguage === 'en' ? "Attach" : "இணைப்பு"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    alert(currentLanguage === 'en' ? "Voice input listening..." : "குரல் உள்ளீடு பதிவு செய்யப்படுகிறது...");
-                  }}
-                  placeholder={currentLanguage === 'en' ? "Describe a change to the proceedings… (Enter to send, Shift+Enter for a new line)" : "இங்கே உங்கள் கேள்வியை தட்டச்சு செய்யவும்... (Enter அழுத்தவும்)"}
+                  onChange={(e) => setGeneratedContent(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '12px 16px 4px 16px',
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '0.92rem',
-                    fontFamily: "'Noto Sans Tamil', 'Plus Jakarta Sans', sans-serif",
-                    color: '#1e293b',
-                    resize: 'none',
-                    background: 'transparent',
-                    lineHeight: '1.5'
-                  }}
-                />
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '5px 12px',
-                    fontSize: '0.825rem',
-                    color: '#102C57',
-                    background: '#ffffff',
+                    height: '100%',
+                    minHeight: '0',
+                    padding: '1.25rem',
                     border: '1px solid #EADBC8',
                     borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    background: '#ffffff',
+                    color: '#102C57',
+                    fontFamily: "'TAU-Marutham', 'Noto Sans Tamil', 'Latha', 'Plus Jakarta Sans', sans-serif",
+                    fontSize: '0.94rem',
+                    lineHeight: '1.85',
+                    outline: 'none',
+                    resize: 'none',
+                    overflowY: 'auto',
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
                   }}
-                  title="Voice input"
-                >
-                  <Mic size={14} color="#102C57" />
-                  <span>{currentLanguage === 'en' ? "Voice Input" : "குரல் உள்ளீடு"}</span>
-                </button>
-
-                {lastUpdatedMessage && (
-                  <span style={{ fontSize: '0.8rem', color: '#102C57', fontWeight: 600, marginLeft: '6px' }}>
-                    ✓ {lastUpdatedMessage}
-                  </span>
-                )}
+                />
               </div>
+            </div>
 
-                {/* Bottom Bar: Action buttons & Send button */}
-                <div style={{
+            {/* Right Panel: Chat or Original Scanned Document Viewer (40% of workspace) */}
+            <div style={{ position: 'relative', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              {!showOriginalDoc ? (
+                /* State 1: RR Assistant Chat Panel */
+                <div className="rr-chat-panel" style={{
+                  background: '#ffffff',
+                  border: '1px solid #EADBC8',
+                  borderRadius: '12px',
+                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+                  overflow: 'hidden',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 16px 12px 16px',
-                  borderTop: '1px solid #f1f5f9',
-                  flexWrap: 'wrap',
-                  gap: '8px'
+                  flexDirection: 'column',
+                  height: '100%',
+                  minHeight: 0
                 }}>
-                  {/* Left Action Buttons: Attachment & Voice Input */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="rr-chat-heading" style={{
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <MessageSquare size={18} />
+                      <div><h3>RR Assistant</h3><p>Request changes to your proceedings</p></div>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => setShowOriginalDoc(true)}
+                      style={{
+                        backgroundColor: '#DAC0A3',
+                        color: '#102C57',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '5px 11px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
+                      }}
+                      title="View Original Scanned Document"
+                    >
+                      <FileText size={13} />
+                      <span>Original Petition ◀</span>
+                    </button>
+                  </div>
+                  <div className="rr-chat-history" role="log" aria-label="Proceedings conversation" aria-live="polite" style={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: 'auto'
+                  }}>
+                    <div className="rr-chat-message rr-chat-assistant">Your proceedings are ready in the fixed template. Review the document on the left, or send an instruction to revise it.</div>
+                    {promptHistory.slice(1).map((item) => (
+                      <React.Fragment key={item.id}>
+                        <div className="rr-chat-message rr-chat-user">{item.prompt}</div>
+                        <div className="rr-chat-message rr-chat-assistant">The requested revision has been applied. Review the updated proceedings on the left.</div>
+                      </React.Fragment>
+                    ))}
+                    {isApplyingChanges && <div className="rr-chat-message rr-chat-assistant">Updating proceedings…</div>}
+                  </div>
+                  {/* Correction input */}
+                  <textarea
+                    rows={2}
+                    aria-label="Instructions for RR Assistant"
+                    value={correctionInstruction}
+                    onChange={(e) => setCorrectionInstruction(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        if (correctionInstruction.trim() && !isApplyingChanges) {
+                          handleApplyChanges();
+                        }
+                      }
+                    }}
+                    placeholder={currentLanguage === 'en' ? "Describe a change to the proceedings… (Enter to send, Shift+Enter for a new line)" : "இங்கே உங்கள் கேள்வியை தட்டச்சு செய்யவும்... (Enter அழுத்தவும்)"}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px 4px 16px',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '0.92rem',
+                      fontFamily: "'Noto Sans Tamil', 'Plus Jakarta Sans', sans-serif",
+                      color: '#102C57',
+                      resize: 'none',
+                      background: 'transparent',
+                      lineHeight: '1.5'
+                    }}
+                  />
+
+                  {/* Bottom Bar: Action buttons & Send button */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 16px 12px 16px',
+                    borderTop: '1px solid #FEFAF6',
+                    flexWrap: 'wrap',
+                    gap: '8px'
+                  }}>
+                    {/* Left Action Buttons: Attachment & Voice Input */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '5px 12px',
+                          fontSize: '0.825rem',
+                          color: '#102C57',
+                          background: '#ffffff',
+                          border: '1px solid #EADBC8',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Attach file"
+                      >
+                        <Paperclip size={14} color="#102C57" />
+                        <span>{currentLanguage === 'en' ? "Attach" : "இணைப்பு"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          alert(currentLanguage === 'en' ? "Voice input listening..." : "குரல் உள்ளீடு பதிவு செய்யப்படுகிறது...");
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '5px 12px',
+                          fontSize: '0.825rem',
+                          color: '#102C57',
+                          background: '#ffffff',
+                          border: '1px solid #EADBC8',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Voice input"
+                      >
+                        <Mic size={14} color="#102C57" />
+                        <span>{currentLanguage === 'en' ? "Voice Input" : "குரல் உள்ளீடு"}</span>
+                      </button>
+
+                      {lastUpdatedMessage && (
+                        <span style={{ fontSize: '0.8rem', color: '#102C57', fontWeight: 600, marginLeft: '6px' }}>
+                          ✓ {lastUpdatedMessage}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Right Send Button */}
+                    <button
+                      type="button"
+                      onClick={handleApplyChanges}
+                      disabled={isApplyingChanges || !correctionInstruction.trim()}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
-                        padding: '5px 12px',
-                        fontSize: '0.825rem',
-                        color: '#475569',
-                        background: '#ffffff',
-                        border: '1px solid #e2e8f0',
+                        padding: '6px 16px',
+                        fontSize: '0.85rem',
+                        fontWeight: 500,
+                        color: isApplyingChanges || !correctionInstruction.trim() ? '#102C57' : '#102C57',
+                        background: isApplyingChanges || !correctionInstruction.trim() ? '#FEFAF6' : '#FEFAF6',
+                        border: '1px solid #EADBC8',
                         borderRadius: '8px',
-                        cursor: 'pointer',
+                        cursor: isApplyingChanges || !correctionInstruction.trim() ? 'not-allowed' : 'pointer',
                         transition: 'all 0.15s ease'
                       }}
-                      title="Attach file"
                     >
-                      <Paperclip size={14} color="#64748b" />
-                      <span>{currentLanguage === 'en' ? "Attach" : "இணைப்பு"}</span>
+                      <span>{isApplyingChanges ? (currentLanguage === 'en' ? "Sending..." : "அனுப்புகிறது...") : (currentLanguage === 'en' ? "Send" : "அனுப்பு")}</span>
+                      <Send size={13} className={isApplyingChanges ? "spinner" : ""} />
                     </button>
+                  </div>
+                </div>
+              ) : (
+                /* State 2: Original Scanned Petition Document Viewer */
+                <div className="rr-original-document-viewer" style={{
+                  background: '#0B192C',
+                  border: '1px solid #102C57',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 30px rgba(16, 44, 87, 0.25)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  minHeight: 0,
+                  position: 'relative'
+                }}>
+                  {/* Header Bar: Page Pagination & Close Button */}
+                  <div style={{
+                    padding: '0.65rem 1rem',
+                    background: '#102C57',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                    flexShrink: 0
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <FileText size={16} color="#DAC0A3" />
+                      <span style={{ color: '#EADBC8' }}>Original Scanned Petition</span>
+                    </div>
 
-                    {lastUpdatedMessage && (
-                      <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, marginLeft: '6px' }}>
-                        ✓ {lastUpdatedMessage}
-                      </span>
+                    {/* Page Controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: '#CBD5E1', fontFamily: 'var(--font-mono)' }}>
+                      <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', color: '#94A3B8' }}>‹</button>
+                      <span>1 / 1</span>
+                      <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', color: '#94A3B8' }}>›</button>
+                    </div>
+
+                    {/* Close button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowOriginalDoc(false)}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.12)',
+                        border: 'none',
+                        color: '#ffffff',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '0.785rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <span>CLOSE</span>
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {/* Scanned Image Viewing Container */}
+                  <div style={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: 'auto',
+                    overflowX: 'auto',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#040d1a'
+                  }}>
+                    {docPreviewUrl ? (
+                      <img 
+                        src={docPreviewUrl} 
+                        alt="Scanned Petition Original Document" 
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          objectFit: 'contain',
+                          borderRadius: '4px',
+                          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        maxWidth: '420px',
+                        background: '#FDFCF7',
+                        color: '#1e293b',
+                        borderRadius: '4px',
+                        padding: '1.75rem 1.5rem',
+                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+                        border: '1px solid #d4c5b2',
+                        fontFamily: "'Noto Sans Tamil', 'TAU-Marutham', cursive, serif",
+                        fontSize: '0.85rem',
+                        lineHeight: '1.85'
+                      }}>
+                        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                          நெமிலிச்சேரி<br />21.11.2025
+                        </div>
+                        <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#0f172a' }}>
+                          அனுப்புநர்:<br />
+                          <span style={{ fontWeight: 500 }}>தலைமையாசிரியர்,<br />அரசு உயர்நிலைப்பள்ளி,<br />நெமிலிச்சேரி.</span>
+                        </div>
+                        <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#0f172a' }}>
+                          பெறுநர்:<br />
+                          <span style={{ fontWeight: 500 }}>கல்வி இயக்குநர்,<br />District Administration,<br />ஈரோடு.</span>
+                        </div>
+                        <div style={{ marginBottom: '1rem', fontStyle: 'italic', background: 'rgba(234, 219, 200, 0.35)', padding: '0.5rem', borderRadius: '4px' }}>
+                          பொருள்: பள்ளி வளர்ச்சி திட்டங்கள் மற்றும் மோட்டார் விபத்து இழப்பீட்டுத் தொகை பெறக் கோருதல்.
+                        </div>
+                        <p style={{ margin: '0 0 1rem 0', textIndent: '1.5rem' }}>
+                          மதிப்பிற்குரிய அம்மா / ஐயா, எங்கள் பள்ளியில் பயிலும் மாணவர்கள் பயன்பெறும் வகையில் உதவித் தொகை மற்றும் நீதிமன்ற வசூல் ஆணையை உடனடியாக நிறைவேற்றி ஒப்படைக்க தாழ்மையுடன் கேட்டுக்கொள்கிறோம்.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px dashed #cbd5e1' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700 }}>
+                            [Verified Tamil Mobile Scan]
+                          </div>
+                          <div style={{ textAlign: 'right', fontWeight: 700 }}>
+                            ஒப்பம்/-<br />
+                            <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>தலைமையாசிரியர்</span>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
 
-                  {/* Right Send Button matching Screenshot 2 */}
-                  <button
-                    type="button"
-                    onClick={handleApplyChanges}
-                    disabled={isApplyingChanges || !correctionInstruction.trim()}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 16px',
-                      fontSize: '0.85rem',
-                      fontWeight: 500,
-                      color: isApplyingChanges || !correctionInstruction.trim() ? '#94a3b8' : '#334155',
-                      background: isApplyingChanges || !correctionInstruction.trim() ? '#f8fafc' : '#f1f5f9',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      cursor: isApplyingChanges || !correctionInstruction.trim() ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <span>{isApplyingChanges ? (currentLanguage === 'en' ? "Sending..." : "அனுப்புகிறது...") : (currentLanguage === 'en' ? "Send" : "அனுப்பு")}</span>
-                    <Send size={13} className={isApplyingChanges ? "spinner" : ""} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* State 2: Original Scanned Petition Document Viewer (Image 3) */
-              <div className="rr-original-document-viewer" style={{
-                background: '#0B192C',
-                border: '1px solid #102C57',
-                borderRadius: '12px',
-                boxShadow: '0 8px 30px rgba(16, 44, 87, 0.25)',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                minHeight: 0,
-                position: 'relative'
-              }}>
-                {/* Header Bar: Page Pagination & Close Button */}
-                <div style={{
-                  padding: '0.65rem 1rem',
-                  background: '#102C57',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                  flexShrink: 0
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
-                    <FileText size={16} color="#DAC0A3" />
-                    <span style={{ color: '#EADBC8' }}>Original Scanned Petition</span>
+                  {/* Bottom Status Bar */}
+                  <div style={{
+                    padding: '0.55rem 1rem',
+                    background: '#081424',
+                    color: '#94A3B8',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    flexShrink: 0
+                  }}>
+                    <span style={{ color: '#22c55e', fontSize: '0.9rem' }}>✓</span>
+                    <span>Scanned document is read-only for officer verification.</span>
                   </div>
-
-                  {/* Page Controls */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: '#CBD5E1', fontFamily: 'var(--font-mono)' }}>
-                    <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', color: '#94A3B8' }}>‹</button>
-                    <span>1 / 1</span>
-                    <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', color: '#94A3B8' }}>›</button>
-                  </div>
-
-                  {/* Close button */}
-                  <button
-                    type="button"
-                    onClick={() => setShowOriginalDoc(false)}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.12)',
-                      border: 'none',
-                      color: '#ffffff',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      fontSize: '0.785rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <span>CLOSE</span>
-                    <X size={14} />
-                  </button>
                 </div>
-
-                {/* Scanned Image Viewing Container */}
-                <div style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto',
-                  overflowX: 'auto',
-                  padding: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#040d1a'
-                }}>
-                  {docPreviewUrl ? (
-                    <img 
-                      src={docPreviewUrl} 
-                      alt="Scanned Petition Original Document" 
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        objectFit: 'contain',
-                        borderRadius: '4px',
-                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)'
-                      }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: '100%',
-                      maxWidth: '420px',
-                      background: '#FDFCF7',
-                      color: '#1e293b',
-                      borderRadius: '4px',
-                      padding: '1.75rem 1.5rem',
-                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
-                      border: '1px solid #d4c5b2',
-                      fontFamily: "'Noto Sans Tamil', 'TAU-Marutham', cursive, serif",
-                      fontSize: '0.85rem',
-                      lineHeight: '1.85'
-                    }}>
-                      <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem' }}>
-                        நெமிலிச்சேரி<br />21.11.2025
-                      </div>
-                      <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#0f172a' }}>
-                        அனுப்புநர்:<br />
-                        <span style={{ fontWeight: 500 }}>தலைமையாசிரியர்,<br />அரசு உயர்நிலைப்பள்ளி,<br />நெமிலிச்சேரி.</span>
-                      </div>
-                      <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#0f172a' }}>
-                        பெறுநர்:<br />
-                        <span style={{ fontWeight: 500 }}>கல்வி இயக்குநர்,<br />District Administration,<br />ஈரோடு.</span>
-                      </div>
-                      <div style={{ marginBottom: '1rem', fontStyle: 'italic', background: 'rgba(234, 219, 200, 0.35)', padding: '0.5rem', borderRadius: '4px' }}>
-                        பொருள்: பள்ளி வளர்ச்சி திட்டங்கள் மற்றும் மோட்டார் விபத்து இழப்பீட்டுத் தொகை பெறக் கோருதல்.
-                      </div>
-                      <p style={{ margin: '0 0 1rem 0', textIndent: '1.5rem' }}>
-                        மதிப்பிற்குரிய அம்மா / ஐயா, எங்கள் பள்ளியில் பயிலும் மாணவர்கள் பயன்பெறும் வகையில் உதவித் தொகை மற்றும் நீதிமன்ற வசூல் ஆணையை உடனடியாக நிறைவேற்றி ஒப்படைக்க தாழ்மையுடன் கேட்டுக்கொள்கிறோம்.
-                      </p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px dashed #cbd5e1' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700 }}>
-                          [Verified Tamil Mobile Scan]
-                        </div>
-                        <div style={{ textAlign: 'right', fontWeight: 700 }}>
-                          ஒப்பம்/-<br />
-                          <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>தலைமையாசிரியர்</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Bottom Status Bar matching Image 3 */}
-                <div style={{
-                  padding: '0.55rem 1rem',
-                  background: '#081424',
-                  color: '#94A3B8',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                  flexShrink: 0
-                }}>
-                  <span style={{ color: '#22c55e', fontSize: '0.9rem' }}>✓</span>
-                  <span>Scanned document is read-only for officer verification.</span>
-                </div>
-              </div>
-            )}
-                  gap: '6px',
-                  padding: '6px 16px',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  color: isApplyingChanges || !correctionInstruction.trim() ? '#102C57' : '#102C57',
-                  background: isApplyingChanges || !correctionInstruction.trim() ? '#FEFAF6' : '#FEFAF6',
-                  border: '1px solid #EADBC8',
-                  borderRadius: '8px',
-                  cursor: isApplyingChanges || !correctionInstruction.trim() ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <span>{isApplyingChanges ? (currentLanguage === 'en' ? "Sending..." : "அனுப்புகிறது...") : (currentLanguage === 'en' ? "Send" : "அனுப்பு")}</span>
-                <Send size={13} className={isApplyingChanges ? "spinner" : ""} />
-              </button>
+              )}
             </div>
-          </div>
           </div>
         </div>
       )}

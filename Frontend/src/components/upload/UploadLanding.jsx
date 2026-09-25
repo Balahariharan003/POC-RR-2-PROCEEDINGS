@@ -18,7 +18,6 @@ export default function UploadLanding({
   onLoadSample, 
   currentLanguage,
   onScanMobile
-  currentLanguage 
 }) {
   const fileInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);

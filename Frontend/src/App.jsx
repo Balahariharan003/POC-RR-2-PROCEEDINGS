@@ -148,7 +148,6 @@ export default function App() {
   };
 
   const applyPipelineResult = (result, fileNameOverride) => {
-  const applyPipelineResult = (result) => {
     recordActivity('Proceedings generated', { reference: result.entities?.case_details?.case_number || result.generated_docx_filename });
     setCurrentEntities(result.entities);
     setValidationInsights(result.validation_insights);
@@ -322,39 +321,14 @@ if (window.location.pathname.startsWith('/capture/')) {
 
 if (!currentUser) {
   return <LoginPage onLogin={(user) => {
-    // Local directory only: the existing login remains a frontend demo.
-    try {
-      const users = readUsers();
-      if (user.role === 'admin' && !users.length) {
-        saveUsers([
-          {
-            ...user,
-            id: crypto.randomUUID(),
-            status: 'active',
-            taluk: 'District administration'
-          }
-        ]);
-      }
-    } catch (error) {
-      console.warn('Could not initialize officer directory:', error);
-    }
-
+    setActivityActor(user);
+    recordActivity('Signed in');
     setCurrentUser(user);
     setActiveSession(null);
     setActiveView(user.role === 'admin' ? 'adminDashboard' : 'rrAssistant');
     setMobileMenuOpen(false);
   }} />;
 }
-  if (!currentUser) {
-    return <LoginPage onLogin={(user) => {
-      setActivityActor(user);
-      recordActivity('Signed in');
-      setCurrentUser(user);
-      setActiveSession(null);
-      setActiveView(user.role === 'admin' ? 'adminDashboard' : 'rrAssistant');
-      setMobileMenuOpen(false);
-    }} />;
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh', overflow: 'hidden', backgroundColor: '#FEFAF6' }}>
@@ -397,16 +371,9 @@ if (!currentUser) {
         {/* Dynamic Center Work Area */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, height: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
           {/* View Routing */}
-          <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1rem', height: '100%' }}>
-            {currentUser.role === 'admin' && ['adminDashboard', 'adminTemplates', 'adminUsers', 'adminBackup'].includes(activeView) && (
-              <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onNavigate={setActiveView} onRestored={() => {
           <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1.25rem' }}>
-            {activeView === 'myProfile' && <MyProfile currentUser={currentUser} currentLanguage={currentLanguage}
-              onUserUpdated={user => { setActivityActor(user); setCurrentUser(user); }}
-              setLanguage={setLanguage}
-              onBack={() => setActiveView(currentUser.role === 'admin' ? 'adminDashboard' : 'rrAssistant')} />}
-            {currentUser.role === 'admin' && ['adminDashboard', 'adminUsers', 'adminBackup'].includes(activeView) && (
-              <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onUserUpdated={user => { setActivityActor(user); setCurrentUser(user); }} onNavigate={setActiveView} onRestored={() => {
+            {currentUser.role === 'admin' && ['adminDashboard', 'adminUsers', 'adminTemplates', 'adminBackup'].includes(activeView) && (
+              <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onNavigate={setActiveView} onRestored={() => {
                 setActivityActor(null);
                 setCurrentUser(null);
                 setActiveSession(null);

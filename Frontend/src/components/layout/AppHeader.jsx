@@ -149,11 +149,6 @@ export default function AppHeader({
                 <span>Officer Profile</span>
               </div>
 
-              <div 
-              <button type="button" className="dropdown-item" onClick={() => { setProfileOpen(false); setActiveView('myProfile'); setMobileMenuOpen?.(false); }}>
-                <User size={16} /><span>My Profile</span>
-              </button>
-
               <button type="button"
                 className="dropdown-item signout"
                 onClick={(e) => {

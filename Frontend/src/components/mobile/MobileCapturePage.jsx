@@ -164,7 +164,7 @@ export default function MobileCapturePage({ sessionId: propSessionId }) {
       <header className="mobile-top-bar">
         <div className="mobile-brand-group">
           <img 
-            src="/tn-emblem.png" 
+            src="/assets/tn_emblem.svg" 
             alt="Government Emblem" 
             className="mobile-emblem-icon"
             onError={(e) => { e.target.style.display = 'none'; }}

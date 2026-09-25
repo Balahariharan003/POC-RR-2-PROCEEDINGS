@@ -993,33 +993,7 @@ export default function AuditFilters({
         </div>
 
 
-        {/* OFFICER */}
 
-        <select
-          aria-label="Officer ID"
-          value={filters.officer}
-          onChange={(event) =>
-            update({
-              officer:
-                event.target.value
-            })
-          }
-        >
-
-          <option value="">
-            All Officers
-          </option>
-
-          {officers.map((id) => (
-            <option
-              key={id}
-              value={id}
-            >
-              {id}
-            </option>
-          ))}
-
-        </select>
 
 
         {/* DATE RANGE */}
