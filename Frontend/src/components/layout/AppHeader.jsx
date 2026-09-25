@@ -136,6 +136,20 @@ export default function AppHeader({
 
               <div className="dropdown-divider"></div>
 
+              <div 
+                className="dropdown-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProfileOpen(false);
+                  if (setActiveView) setActiveView('profile');
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <User size={16} />
+                <span>Officer Profile</span>
+              </div>
+
+              <div 
               <button type="button" className="dropdown-item" onClick={() => { setProfileOpen(false); setActiveView('myProfile'); setMobileMenuOpen?.(false); }}>
                 <User size={16} /><span>My Profile</span>
               </button>

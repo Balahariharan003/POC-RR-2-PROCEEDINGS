@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   History, 
   Search, 
@@ -27,18 +27,46 @@ import {
 import AuditFilters from './AuditFilters.jsx';
 import { emptyAuditFilters, availableOfficerIds, matchesAuditFilters, officerId } from './auditFilters.js';
 import { apiService } from '../../services/apiService.js';
+import { INITIAL_AUDIT_LOGS } from '../../data/mockData.js';
 
 export default function AuditLogView({ 
+  currentUser,
   isAdmin = false,
   onRestoreSession, 
   onNavigateToAssistant 
 }) {
-  const [auditLogs, setAuditLogs] = useState({});
+  const isAdmin = !currentUser || currentUser.role === 'admin';
+  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
 
+  // Filters State (Matching exact screenshot controls)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedOfficer, setSelectedOfficer] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedYear, setSelectedYear] = useState('ALL');
+  const [selectedMonth, setSelectedMonth] = useState('ALL');
+  const [selectedDay, setSelectedDay] = useState('ALL');
   const [filters, setFilters] = useState(emptyAuditFilters);
+
+  // Dynamic list of unique officers from audit logs
+  const officerOptions = useMemo(() => {
+    const names = new Set();
+    if (auditLogs && typeof auditLogs === 'object') {
+      Object.values(auditLogs).forEach(monthEntries => {
+        if (Array.isArray(monthEntries)) {
+          monthEntries.forEach(entry => {
+            if (entry && entry.officerName) {
+              names.add(entry.officerName);
+            }
+          });
+        }
+      });
+    }
+    return Array.from(names).sort();
+  }, [auditLogs]);
 
   // Modal State for Side-by-Side Comparison & Inspection (Phase 3 & 4)
   const [selectedLog, setSelectedLog] = useState(null);
@@ -49,8 +77,10 @@ export default function AuditLogView({
     setError('');
     try {
       const logs = await apiService.getAuditLogs();
-      setAuditLogs(logs || {});
+      setAuditLogs((logs && typeof logs === 'object' && Object.keys(logs).length > 0) ? logs : INITIAL_AUDIT_LOGS);
     } catch (err) {
+      console.error("Error loading audit logs:", err);
+      setAuditLogs(INITIAL_AUDIT_LOGS);
       setAuditLogs({});
       setError(err?.message || 'Unable to load saved audit records.');
     } finally {
@@ -85,8 +115,59 @@ export default function AuditLogView({
   };
 
   // Flatten and filter entries across all partitions (Phase 2)
-  const allMonths = Object.keys(auditLogs);
+  const allMonths = auditLogs && typeof auditLogs === 'object' ? Object.keys(auditLogs) : [];
   
+  const filterEntries = (entries) => {
+    if (!Array.isArray(entries)) return [];
+    return entries.filter(e => {
+      if (!e || typeof e !== 'object') return false;
+
+      // 1. Text Search Filter (Officer, Case/Source ID, Prompt)
+      const queryLower = (searchQuery || '').toLowerCase();
+      const matchesSearch = !queryLower || 
+        (e.caseNumber && typeof e.caseNumber === 'string' && e.caseNumber.toLowerCase().includes(queryLower)) ||
+        (e.id && typeof e.id === 'string' && e.id.toLowerCase().includes(queryLower)) ||
+        (e.defaulter && typeof e.defaulter === 'string' && e.defaulter.toLowerCase().includes(queryLower)) ||
+        (e.officerName && typeof e.officerName === 'string' && e.officerName.toLowerCase().includes(queryLower)) ||
+        (e.taluk && typeof e.taluk === 'string' && e.taluk.toLowerCase().includes(queryLower)) ||
+        (e.notes && typeof e.notes === 'string' && e.notes.toLowerCase().includes(queryLower)) ||
+        (Array.isArray(e.promptHistory) && e.promptHistory.some(p => {
+          if (!p) return false;
+          if (typeof p === 'string') return p.toLowerCase().includes(queryLower);
+          return p.prompt && typeof p.prompt === 'string' && p.prompt.toLowerCase().includes(queryLower);
+        }));
+
+      // 2. Status Filter
+      const matchesStatus = selectedStatus === 'ALL' || 
+        (selectedStatus === 'DISPATCHED' && (e.status === 'DISPATCHED' || e.status === 'DISPATCHED_TO_DRO')) ||
+        (selectedStatus === 'FLAGGED' && (e.status === 'FLAGGED' || e.status === 'FLAGGED_FOR_REVIEW')) ||
+        (selectedStatus === 'VERIFIED' && e.status === 'VERIFIED') ||
+        (selectedStatus === 'DRAFT' && e.status === 'DRAFT');
+
+      // 3. Officer Filter
+      const matchesOfficer = selectedOfficer === 'ALL' || e.officerName === selectedOfficer;
+
+      // 4. Date Input Filter
+      const matchesDate = !selectedDate || (e.timestamp && typeof e.timestamp === 'string' && e.timestamp.startsWith(selectedDate));
+
+      // 5. Year / Month / Day Dropdowns
+      let matchesYear = true;
+      let matchesMonth = true;
+      let matchesDay = true;
+
+      if (e.timestamp && typeof e.timestamp === 'string') {
+        const [datePart] = e.timestamp.split(' ');
+        if (datePart) {
+          const [yr, mo, dy] = datePart.split('-');
+          if (selectedYear !== 'ALL' && yr !== selectedYear) matchesYear = false;
+          if (selectedMonth !== 'ALL' && parseInt(mo, 10) !== parseInt(selectedMonth, 10)) matchesMonth = false;
+          if (selectedDay !== 'ALL' && parseInt(dy, 10) !== parseInt(selectedDay, 10)) matchesDay = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesOfficer && matchesDate && matchesYear && matchesMonth && matchesDay;
+    });
+  };
   const officers = availableOfficerIds(Object.values(auditLogs).flat());
   const filterEntries = entries => entries.filter(entry => matchesAuditFilters(entry, filters));
 
@@ -221,6 +302,147 @@ export default function AuditLogView({
         </div>
       )}
 
+        {/* Officer Dropdown (Admin Login -> Audit Logs) */}
+        {isAdmin && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            padding: '0 8px 0 10px',
+            background: '#ffffff',
+            position: 'relative',
+            cursor: 'pointer',
+            boxSizing: 'border-box'
+          }}>
+            <User size={14} color="#64748b" style={{ flexShrink: 0 }} />
+            <select
+              value={selectedOfficer}
+              onChange={(e) => setSelectedOfficer(e.target.value)}
+              style={{
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontSize: '0.825rem',
+                color: selectedOfficer === 'ALL' ? '#334155' : '#0f243c',
+                fontWeight: selectedOfficer === 'ALL' ? 400 : 500,
+                cursor: 'pointer',
+                padding: '5px 18px 5px 0',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                appearance: 'none'
+              }}
+            >
+              <option value="ALL">Officer</option>
+              {officerOptions.map((officer) => (
+                <option key={officer} value={officer}>
+                  {officer}
+                </option>
+              ))}
+            </select>
+            <ChevronDown 
+              size={14} 
+              color="#64748b" 
+              style={{ 
+                position: 'absolute', 
+                right: '8px', 
+                pointerEvents: 'none',
+                flexShrink: 0 
+              }} 
+            />
+          </div>
+        )}
+
+        {/* Date Picker Input */}
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          style={{
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            padding: '5px 10px',
+            fontSize: '0.825rem',
+            color: '#334155',
+            background: '#ffffff',
+            cursor: 'pointer',
+            outline: 'none'
+          }}
+        />
+
+        {/* Year Dropdown */}
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(e.target.value)}
+          style={{
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            padding: '6px 10px',
+            fontSize: '0.825rem',
+            color: '#334155',
+            background: '#ffffff',
+            cursor: 'pointer',
+            outline: 'none'
+          }}
+        >
+          <option value="ALL">All Years</option>
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+
+        {/* Month Dropdown */}
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          style={{
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            padding: '6px 10px',
+            fontSize: '0.825rem',
+            color: '#334155',
+            background: '#ffffff',
+            cursor: 'pointer',
+            outline: 'none'
+          }}
+        >
+          <option value="ALL">All Months</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+
+        {/* Day Dropdown */}
+        <select
+          value={selectedDay}
+          onChange={(e) => setSelectedDay(e.target.value)}
+          style={{
+            border: '1px solid #cbd5e1',
+            borderRadius: '6px',
+            padding: '6px 10px',
+            fontSize: '0.825rem',
+            color: '#334155',
+            background: '#ffffff',
+            cursor: 'pointer',
+            outline: 'none'
+          }}
+        >
+          <option value="ALL">All Days</option>
+          {Array.from({ length: 31 }, (_, i) => (
+            <option key={i + 1} value={i + 1}>{i + 1}</option>
+          ))}
+        </select>
+      </div>
       <AuditFilters filters={filters} onChange={setFilters} officers={officers} records={Object.values(auditLogs).flat()} />
 
       {/* Showing Count Indicator */}
