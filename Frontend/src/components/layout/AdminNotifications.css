@@ -1,0 +1,18 @@
+.topbar-right { position: relative; }
+.rr-notifications { position: static; }
+.rr-notification-bell { display: grid; place-items: center; position: relative; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(234,219,200,.4); background: transparent; color: #FEFAF6; cursor: pointer; }
+.rr-notification-count { position: absolute; top: -6px; right: -6px; padding: 1px 4px; min-width: 17px; border-radius: 10px; background: #EADBC8; color: #102C57; font-size: 10px; font-weight: 700; }
+.rr-notification-panel { position: absolute; top: calc(100% + 15px); right: 0; width: 370px; max-width: calc(100vw - 24px); color: #102C57; background: #fff; border: 1px solid #DAC0A3; border-radius: 10px; box-shadow: var(--shadow-lg); overflow: auto; max-height: min(560px, calc(100dvh - 100px)); z-index: 1100; }
+.rr-notification-panel header { display: flex; align-items: center; justify-content: space-between; padding: 1rem; border-bottom: 1px solid #EADBC8; }
+.rr-notification-panel h2 { font-size: .95rem; margin: 0; }
+.rr-notification-panel button { display: inline-flex; gap: .4rem; align-items: center; padding: .4rem; border: 0; background: transparent; color: inherit; font: inherit; font-size: .78rem; cursor: pointer; }
+.rr-notification-panel .rr-mark-read { margin: .5rem .75rem; }
+.rr-notification-panel ul { list-style: none; margin: 0; padding: 0; }
+.rr-notification-panel li { display: flex; justify-content: space-between; align-items: start; gap: .7rem; padding: .85rem 1rem; border-bottom: 1px solid #EADBC8; }
+.rr-notification-panel li.unread { background: #FEFAF6; }
+.rr-notification-panel li div { display: grid; gap: .3rem; font-size: .78rem; overflow-wrap: anywhere; min-width: 0; }
+.rr-notification-panel time { font-size: .68rem; }
+.rr-unread-dot { width: 6px; height: 6px; border-radius: 50%; background: #102C57; flex-shrink: 0; margin-top: .35rem; }
+.rr-notification-panel p, .rr-notification-panel footer { padding: 1rem; margin: 0; font-size: .8rem; }
+.rr-notification-panel footer { text-align: center; }
+@media (max-width: 700px) { .rr-notification-panel { position: fixed; right: 12px; top: 74px; } .topbar-right { gap: .5rem; } }

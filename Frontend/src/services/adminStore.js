@@ -23,13 +23,16 @@ function validateUsers(users) {
   for (const user of users) {
     if (!user || typeof user.id !== 'string' || !user.id || ids.has(user.id) ||
       typeof user.name !== 'string' || !user.name.trim() ||
-      typeof user.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email) ||
+      typeof user.email !== 'string' || (!user.email && !user.username) ||
+      (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) ||
+      (user.username !== undefined && (typeof user.username !== 'string' || !user.username.trim() || /\s/.test(user.username))) ||
+      ['section', 'mobileNumber', 'nameTamil', 'designation'].some(key => user[key] !== undefined && typeof user[key] !== 'string') ||
       !['admin', 'user'].includes(user.role) || !['active', 'inactive'].includes(user.status) ||
-      typeof user.taluk !== 'string' || emails.has(user.email.toLowerCase())) {
+      typeof user.taluk !== 'string' || [user.email, user.username].filter(Boolean).some(value => emails.has(value.toLowerCase()))) {
       throw new Error('Users must have unique IDs and emails, a name, role, status and taluk.');
     }
     ids.add(user.id);
-    emails.add(user.email.toLowerCase());
+    for (const identifier of [user.email, user.username].filter(Boolean)) emails.add(identifier.toLowerCase());
   }
 }
 

@@ -1,0 +1,38 @@
+.rr-profile-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 1.1rem; align-items: start; }
+.rr-profile-settings { display: grid; gap: 1.1rem; min-width: 0; }
+.rr-profile-title { display: flex; align-items: center; gap: .6rem; }
+.rr-profile-account { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1rem; margin: 1.1rem 0 1.5rem; background: var(--cream); border: 1px solid var(--border-subtle); border-radius: 6px; }
+.rr-profile-account dt { font-size: .75rem; margin-bottom: .4rem; }
+.rr-profile-account dd { margin: 0; font-size: .9rem; font-weight: 600; }
+.rr-profile-fields, .rr-profile-passwords { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 1.1rem; }
+.rr-profile-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rr-profile-page input, .rr-profile-page select { width: 100%; }
+.rr-profile-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
+.rr-profile-page .rr-profile-hint { font-size: .75rem; margin: .7rem 0 0; }
+button.dropdown-item { width: 100%; border: 0; background: transparent; font: inherit; text-align: left; }
+@media (max-width: 1000px) { .rr-profile-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .rr-profile-fields { grid-template-columns: minmax(0, 1fr); } }
+
+.rr-profile-page { max-width: 1160px; margin: 0 auto; gap: 1.2rem; }
+.rr-official-heading { padding-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); }
+.rr-profile-page .rr-official-heading h1 { display: flex; align-items: center; gap: .7rem; font-size: 1.35rem; }
+.rr-official-heading p { font-size: .85rem; margin-bottom: 0; }
+.rr-profile-page .rr-official-card { padding: 0; overflow: hidden; }
+.rr-official-card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border-subtle); background: var(--cream); }
+.rr-profile-page .rr-official-card-header h2 { display: flex; align-items: center; gap: .6rem; margin: 0; font-size: 1rem; }
+.rr-profile-chip { display: inline-flex; align-items: center; gap: .35rem; border: 1px solid var(--border-subtle); border-radius: 20px; padding: .2rem .6rem; font-size: .67rem; background: var(--cream); }
+.rr-official-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.3rem; border: 0; min-width: 0; padding: 1.3rem; margin: 0; }
+.rr-profile-page .rr-official-fields label { min-width: 0; font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.rr-official-input { display: flex; align-items: center; gap: .6rem; border: 1px solid var(--border-subtle); border-radius: 5px; padding: 0 .75rem; background: var(--cream); }
+.rr-official-input svg { flex-shrink: 0; }
+.rr-profile-page .rr-official-input input { border: 0; padding: .75rem 0; font-weight: 500; background: transparent; font-size: .82rem; text-overflow: ellipsis; }
+.rr-official-input:has(input:not([readonly])) { background: white; border-color: var(--border-card); }
+.rr-official-input:focus-within { outline: 2px solid var(--deep-navy); outline-offset: 2px; }
+.rr-profile-page .rr-official-input input:focus-visible { outline: none; box-shadow: none; }
+.rr-official-card .rr-profile-actions { padding: 0 1.3rem 1.3rem; margin-top: 0; }
+.rr-profile-page .rr-system-assignment { border-style: dashed; }
+.rr-assigned-office { grid-column: 1 / -1; }
+.rr-profile-preferences summary { display: flex; align-items: center; gap: .5rem; cursor: pointer; padding: .5rem 0; font-size: .85rem; }
+.rr-profile-preferences[open] summary { margin-bottom: .75rem; }
+@media (max-width: 1050px) { .rr-official-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .rr-official-fields { grid-template-columns: minmax(0, 1fr); padding: 1rem; } .rr-profile-page .rr-official-card { padding: 0; } }

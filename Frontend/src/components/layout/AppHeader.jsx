@@ -1,5 +1,7 @@
+import AdminNotifications from './AdminNotifications.jsx';
 import React, { useState, useEffect } from 'react';
 import { 
+  Languages,
   User, 
   ChevronDown, 
   ChevronUp, 
@@ -40,6 +42,7 @@ export default function AppHeader({
   const isTamil = currentLanguage === 'ta';
 
   return (
+    <>
     <header className="topbar">
       {/* Topbar Left: Hamburger + Emblem & Title Group */}
       <div className="topbar-left">
@@ -73,21 +76,28 @@ export default function AppHeader({
 
       {/* Topbar Right: Language Switcher & Officer Profile Menu */}
       <div className="topbar-right">
+        {currentUser?.role === 'admin' && <AdminNotifications key={currentUser.id} user={currentUser} onViewActivity={() => { setActiveView('adminDashboard'); setProfileOpen(false); }} />}
         {/* Language Switcher */}
         <div className="lang-switch">
           <button 
             type="button"
             className={`lang-btn ${currentLanguage === 'en' ? 'active' : ''}`}
+            aria-label="Switch to English"
+            title="English"
+            aria-pressed={currentLanguage === 'en'}
             onClick={() => setLanguage('en')}
           >
-            English
+            {currentLanguage === 'en' ? 'English' : <Languages size={18} aria-hidden="true" />}
           </button>
           <button 
             type="button"
             className={`lang-btn ${currentLanguage === 'ta' ? 'active' : ''}`}
+            aria-label="Switch to Tamil"
+            title="Tamil"
+            aria-pressed={currentLanguage === 'ta'}
             onClick={() => setLanguage('ta')}
           >
-            தமிழ்
+            {currentLanguage === 'ta' ? 'தமிழ்' : <Languages size={18} aria-hidden="true" />}
           </button>
         </div>
 
@@ -99,7 +109,7 @@ export default function AppHeader({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.15 }}>
               <span className="user-name" style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '0.825rem' }}>
-                {currentUser?.name || 'Naveen'}
+                {currentUser?.name || 'Officer'}
               </span>
               <span style={{ color: 'var(--soft-sand, #EADBC8)', fontSize: '0.685rem', fontWeight: 400 }}>
                 {currentUser?.role === 'admin' ? 'Admin' : 'User'}
@@ -118,8 +128,8 @@ export default function AppHeader({
                   <User size={24} />
                 </div>
                 <div className="dropdown-info">
-                  <h4>{currentUser?.name || 'S. Ramanathan'}</h4>
-                  <p>{currentUser?.role === 'admin' ? 'District Collector • Administration' : 'Tahsildar • Revenue Recovery'}</p>
+                  <h4>{currentUser?.name || 'Officer'}</h4>
+                  <p>{currentUser?.section || currentUser?.taluk || (currentUser?.role === 'admin' ? 'Administrator' : 'Officer')}</p>
                   <span className="dropdown-dept">Revenue &amp; Disaster Management</span>
                 </div>
               </div>
@@ -140,6 +150,11 @@ export default function AppHeader({
               </div>
 
               <div 
+              <button type="button" className="dropdown-item" onClick={() => { setProfileOpen(false); setActiveView('myProfile'); setMobileMenuOpen?.(false); }}>
+                <User size={16} /><span>My Profile</span>
+              </button>
+
+              <button type="button"
                 className="dropdown-item signout"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -150,12 +165,13 @@ export default function AppHeader({
               >
                 <LogOut size={16} />
                 <span>Sign Out</span>
-              </div>
+              </button>
             </div>
           )}
         </div>
       </div>
     </header>
+    </>
   );
 }
 

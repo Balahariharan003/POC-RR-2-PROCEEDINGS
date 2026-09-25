@@ -1,118 +1,58 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Layers } from 'lucide-react';
-import { apiService } from '../../services/apiService.js';
+import { ACTIVITY_EVENT, readActivities, mergeActivities } from '../../services/activityStore.js';
 
-const categories = [
-  { name: 'Customs', color: 'var(--deep-navy)', pattern: /\bcustoms\b/i },
-  { name: 'MCOP', color: 'var(--slate)', pattern: /\bm\.?c\.?o\.?p\b/i },
-  { name: 'TNRERA', color: 'var(--muted-blue-grey)', pattern: /\b(?:tn\s*)?rera\b/i },
-  { name: 'Court Warrant', color: 'var(--tan-warm)', pattern: /\bwarrant\b/i },
-  { name: 'General Revenue', color: 'var(--sand-soft)', pattern: /\b(?:general|revenue|land)\b/i },
-  { name: 'Others', color: 'var(--bg-tertiary)' },
-];
+const statusLabel = value => ({ DISPATCHED_TO_DRO: 'Dispatched', FLAGGED_FOR_REVIEW: 'Flagged' }[value] || value.toLowerCase().replace(/_/g, ' ').replace(/^./, char => char.toUpperCase()));
 
-function proceedingType(record) {
-  const explicitType = record.department_type || record.templateType || record.type;
-  const source = String(explicitType || `${record.caseNumber || ''} ${record.fileName || ''}`).replace(/[_-]/g, ' ');
-  return categories.find(category => category.pattern?.test(source))?.name || 'Others';
+function activityLabel(action) {
+  if (action === 'Signed in') return ['LOGIN', 'login'];
+  if (action === 'Signed out') return ['LOGOUT', 'logout'];
+  if (/created|generated/i.test(action) && /proceeding/i.test(action)) return ['GENERATE', 'document'];
+  if (/proceeding|draft/i.test(action)) return ['PROCEEDINGS', 'document'];
+  if (/backup/i.test(action)) return ['BACKUP', 'neutral'];
+  if (/password/i.test(action)) return ['SECURITY', 'neutral'];
+  if (/Officer added/.test(action)) return ['CREATE', 'login'];
+  return ['UPDATE', 'neutral'];
+}
+function activityDescription(row) {
+  const name = row.actorName || 'Unknown user';
+  if (row.action === 'Signed in') return `${name} logged in.`;
+  if (row.action === 'Signed out') return `${name} logged out.`;
+  const reference = row.reference && Number.isFinite(Date.parse(row.reference)) && /^\d{4}-\d{2}-\d{2}T/.test(row.reference)
+    ? new Date(row.reference).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : row.reference;
+  return `${name}: ${row.action}${reference ? ` (${reference})` : ''}${row.status ? ` ? ${statusLabel(row.status)}` : ''}.`;
 }
 
-function proceedingStatus(status) {
-  if (!status) return 'Draft';
-  if (['DISPATCHED', 'DISPATCHED_TO_DRO'].includes(status)) return 'Dispatched';
-  if (['FLAGGED', 'FLAGGED_FOR_REVIEW'].includes(status)) return 'Flagged';
-  return status.toLowerCase().replace(/_/g, ' ').replace(/^./, char => char.toUpperCase());
-}
-
-function savedTime(record) {
-  const time = Date.parse(record.timestamp);
-  return Number.isFinite(time) ? time : 0;
-}
-
-export default function AdminDashboardContent({ records, onNavigate }) {
-  const [templates, setTemplates] = useState([]);
-
+export default function AdminDashboardContent({ records }) {
+  const [activities, setActivities] = useState([]);
+  const [error, setError] = useState('');
+  const [showAll, setShowAll] = useState(false);
   useEffect(() => {
-    apiService.getTemplates().then(tpls => {
-      if (tpls && tpls.length > 0) setTemplates(tpls);
-    }).catch(err => console.warn("Failed to load templates for dashboard:", err));
+    const refresh = () => {
+      try { setActivities(readActivities()); setError(''); }
+      catch { setError('Unable to load activity history. Please reload to try again.'); }
+    };
+    refresh();
+    window.addEventListener(ACTIVITY_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => { window.removeEventListener(ACTIVITY_EVENT, refresh); window.removeEventListener('storage', refresh); };
   }, []);
-
-  const recentRecords = records.slice().sort((a, b) => savedTime(b) - savedTime(a)).slice(0, 5);
-  const counts = new Map(categories.map(category => [category.name, 0]));
-  records.forEach(record => {
-    const type = proceedingType(record);
-    counts.set(type, counts.get(type) + 1);
-  });
-  let offset = 0;
-  const segments = categories.map(category => {
-    const count = counts.get(category.name);
-    const start = offset;
-    offset += records.length ? count / records.length * 100 : 0;
-    return { ...category, count, start, length: offset - start };
-  });
-
-  return <>
-    <article className="rr-admin-card rr-admin-recent" aria-labelledby="rr-recent-title">
-      <div className="rr-admin-toolbar">
-        <h2 id="rr-recent-title">Recent RR Proceedings</h2>
-        <button className="btn btn-ghost" onClick={() => onNavigate('audit')}>View All</button>
-      </div>
-      {recentRecords.length ? <div className="rr-admin-table-scroll">
-        <table>
-          <thead><tr>{['RR No.', 'Type', 'Party / Organisation', 'Officer', 'Status', 'Date'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
-          <tbody>{recentRecords.map(record => <tr key={record.id}>
-            <td>{record.rrNumber || record.proceedings_roc_number || record.caseNumber || record.fileName || record.id}</td>
-            <td>{proceedingType(record)}</td>
-            <td>{record.defaulter || record.defaulterName || 'Not recorded'}</td>
-            <td>{record.officerName || 'Not recorded'}</td>
-            <td><span className="rr-admin-status">{proceedingStatus(record.status)}</span></td>
-            <td>{Number.isFinite(Date.parse(record.timestamp)) ? new Date(record.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not recorded'}</td>
-          </tr>)}</tbody>
-        </table>
-      </div> : <p className="rr-admin-empty">No saved RR proceedings yet.</p>}
-    </article>
-
-    <div className="rr-admin-columns rr-admin-dashboard-bottom">
-      <article className="rr-admin-card" aria-labelledby="rr-overview-title">
-        <h2 id="rr-overview-title">Proceedings Overview</h2>
-        <p>Distribution of RR proceedings by type</p>
-        <div className="rr-admin-distribution">
-          <div className="rr-admin-donut" style={{ background: records.length
-            ? `conic-gradient(${segments.filter(segment => segment.count).map(segment => `${segment.color} ${segment.start}% ${segment.start + segment.length}%`).join(', ')})`
-            : 'var(--border-subtle)' }}>
-            <div className="rr-admin-donut-total"><strong>{records.length}</strong><span>Total proceedings</span></div>
-          </div>
-          <ul className="rr-admin-legend" aria-label="Proceedings by type">
-            {segments.map(segment => <li key={segment.name}>
-              <span className="rr-admin-swatch" style={{ background: segment.color }} aria-hidden="true" />
-              <span>{segment.name}</span><strong>{segment.count}</strong>
-            </li>)}
-          </ul>
-        </div>
-        {!records.length && <p className="rr-admin-overview-empty">No proceedings to display yet.</p>}
-      </article>
-
-      <article className="rr-admin-card rr-admin-templates" aria-labelledby="rr-templates-title">
-        <h2 id="rr-templates-title">Proceedings Templates (PostgreSQL)</h2>
-        <p>{templates.length} templates configured for Tamil Nadu Collectorate proceedings</p>
-        <ul className="rr-admin-template-list">
-          {templates.slice(0, 5).map(tpl => (
-            <li key={tpl.id}>
-              <FileText size={16} aria-hidden="true" />
-              <span>{tpl.name}</span>
-              <small>{tpl.category}</small>
-            </li>
-          ))}
-          {templates.length === 0 && (
-            <li><FileText size={16} aria-hidden="true" /><span>Loading templates from PostgreSQL...</span></li>
-          )}
-        </ul>
-        <button className="btn btn-primary" onClick={() => onNavigate('adminTemplates')}>
-          <Layers size={15} style={{ marginRight: '6px' }} />
-          Manage Templates ({templates.length})
-        </button>
-      </article>
+  const history = mergeActivities(activities.filter(item => item.action !== 'Language changed'), records);
+  const visible = showAll ? history : history.slice(0, 5);
+  return <article className="rr-admin-card rr-admin-recent rr-admin-activity" aria-labelledby="rr-recent-title">
+    <div className="rr-admin-toolbar">
+      <h2 id="rr-recent-title">Recent Activity</h2>
+      {history.length > 5 && <button className="btn btn-ghost rr-activity-view-all" aria-expanded={showAll} onClick={() => setShowAll(value => !value)}>{showAll ? 'Show Recent' : 'View All'}</button>}
     </div>
-  </>;
+    {error && <p role="alert">{error}</p>}
+    {visible.length ? <ul className="rr-activity-list" aria-label="Recent activity">
+      {visible.map(row => {
+        const [label, tone] = activityLabel(row.action);
+        return <li key={row.id}>
+          <span className={`rr-activity-badge ${tone}`}>{label}</span>
+          <span className="rr-activity-description">{activityDescription(row)}</span>
+          {Number.isFinite(Date.parse(row.timestamp)) ? <time dateTime={row.timestamp}>{new Date(row.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</time> : <span>Not recorded</span>}
+        </li>;
+      })}
+    </ul> : !error && <p className="rr-admin-empty">No activity recorded yet.</p>}
+  </article>;
 }

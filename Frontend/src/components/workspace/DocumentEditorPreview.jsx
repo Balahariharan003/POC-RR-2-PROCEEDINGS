@@ -168,7 +168,7 @@ export default function DocumentEditorPreview({
                   <Sparkles size={16} color="#102C57" />
                   <span>AI வழிகாட்டல் / திருத்தக் குறிப்பு (AI Prompt to Re-generate DOCX)</span>
                 </label>
-                <span style={{ fontSize: '0.72rem', color: '#3A4B63' }}>
+                <span style={{ fontSize: '0.72rem', color: '#102C57' }}>
                   If DOCX contains wrong info, specify modifications here
                 </span>
               </div>
@@ -210,7 +210,7 @@ export default function DocumentEditorPreview({
                         borderRadius: '9999px',
                         background: '#FFFFFF',
                         border: '1px solid #DAC0A3',
-                        color: '#3A4B63'
+                        color: '#102C57'
                       }}
                     >
                       {chip}
@@ -273,11 +273,11 @@ export default function DocumentEditorPreview({
               gap: '0.5rem'
             }}>
               <span>வெற்றிகரமாக உருவாக்கப்பட்டது!</span>
-              <span style={{ fontSize: '0.785rem', fontWeight: 600, color: '#3A4B63' }}>
+              <span style={{ fontSize: '0.785rem', fontWeight: 600, color: '#102C57' }}>
                 (Successfully Created!)
               </span>
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#3A4B63', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
+            <div style={{ fontSize: '0.75rem', color: '#102C57', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
               <span>{refNumber}</span>
               <span>•</span>
               <span>{docDate}</span>
@@ -353,7 +353,7 @@ export default function DocumentEditorPreview({
           <button
             onClick={onNewDocument}
             className="btn btn-ghost"
-            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', color: '#3A4B63' }}
+            style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', color: '#102C57' }}
           >
             <PlusCircle size={15} />
             <span>+ New Document</span>
@@ -379,7 +379,7 @@ export default function DocumentEditorPreview({
           background: '#FEFAF6',
           borderBottom: '1px solid #EADBC8',
           fontSize: '0.785rem',
-          color: '#3A4B63'
+          color: '#102C57'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
             <FileText size={15} color="#102C57" />

@@ -1,0 +1,161 @@
+.rr-audit-filters { position: relative; z-index: 20; background: #fff; border: 1px solid #EADBC8; border-radius: 12px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,.04); color: #102C57; overflow: visible; }
+.rr-audit-filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rr-audit-search { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-width: 190px; }
+.rr-audit-search input { border: 0; outline: none; width: 100%; min-width: 0; background: transparent; font-size: .85rem; color: inherit; padding: 6px 0; }
+.rr-audit-search > svg { flex-shrink: 0; }
+.rr-audit-filters select { border: 1px solid #DAC0A3; border-radius: 6px; padding: 6px 10px; font-size: .825rem; color: inherit; background: #fff; cursor: pointer; max-width: 190px; }
+
+/* Compact Date Range Box in Filter Row */
+.rr-audit-date-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+.rr-audit-date-trigger {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  min-width: 195px;
+  padding: 6px 12px !important;
+  border: 1px solid #DAC0A3 !important;
+  border-radius: 6px;
+  background: #ffffff !important;
+  color: #102C57 !important;
+  font-size: 0.825rem !important;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.rr-audit-date-trigger:hover {
+  background: #FEFAF6 !important;
+}
+.rr-audit-date-trigger.active,
+.rr-audit-date-trigger:focus-visible {
+  border-color: #102C57 !important;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px #102C57;
+  outline: none !important;
+}
+.rr-audit-date-trigger-text {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0.72;
+  font-weight: 500;
+}
+.rr-audit-date-trigger.has-value .rr-audit-date-trigger-text {
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* Floating Popup / Dropdown Panel for Start & End Spinner Selector */
+.rr-audit-date-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 120;
+  background: #ffffff;
+  border: 1px solid #EADBC8;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(16, 44, 87, 0.14), 0 2px 6px rgba(16, 44, 87, 0.06);
+  padding: 12px 16px 14px;
+  user-select: none;
+}
+.rr-audit-date-popover-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.rr-audit-spin-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.rr-audit-spin-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #102C57;
+  opacity: 0.8;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+.rr-audit-spin-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rr-audit-spin-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #EADBC8;
+  border-radius: 6px;
+  padding: 2px 4px;
+  background: #FEFAF6;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
+}
+.rr-audit-spin-unit:hover,
+.rr-audit-spin-unit:focus-within {
+  border-color: #DAC0A3;
+  background-color: #ffffff;
+}
+.rr-spin-day { min-width: 34px; }
+.rr-spin-month { min-width: 44px; }
+.rr-spin-year { min-width: 50px; }
+
+.rr-audit-spin-arrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 2px 0 !important;
+  height: 18px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #102C57;
+  opacity: 0.65;
+  cursor: pointer;
+  line-height: 1;
+  transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+.rr-audit-spin-arrow:hover:not(:disabled) {
+  opacity: 1;
+  background-color: #EADBC8;
+  border-radius: 4px;
+}
+.rr-audit-spin-arrow:disabled {
+  opacity: 0.22;
+  cursor: default;
+}
+.rr-audit-spin-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #102C57;
+  line-height: 1.4;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+}
+.rr-audit-spin-value:focus-visible {
+  outline: 1.5px solid #102C57;
+  background-color: #EADBC8;
+}
+.rr-audit-spin-sep {
+  color: #102C57;
+  opacity: 0.65;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding-top: 16px;
+}
+
+.rr-audit-filters button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 6px; font: inherit; font-size: .825rem; }
+.rr-audit-filters :is(button, select):focus-visible { outline: 2px solid #102C57; outline-offset: 2px; }
+.rr-audit-filters > p { margin: 8px 0 0; font-size: .775rem; }
+@media (min-width: 1250px) { .rr-audit-filter-row { flex-wrap: nowrap; } }
+@media (max-width: 600px) {
+  .rr-audit-search { flex-basis: 100%; }
+  .rr-audit-date-dropdown, .rr-audit-date-trigger { width: 100%; }
+  .rr-audit-date-popover { left: 0; right: 0; width: 100%; }
+  .rr-audit-date-popover-inner { flex-wrap: wrap; justify-content: center; gap: 10px; }
+}

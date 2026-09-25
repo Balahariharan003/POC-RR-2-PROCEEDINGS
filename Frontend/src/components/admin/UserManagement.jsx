@@ -1,269 +1,105 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Plus, X, Trash2, Edit2 } from 'lucide-react';
-import { apiService } from '../../services/apiService.js';
+import { recordActivity } from '../../services/activityStore.js';
+import React, { useEffect, useState } from 'react';
+import { Plus, KeyRound, UsersRound, CheckCircle2, X } from 'lucide-react';
+import { readUsers } from '../../services/adminStore.js';
+import { saveOfficerAccount } from '../../services/accountStore.js';
+import Modal from '../common/Modal.jsx';
+import PasswordInput from '../common/PasswordInput.jsx';
 import './UserManagement.css';
 
-const emptyOfficer = { name: '', email: '', mobileNumber: '', taluk: '', department: 'Revenue Recovery', role: 'user', status: 'active' };
+const detailsFor = user => ({ id: user?.id, name: user?.name || '', nameTamil: user?.nameTamil || '', identifier: user?.username || user?.email || '', mobileNumber: String(user?.mobileNumber || ''), section: user?.section || user?.taluk || '' });
 
-function OfficerDialog({ officer, setOfficer, jurisdictions, error, onSave, onClose, isAdmin = true }) {
-  const dialogRef = useRef(null);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog && !dialog.open) {
-      dialog.showModal();
-      dialog.querySelector('[name="name"]')?.focus();
-    }
-    return () => {
-      if (dialog && dialog.open) {
-        dialog.close();
-      }
-    };
-  }, []);
-
-  const update = event => setOfficer({ ...officer, [event.target.name]: event.target.value });
-
-  return (
-    <dialog ref={dialogRef} className="rr-admin-card rr-officer-dialog" aria-labelledby="rr-officer-title">
-      <div className="rr-admin-toolbar">
-        <h2 id="rr-officer-title">{officer.id ? 'Edit Officer Profile' : 'Add Officer Account'}</h2>
-        <button type="button" className="btn btn-ghost" aria-label="Close dialog" onClick={onClose}><X size={18} /></button>
-      </div>
-      <form onSubmit={onSave}>
-        {error && <div className="rr-admin-alert" role="alert">{error}</div>}
-        <div className="rr-admin-form">
-          <label className="rr-officer-full-name">Full Name
-            <input required name="name" autoComplete="name" maxLength={160} value={officer.name || ''} onChange={update} />
-          </label>
-          <label>Email Address
-            <input required name="email" type="email" autoComplete="email" maxLength={160} value={officer.email || ''} onChange={update} disabled={Boolean(officer.id) && !isAdmin} />
-          </label>
-          <label>Mobile Number
-            <input name="mobileNumber" type="tel" autoComplete="tel" maxLength={24} value={officer.mobileNumber || ''} onChange={update} />
-          </label>
-          <label>Taluk / Jurisdiction
-            <input required name="taluk" list="rr-officer-jurisdictions" maxLength={160} value={officer.taluk || ''} onChange={update} />
-            <datalist id="rr-officer-jurisdictions">
-              {['ஈரோடு', 'பெருந்துறை', 'பவானி', 'அந்தியூர்', 'கொடுமுடி', 'மொடக்குறிச்சி', 'கோபிசெட்டிபாளையம்', 'சத்தியமங்கலம்', 'தாளவாடி'].map(taluk => (
-                <option key={taluk} value={taluk} />
-              ))}
-            </datalist>
-          </label>
-          <label>Department / Cell
-            <input name="department" maxLength={160} value={officer.department || 'Revenue Recovery'} onChange={update} />
-          </label>
-          {isAdmin && (
-            <>
-              <label>Role
-                <select name="role" value={officer.role || 'user'} onChange={update}>
-                  <option value="user">Officer (வட்டாட்சியர் / எழுத்தர்)</option>
-                  <option value="admin">Administrator (நிர்வாகி)</option>
-                </select>
-              </label>
-              <label>Account Status
-                <select name="status" value={officer.status || 'active'} onChange={update}>
-                  <option value="active">Active (செயலில்)</option>
-                  <option value="inactive">Inactive (முடக்கப்பட்டது)</option>
-                </select>
-              </label>
-            </>
-          )}
-        </div>
-        <div className="rr-admin-actions rr-officer-actions" style={{ marginTop: '1.5rem' }}>
-          <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary">{officer.id ? 'Save Changes' : 'Create Officer'}</button>
-        </div>
-      </form>
-    </dialog>
-  );
-}
-
-export default function UserManagement({ currentUser }) {
+export default function UserManagement({ currentUser, onUserUpdated }) {
   const [users, setUsers] = useState([]);
-  const [query, setQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [editing, setEditing] = useState(null);
+  const [original, setOriginal] = useState(null);
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [changePassword, setChangePassword] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [formError, setFormError] = useState('');
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  const isAdmin = currentUser?.role === 'admin';
-
-  const loadUsers = async () => {
-    setLoading(true);
-    try {
-      const data = await apiService.getUsers(query, roleFilter, statusFilter);
-      setUsers(data);
-    } catch (err) {
-      setLoadError('Unable to load officers from PostgreSQL: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadUsers();
-  }, [query, roleFilter, statusFilter]);
+    const load = () => {
+      try { setUsers(readUsers()); setLoadError(''); }
+      catch { setLoadError('Unable to load officers. Please reload this page to try again.'); }
+    };
+    load();
+    window.addEventListener('storage', load);
+    return () => window.removeEventListener('storage', load);
+  }, []);
 
-  const openOfficer = (user = null) => {
-    if (user) {
-      setEditing({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        mobileNumber: user.mobile_number || user.mobileNumber || '',
-        taluk: user.taluk || '',
-        department: user.department || 'Revenue Recovery',
-        role: user.role,
-        status: user.status
-      });
-    } else {
-      setEditing({ ...emptyOfficer });
-    }
-    setFormError('');
-    setMessage('');
-  };
-
-  const saveOfficer = async (event) => {
+  function openOfficer(user) {
+    const details = detailsFor(user);
+    setOriginal(details); setEditing({ ...details });
+    setPassword(''); setConfirmation(''); setChangePassword(false); setFormError(''); setMessage('');
+  }
+  function closeOfficer() { if (!busy) setEditing(null); }
+  const dirty = editing && (['name', 'nameTamil', 'mobileNumber', 'section'].some(key => editing[key].trim() !== original[key].trim()) || editing.identifier.trim().toLowerCase() !== original.identifier.trim().toLowerCase() || (changePassword && Boolean(password)));
+  const needsPassword = editing && (!editing.id || changePassword);
+  async function saveOfficer(event) {
     event.preventDefault();
+    if (busy || (editing.id && !dirty)) return;
     setFormError('');
-
+    if (needsPassword && !password) { setFormError('Enter a new password.'); return; }
+    if (needsPassword && password !== confirmation) { setFormError('Passwords do not match.'); return; }
+    setBusy(true);
     try {
-      if (editing.id) {
-        await apiService.updateUser(editing.id, editing, currentUser?.role || 'user', currentUser?.id);
-        setMessage('Officer details updated successfully in PostgreSQL.');
-      } else {
-        await apiService.createUser(editing, currentUser?.role || 'admin');
-        setMessage('New officer created successfully in PostgreSQL.');
-      }
-      setEditing(null);
-      loadUsers();
-    } catch (err) {
-      setFormError(err.message);
-    }
-  };
+      const officer = await saveOfficerAccount(editing, needsPassword ? password : '');
+      recordActivity(editing.id ? 'Officer details updated' : 'Officer added', { reference: officer.name }, currentUser);
+      if (editing.id && needsPassword) recordActivity('Officer password changed', { reference: officer.name }, currentUser);
+      setUsers(readUsers()); setEditing(null);
+      setMessage(editing.id ? 'Officer details updated.' : 'Officer added.');
+      if (officer.id === currentUser.id || (original.identifier.toLowerCase() === (currentUser.username || currentUser.email).toLowerCase())) onUserUpdated?.(officer);
+    } catch (e) { setFormError(e.message || 'Unable to save this officer. Please try again.'); }
+    finally { setBusy(false); }
+  }
+  const update = event => setEditing({ ...editing, [event.target.name]: event.target.value });
 
-  const deleteOfficer = async (user, e) => {
-    e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete officer "${user.name}"?`)) return;
-    try {
-      await apiService.deleteUser(user.id, currentUser?.role || 'admin');
-      setMessage('Officer account deleted.');
-      loadUsers();
-    } catch (err) {
-      setFormError(err.message);
-    }
-  };
-
-  return (
-    <section className="rr-admin rr-user-management">
-      <header className="rr-admin-heading">
-        <div>
-          <h1>User & Officer Management</h1>
-          <p>Manage revenue officers, taluk jurisdictions, and role-based permissions stored in PostgreSQL.</p>
-        </div>
-        {isAdmin && (
-          <button className="btn btn-primary" onClick={() => openOfficer()}>
-            <Plus size={16} /> Add Officer
-          </button>
-        )}
+  return <section className="rr-admin rr-user-management">
+    <header className="rr-admin-heading rr-officers-heading">
+      <div><h1>User Management</h1><p>Manage officers and their RR workspace access.</p></div>
+    </header>
+    {loadError && <div className="rr-admin-alert" role="alert">{loadError}</div>}
+    {message && <div className="rr-admin-notice rr-officer-notice"><CheckCircle2 size={19} aria-hidden="true" /><span role="status">{message}</span><button type="button" aria-label="Dismiss notification" title="Dismiss notification" onClick={() => setMessage('')}><X size={18} /></button></div>}
+    <article className="rr-admin-card rr-officer-directory">
+      <header className="rr-directory-heading">
+        <div className="rr-directory-title"><span className="rr-directory-icon"><UsersRound size={22} aria-hidden="true" /></span><div><h2>Officer Directory</h2><p>Select an officer to view or edit their details.</p></div></div>
+        <button className="btn btn-primary rr-add-officer" disabled={Boolean(loadError)} onClick={() => openOfficer()}><Plus size={18} aria-hidden="true" />Add Officer</button>
       </header>
-
-      {loadError && <div className="rr-admin-alert" role="alert">{loadError}</div>}
-      {message && <div className="rr-admin-notice" role="status">{message}</div>}
-
-      <div className="rr-admin-filters">
-        <input
-          placeholder="Search officers by name, email, or taluk..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-        />
-        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
-          <option value="all">All Roles</option>
-          <option value="admin">Administrators</option>
-          <option value="user">Officers</option>
-        </select>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
+      <div className="rr-directory-table">
+      <table aria-label="Officers">
+        <thead><tr>{['Officer Name', 'Section', 'Status'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
+        <tbody>{users.map(user => <tr key={user.id} onClick={() => openOfficer(user)}>
+          <td><button type="button" className="rr-officer-name" aria-haspopup="dialog" aria-label={`Edit ${user.name}`} onClick={event => { event.stopPropagation(); openOfficer(user); }}><strong>{user.name}</strong></button></td><td><span className="rr-officer-section">{user.section || user.taluk || 'Not provided'}</span></td>
+          <td><span className={`rr-admin-status ${user.status}`}>{user.status === 'active' ? 'Active' : 'Inactive'}</span></td>
+        </tr>)}</tbody>
+      </table>
       </div>
-
-      <article className="rr-admin-card rr-admin-table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Officer</th>
-              <th scope="col">Taluk / Jurisdiction</th>
-              <th scope="col">Department</th>
-              <th scope="col">Role</th>
-              <th scope="col">Status</th>
-              {isAdmin && <th scope="col" style={{ textAlign: 'right' }}>Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr
-                key={user.id}
-                tabIndex={0}
-                onClick={() => openOfficer(user)}
-                style={{ cursor: 'pointer' }}
-              >
-                <td>
-                  <strong>{user.name}</strong>
-                  <small style={{ display: 'block', color: '#94a3b8' }}>{user.email} {user.mobile_number ? `· ${user.mobile_number}` : ''}</small>
-                </td>
-                <td>{user.taluk || '—'}</td>
-                <td>{user.department || 'Revenue Recovery'}</td>
-                <td>
-                  <span className={`rr-badge ${user.role === 'admin' ? 'badge-dept' : 'badge-cat'}`}>
-                    {user.role === 'admin' ? 'Administrator' : 'Officer'}
-                  </span>
-                </td>
-                <td>
-                  <span className={`rr-admin-status ${user.status}`}>
-                    {user.status === 'active' ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                {isAdmin && (
-                  <td style={{ textAlign: 'right' }}>
-                    <button
-                      className="btn btn-ghost"
-                      style={{ padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
-                      onClick={(e) => { e.stopPropagation(); openOfficer(user); }}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    {user.role !== 'admin' && (
-                      <button
-                        className="btn btn-ghost"
-                        style={{ padding: '0.25rem 0.5rem', color: '#f87171' }}
-                        onClick={(e) => deleteOfficer(user, e)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!loading && !users.length && <p style={{ padding: '1.5rem', textAlign: 'center', color: '#94a3b8' }}>No officers found.</p>}
-      </article>
-
-      {editing && (
-        <OfficerDialog
-          officer={editing}
-          setOfficer={setEditing}
-          error={formError}
-          onSave={saveOfficer}
-          onClose={() => setEditing(null)}
-          isAdmin={isAdmin}
-        />
-      )}
-    </section>
-  );
+      {!loadError && !users.length && <div className="rr-officers-empty"><UsersRound size={28} aria-hidden="true" /><h3>No officers yet</h3><p>Add an officer to get started.</p></div>}
+    </article>
+    {editing && <Modal title={editing.id ? `Edit User: ${original.name}` : 'Add Official Account'} className="rr-officer-dialog" onClose={closeOfficer}>
+      <form onSubmit={saveOfficer}>
+        {formError && <div className="rr-admin-alert" role="alert">{formError}</div>}
+        <fieldset disabled={busy} className="rr-officer-fields">
+          <h3 className="rr-officer-full-name">Official Identity &amp; Contact</h3>
+          <label className="rr-officer-full-name">Full Name (English)<input required name="name" autoComplete="name" placeholder="Enter full name" maxLength={160} value={editing.name} onChange={update} /></label>
+          <label className="rr-officer-full-name">Full Name (Tamil - optional)<input name="nameTamil" lang="ta" maxLength={160} value={editing.nameTamil} onChange={update} /></label>
+          <label>Mobile Number<input required name="mobileNumber" type="tel" autoComplete="tel" placeholder="Enter mobile number" maxLength={24} value={editing.mobileNumber} onChange={update} /></label>
+          <label>Official Email / Username<input required name="identifier" autoComplete="username" placeholder="officer@tn.gov.in" maxLength={160} value={editing.identifier} onChange={update} /></label>
+          <label className="rr-officer-full-name">Department / Section<input required name="section" placeholder="Revenue Administration" maxLength={160} value={editing.section} onChange={update} /></label>
+          {editing.id && <div className="rr-officer-security rr-officer-full-name"><div><h3>Account Security</h3><p>Reset or change this official's password.</p></div><button type="button" className="btn btn-outline" aria-expanded={changePassword} onClick={() => { setChangePassword(!changePassword); setPassword(''); setConfirmation(''); setFormError(''); }}><KeyRound size={16} />{changePassword ? 'Cancel Password Change' : 'Edit Password'}</button></div>}
+          {needsPassword && <>
+            {!editing.id && <h3 className="rr-officer-full-name">Initial Password</h3>}
+            <PasswordInput label={editing.id ? 'New Password' : 'Password'} required name="password" autoComplete="new-password" minLength={8} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} />
+            <PasswordInput label={editing.id ? 'Confirm New Password' : 'Confirm Password'} required name="confirmPassword" autoComplete="new-password" minLength={8} maxLength={128} value={confirmation} onChange={event => setConfirmation(event.target.value)} />
+          </>}
+        </fieldset>
+        <div className="rr-modal-actions"><button type="button" className="btn btn-outline" disabled={busy} onClick={closeOfficer}>Cancel</button>
+          <button type="submit" className="btn btn-primary" disabled={busy || (Boolean(editing.id) && !dirty)}>{busy ? 'Saving...' : editing.id ? 'Save Profile' : 'Create Account'}</button>
+        </div>
+      </form>
+    </Modal>}
+  </section>;
 }

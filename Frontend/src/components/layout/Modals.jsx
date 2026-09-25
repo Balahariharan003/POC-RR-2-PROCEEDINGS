@@ -22,7 +22,7 @@ export function ProceedingsPreviewModal({ isOpen, onClose, entities, onDownloadD
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(3, 7, 18, 0.85)',
+      background: 'rgba(16, 44, 87, 0.85)',
       backdropFilter: 'blur(10px)',
       display: 'flex',
       alignItems: 'center',
@@ -37,7 +37,7 @@ export function ProceedingsPreviewModal({ isOpen, onClose, entities, onDownloadD
         display: 'flex',
         flexDirection: 'column',
         background: '#ffffff',
-        color: '#0f172a',
+        color: '#102C57',
         borderRadius: 'var(--radius-lg)',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)',
         overflow: 'hidden'
@@ -48,12 +48,12 @@ export function ProceedingsPreviewModal({ isOpen, onClose, entities, onDownloadD
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '1rem 1.5rem',
-          background: '#0f172a',
+          background: '#102C57',
           color: '#ffffff',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <FileCheck size={20} color="#38bdf8" />
+            <FileCheck size={20} color="#DAC0A3" />
             <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
               செயல்முறை ஆணை மாதிரிப் பார்வை (Draft Proceedings Preview)
             </h3>
@@ -80,7 +80,7 @@ export function ProceedingsPreviewModal({ isOpen, onClose, entities, onDownloadD
             <button 
               onClick={onClose}
               className="btn btn-ghost"
-              style={{ padding: '0.4rem', color: '#94a3b8' }}
+              style={{ padding: '0.4rem', color: '#102C57' }}
             >
               <X size={18} />
             </button>
@@ -94,17 +94,17 @@ export function ProceedingsPreviewModal({ isOpen, onClose, entities, onDownloadD
           fontFamily: "'Noto Sans Tamil', 'Plus Jakarta Sans', serif",
           lineHeight: '1.8',
           fontSize: '0.92rem',
-          color: '#1e293b'
+          color: '#102C57'
         }}>
           {/* Header Title */}
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 0.35rem 0', color: '#0f172a' }}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 0.35rem 0', color: '#102C57' }}>
               {j.district} மாவட்ட ஆட்சித் தலைவர் மற்றும் மாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள்
             </h2>
             <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>
               முன்னிலை: {j.collector_name}
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.85rem', color: '#102C57' }}>
               {j.collector_designation}
             </div>
           </div>
@@ -113,7 +113,7 @@ export function ProceedingsPreviewModal({ isOpen, onClose, entities, onDownloadD
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            borderBottom: '2px solid #cbd5e1',
+            borderBottom: '2px solid #DAC0A3',
             paddingBottom: '0.75rem',
             marginBottom: '1.25rem',
             fontWeight: 600,
@@ -156,7 +156,7 @@ export function ProceedingsPreviewModal({ isOpen, onClose, entities, onDownloadD
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2.5rem', textAlign: 'center' }}>
             <div>
               <div style={{ height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#64748b' }}>[டிஜிட்டல் கையொப்பம் / Seal]</span>
+                <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#102C57' }}>[டிஜிட்டல் கையொப்பம் / Seal]</span>
               </div>
               <div style={{ fontWeight: 700 }}>மாவட்ட ஆட்சித் தலைவர்</div>
               <div style={{ fontSize: '0.85rem' }}>{j.district} மாவட்டம்</div>
@@ -164,7 +164,7 @@ export function ProceedingsPreviewModal({ isOpen, onClose, entities, onDownloadD
           </div>
 
           {/* Distribution Copy (நகல்) */}
-          <div style={{ marginTop: '2rem', borderTop: '1px dashed #cbd5e1', paddingTop: '1rem', fontSize: '0.82rem' }}>
+          <div style={{ marginTop: '2rem', borderTop: '1px dashed #DAC0A3', paddingTop: '1rem', fontSize: '0.82rem' }}>
             <strong>பெறுநர் / நகல்:</strong>
             <ol style={{ paddingLeft: '1.25rem', marginTop: '0.35rem', lineHeight: '1.6' }}>
               <li>வருவாய் வட்டாட்சியர், {j.taluk} வட்டம் (தக்க நடவடிக்கைக்காக).</li>
@@ -194,7 +194,7 @@ export function DroReceiptModal({ isOpen, onClose, receiptData }) {
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(3, 7, 18, 0.85)',
+      background: 'rgba(16, 44, 87, 0.85)',
       backdropFilter: 'blur(10px)',
       display: 'flex',
       alignItems: 'center',
@@ -207,7 +207,7 @@ export function DroReceiptModal({ isOpen, onClose, receiptData }) {
         maxWidth: '520px',
         padding: '2rem',
         borderRadius: 'var(--radius-lg)',
-        border: '1px solid rgba(16, 185, 129, 0.3)',
+        border: '1px solid rgba(16, 44, 87, 0.3)',
         boxShadow: '0 20px 40px rgba(0, 0, 0, 0.7)',
         textAlign: 'center'
       }}>
@@ -215,17 +215,17 @@ export function DroReceiptModal({ isOpen, onClose, receiptData }) {
           width: '64px',
           height: '64px',
           borderRadius: '50%',
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid rgba(16, 185, 129, 0.4)',
+          background: 'rgba(16, 44, 87, 0.15)',
+          border: '1px solid rgba(16, 44, 87, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 1.25rem auto'
         }}>
-          <CheckCircle2 size={36} color="#10b981" />
+          <CheckCircle2 size={36} color="#102C57" />
         </div>
 
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#f8fafc' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#FEFAF6' }}>
           Dispatched to DRO Grievance Portal
         </h3>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 1.5rem 0' }}>
@@ -234,7 +234,7 @@ export function DroReceiptModal({ isOpen, onClose, receiptData }) {
 
         {/* Receipt Box */}
         <div style={{
-          background: 'rgba(15, 23, 42, 0.8)',
+          background: 'rgba(16, 44, 87, 0.8)',
           borderRadius: 'var(--radius-md)',
           padding: '1rem',
           border: '1px solid var(--border-card)',
@@ -257,7 +257,7 @@ export function DroReceiptModal({ isOpen, onClose, receiptData }) {
             fontSize: '1rem',
             fontFamily: 'var(--font-mono)',
             fontWeight: 700,
-            color: '#38bdf8',
+            color: '#DAC0A3',
             marginBottom: '0.75rem'
           }}>
             {receiptData.receipt}

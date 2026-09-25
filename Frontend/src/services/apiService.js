@@ -1,3 +1,5 @@
+import { readSavedAuditLogs } from './auditStore.js';
+import { recordActivity } from './activityStore.js';
 /**
  * API Service Client - Connects Frontend to FastAPI backend endpoints.
  * Includes resilient offline fallbacks and simulation for seamless dev/testing.
@@ -5,8 +7,17 @@
 
 import { DEFAULT_ENTITIES, DEFAULT_VALIDATION, evaluateGrounding } from "../data/schemas.js";
 import { INITIAL_AUDIT_LOGS, RAG_RESPONSES, SAMPLE_BOUNDING_BOXES } from "../data/mockData.js";
+ * Uses server responses; unavailable operations report errors.
+ */
+
+import { DEFAULT_ENTITIES, DEFAULT_VALIDATION } from "../data/schemas.js";
 
 const API_BASE = "/api";
+async function requestJson(path, payload) {
+  const res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error(`Request failed: ${await res.text()}`);
+  return res.json();
+}
 
 export const apiService = {
   /**
@@ -111,7 +122,20 @@ export const apiService = {
    * Dynamically adapts to Department Category: CUSTOMS vs MCOP vs RERA vs COURT_WARRANT
    * and Entity Classification: COMPANY vs INDIVIDUAL
    */
+    const formData = new FormData(); formData.append('file', file);
+    const res = await fetch(`${API_BASE}/process-document`, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(`Document processing failed: ${await res.text()}`);
+    return this._normalizePipelineResult(await res.json(), file.name);
+  },
+
+
+
+  async regenerateDocument(entities) {
+    return requestJson('/regenerate-document', entities);
+  },
+
   formatDocumentSheet(entities, customSubject) {
+    if (!entities?.case_details?.case_number) return '';
     const d = entities?.defaulter || {};
     const f = entities?.financials || {};
     const j = entities?.jurisdiction || {};
@@ -134,6 +158,15 @@ export const apiService = {
 
     const principal = Number(f.principal_amount || (dept === "CUSTOMS" ? 173308 : 481459));
     const penalty = Number(f.penalty_amount || (dept === "CUSTOMS" ? 9000 : 0));
+    const rawRoc = entities?.proceedings_roc_number || "";
+    const cleanRoc = rawRoc.replace(/^(ந\.க\.|roc\.)\s*/i, '').trim();
+    const docDate = entities?.proceedings_date || "";
+    const district = j.district || "";
+    const taluk = j.taluk || "";
+    const collectorName = j.collector_name || "";
+
+    const principal = Number(f.principal_amount || 0);
+    const penalty = Number(f.penalty_amount || 0);
     const total = penalty > 0 ? principal + penalty : principal;
 
     const formattedAmt = f.formatted_amount || (
@@ -149,6 +182,7 @@ export const apiService = {
             ? "ரூபாய் நான்கு இலட்சத்து எண்பத்தொன்றாயிரத்து நானூற்று ஐம்பத்தொன்பது மட்டும்"
             : `ரூபாய் ${total.toLocaleString('en-IN')} மட்டும்`)
     );
+    const amtWords = f.amount_in_words_tamil || "";
 
     const defaulterTitle = isCompany ? d.name : (d.name?.startsWith("திரு") ? d.name : `திரு.${d.name}`);
     const defaulterParentage = (!isCompany && d.father_or_husband_name) ? `, ${d.father_or_husband_name}` : "";
@@ -170,6 +204,10 @@ export const apiService = {
       const certDate = c.certificate_date || "24.12.2025";
       const oioNo = c.order_in_original_no || "Order in Original No. 105790/2024";
       const orderDate = c.court_order_date || "28.03.2024";
+      const fileNo = c.file_number || "";
+      const certDate = c.certificate_date || "";
+      const oioNo = c.order_in_original_no || "";
+      const orderDate = c.court_order_date || "";
 
       return `${district} மாவட்ட ஆட்சித் தலைவர் மற்றும் மாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள்
 முன்னிலை: ${collectorName}
@@ -222,6 +260,10 @@ export const apiService = {
     const courtName = c.court_name || "மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம், ஈரோடு";
     const orderDate = c.court_order_date || "26.03.2026";
     const iaNo = c.ia_number || "I.A.No.08/2026";
+    const subject = customSubject || `வருவாய் வசூல் சட்டம் 1864 பிரிவு 5 – மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம், ${district} – MCOP எண். ${c.case_number || ""} – இழப்பீட்டுத் தொகை வசூலித்தல் – குறித்து.`;
+    const courtName = c.court_name || "";
+    const orderDate = c.court_order_date || "";
+    const iaNo = c.ia_number || "";
 
     return `${district} மாவட்ட ஆட்சித் தலைவர் மற்றும் மாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள்
 முன்னிலை: ${collectorName}
@@ -231,6 +273,7 @@ export const apiService = {
 பொருள்: ${subject}
 
 பார்வை: 1. ${district}, ${courtName} அவர்களின் ஆணை ${iaNo} in ${c.case_number || "MCOP 109/2022"}, நாள்: ${orderDate}.
+பார்வை: 1. ${district}, ${courtName} அவர்களின் ஆணை ${iaNo} in ${c.case_number || ""}, நாள்: ${orderDate}.
         2. வருவாய் நிலை ஆணை எண் 41 (RSO 41).
 
 உத்தரவு:
@@ -259,6 +302,20 @@ export const apiService = {
 பொருள்: வருவாய் வசூல் சட்டம் 1864 – மோட்டார் வாகன விபத்து இழப்பீட்டுத் தொகை வசூலித்தல் – ஆணை பிறப்பித்தல் – சார்பு.
 
 பார்வை: ${courtName} ஆணை ${iaNo} in ${c.case_number || "MCOP 109/2022"}, நாள்: ${orderDate}.
+
+
+நகல் :
+1. ${b.name || ""}, ${b.address || district}.
+2. ${defaulterTitle}${defaulterParentage}, ${defaulterAddrStr}.
+
+--------------------------------------------------------------------------------
+//அலுவலகக் குறிப்பு//
+
+ந.க. ${cleanRoc}\tநாள்: ${docDate}
+
+பொருள்: வருவாய் வசூல் சட்டம் 1864 – மோட்டார் வாகன விபத்து இழப்பீட்டுத் தொகை வசூலித்தல் – ஆணை பிறப்பித்தல் – சார்பு.
+
+பார்வை: ${courtName} ஆணை ${iaNo} in ${c.case_number || ""}, நாள்: ${orderDate}.
 
    மேற்படி வழக்கில் தீர்ப்பளிக்கப்பட்ட இழப்பீட்டுத் தொகை ${formattedAmt}-யினை வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூலிக்குமாறு ${taluk} வட்டாட்சியருக்கு செயல்முறைக் குறிப்பாணை பிறப்பிக்க மாவட்ட ஆட்சித் தலைவர் அவர்களின் ஒப்புதலுக்குப் பணிந்தனுப்பப்படுகிறது.
 
@@ -332,6 +389,10 @@ export const apiService = {
   /**
    * Modifies official document content based on natural language instruction
    */
+  async regenerateWithPrompt(prompt, entities, subject) {
+    return requestJson('/regenerate-with-prompt', { prompt, entities, subject });
+  },
+
   async modifyContent(content, instruction) {
     try {
       const res = await fetch(`${API_BASE}/modify-content`, {
@@ -373,6 +434,11 @@ export const apiService = {
   /**
    * Generates and downloads DOCX with the CURRENT edited content
    */
+    const data = await requestJson('/modify-content', { content, instruction });
+    if (typeof data.content !== 'string') throw new Error('No revised content returned.');
+    return data.content;
+  },
+
   async exportDocx(content, filename = "Official_Proceedings.docx") {
     try {
       const res = await fetch(`${API_BASE}/export-docx`, {
@@ -507,6 +573,12 @@ export const apiService = {
       console.warn("Failed to load local audit logs:", e);
     }
     return INITIAL_AUDIT_LOGS;
+  async dispatchToDRO(payload) { return requestJson('/dispatch-dro', payload); },
+
+  async askRAGChat(query, context) { return requestJson('/chat', { query, context }); },
+
+  async getAuditLogs() {
+    return readSavedAuditLogs();
   },
 
   /**
@@ -541,6 +613,24 @@ export const apiService = {
     } catch (e) {
       console.warn("Failed to save audit log:", e);
       return null;
+      const current = await this.getAuditLogs();
+      const monthYear = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date());
+      const existingMonth = Object.keys(current).find(month => current[month].some(item => item.id === entry.id));
+      const month = existingMonth || monthYear;
+      const existing = current[month]?.find(item => item.id === entry.id);
+      const savedEntry = { ...existing, ...entry, timestamp: existing?.timestamp || entry.timestamp || new Date().toISOString() };
+      const updated = { ...current, [month]: [savedEntry, ...(current[month] || []).filter(item => item.id !== entry.id)] };
+
+      localStorage.setItem('rr_audit_logs', JSON.stringify(updated));
+      if (!existing || Object.keys(entry).some(key => key !== 'timestamp' && JSON.stringify(entry[key]) !== JSON.stringify(existing[key]))) {
+        recordActivity(!existing ? 'Proceedings created' : existing.status !== savedEntry.status ? 'Proceedings status updated' : 'Proceedings updated', {
+          recordId: savedEntry.id, reference: savedEntry.caseNumber || savedEntry.fileName || savedEntry.id, status: savedEntry.status || 'DRAFT',
+        });
+      }
+      globalThis.window?.dispatchEvent(new Event('rr-audit-logs-updated'));
+      return updated;
+    } catch (e) {
+      throw new Error(e?.message && !e.message.startsWith('Unable to load') ? `Unable to save audit record. ${e.message}` : 'Unable to save audit record.');
     }
   },
 
@@ -551,6 +641,7 @@ export const apiService = {
     const entities = data.entities || DEFAULT_ENTITIES;
     const validation = data.validation_insights || DEFAULT_VALIDATION;
     const boundingBoxes = data.bounding_boxes && data.bounding_boxes.length > 0 ? data.bounding_boxes : SAMPLE_BOUNDING_BOXES;
+    const boundingBoxes = data.bounding_boxes && data.bounding_boxes.length > 0 ? data.bounding_boxes : [];
 
     return {
       success: true,
@@ -587,4 +678,8 @@ export const apiService = {
       generated_docx_filename: `proceedings_${(entities?.case_details?.case_number || "RR_Case").replace(/[^a-zA-Z0-9]/g, '_')}.docx`,
     };
   }
+      generated_docx_filename: data.generated_docx_filename || '',
+    };
+  },
+
 };

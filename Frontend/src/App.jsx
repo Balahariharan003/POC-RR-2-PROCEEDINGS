@@ -1,7 +1,9 @@
+import { recordActivity, setActivityActor } from './services/activityStore.js';
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 
 import AppHeader from './components/layout/AppHeader.jsx';
+import MyProfile from './components/layout/MyProfile.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
 import { ProceedingsPreviewModal, DroReceiptModal } from './components/layout/Modals.jsx';
 
@@ -23,7 +25,6 @@ import { readUsers, saveUsers } from './services/adminStore.js';
 
 import { apiService } from './services/apiService.js';
 import { DEFAULT_ENTITIES, DEFAULT_VALIDATION } from './data/schemas.js';
-import { INITIAL_AUDIT_LOGS, SAMPLE_BOUNDING_BOXES } from './data/mockData.js';
 
 
 export default function App() {
@@ -45,16 +46,12 @@ export default function App() {
   // Document & Extracted Entities
   const [currentEntities, setCurrentEntities] = useState(DEFAULT_ENTITIES);
   const [validationInsights, setValidationInsights] = useState(DEFAULT_VALIDATION);
-  const [currentDocxFilename, setCurrentDocxFilename] = useState('proceedings_MCOP-225_2022.docx');
-  const [rawOcrText, setRawOcrText] = useState(
-    "ஈரோடு, மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம் / சிறப்பு சார்பு நீதிமன்றம்\nவழக்கு எண்: MCOP-225/2022\nமனு எண்: I.A.No.08/2026\nஉத்தரவு நாள்: 26.03.2026\nமனுதாரர்: Cholamandalam MS General Insurance Co. Ltd., Erode\nஎதிர்மனுதாரர்: திரு.T.P.ராமலிங்கம், த/பெ.பழனிச்சாமி, கதவு எண் 90/6, சந்தை மேடு, சிவகிரி, கொடுமுடி வட்டம், ஈரோடு மாவட்டம் - 638 109\nஇழப்பீட்டுத் தொகை: ரூ. 4,60,690/-"
-  );
-  const [boundingBoxes, setBoundingBoxes] = useState(SAMPLE_BOUNDING_BOXES);
+  const [currentDocxFilename, setCurrentDocxFilename] = useState('');
+  const [rawOcrText, setRawOcrText] = useState('');
+  const [boundingBoxes, setBoundingBoxes] = useState([]);
 
   // Editable Document Content & Subject (Matching Screenshots 1 & 2)
-  const [subjectText, setSubjectText] = useState(
-    '"உங்களைத் தேடி உங்கள் ஊரில்" திட்டம் — ஈரோடு மாவட்டம், கொடுமுடி வட்டத்தில் பல்வேறு வளர்ச்சித் திட்டப் பணிகளை மாவட்ட ஆட்சித்தலைவர் ஆய்வு செய்தல் மற்றும் ரூ.4,60,690/- இழப்பீட்டுத் தொகையை வசூலித்து ஒப்படைக்க உத்தரவிடுதல்.'
-  );
+  const [subjectText, setSubjectText] = useState('');
   const [documentContent, setDocumentContent] = useState('');
 
   // Cross-Component Interaction
@@ -68,7 +65,7 @@ export default function App() {
 
   // Active Restored Session & Audit Logs
   const [activeSession, setActiveSession] = useState(null);
-  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
+  const [auditLogs, setAuditLogs] = useState({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Handle restoring a session from Audit Logs (ChatGPT / Gemini style)
@@ -95,7 +92,7 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    apiService.getAuditLogs().then(setAuditLogs);
+    apiService.getAuditLogs().then(setAuditLogs).catch(error => console.warn('Unable to load saved audit logs:', error));
     try {
       const preferences = JSON.parse(localStorage.getItem('rr_preferences') || 'null');
       if (preferences) {
@@ -151,11 +148,13 @@ export default function App() {
   };
 
   const applyPipelineResult = (result, fileNameOverride) => {
+  const applyPipelineResult = (result) => {
+    recordActivity('Proceedings generated', { reference: result.entities?.case_details?.case_number || result.generated_docx_filename });
     setCurrentEntities(result.entities);
     setValidationInsights(result.validation_insights);
     setCurrentDocxFilename(fileNameOverride || result.generated_docx_filename);
     setRawOcrText(result.rawOcrText);
-    setBoundingBoxes(result.bounding_boxes || SAMPLE_BOUNDING_BOXES);
+    setBoundingBoxes(result.bounding_boxes || []);
 
     // Format the new document content
     const initialSubject = `"உங்களைத் தேடி உங்கள் ஊரில்" திட்டம் — ${result.entities.jurisdiction.district} மாவட்டம், ${result.entities.jurisdiction.taluk} வட்டத்தில் மோட்டார் விபத்து இழப்பீட்டுத் தொகை ரூ.${Number(result.entities.financials.principal_amount).toLocaleString('en-IN')}/- ஐ வசூலித்து ஒப்படைக்க உத்தரவிடுதல்.`;
@@ -171,6 +170,7 @@ export default function App() {
     setIsRegenerating(true);
     try {
       const res = await apiService.regenerateWithPrompt(prompt, currentEntities, subjectText);
+      recordActivity('Proceedings updated', { reference: res.entities?.case_details?.case_number || '' });
       setCurrentEntities(res.entities);
       setDocumentContent(res.documentContent);
       if (res.generated_docx_filename) {
@@ -189,6 +189,7 @@ export default function App() {
     setIsRecalculating(true);
     try {
       const res = await apiService.regenerateDocument(currentEntities);
+      recordActivity('Proceedings updated', { reference: res.entities?.case_details?.case_number || '' });
       setCurrentEntities(res.entities);
       setValidationInsights(res.validation_insights || validationInsights);
       if (res.generated_docx_filename) {
@@ -206,12 +207,14 @@ export default function App() {
   // Download Proceedings DOCX
   const handleDownloadDocx = () => {
     if (!currentDocxFilename) return;
+    recordActivity('Proceedings download requested', { reference: currentDocxFilename });
     const url = apiService.getDownloadUrl(currentDocxFilename);
     window.open(url, '_blank');
   };
 
   // Download / Print as PDF
   const handleDownloadPdf = () => {
+    recordActivity('Proceedings print requested', { reference: currentEntities?.case_details?.case_number || '' });
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       window.print();
@@ -274,6 +277,7 @@ export default function App() {
         [currentMonth]: [response.auditEntry, ...(prev[currentMonth] || [])]
       }));
 
+      recordActivity('Proceedings dispatched', { reference: currentEntities?.case_details?.case_number || '', status: 'DISPATCHED' });
       setDroReceiptData(response);
     } catch (err) {
       alert("Dispatch error: " + err.message);
@@ -341,6 +345,16 @@ if (!currentUser) {
     setMobileMenuOpen(false);
   }} />;
 }
+  if (!currentUser) {
+    return <LoginPage onLogin={(user) => {
+      setActivityActor(user);
+      recordActivity('Signed in');
+      setCurrentUser(user);
+      setActiveSession(null);
+      setActiveView(user.role === 'admin' ? 'adminDashboard' : 'rrAssistant');
+      setMobileMenuOpen(false);
+    }} />;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh', overflow: 'hidden', backgroundColor: '#FEFAF6' }}>
@@ -357,7 +371,7 @@ if (!currentUser) {
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         currentUser={currentUser}
-        onLogout={() => setCurrentUser(null)}
+        onLogout={() => { recordActivity('Signed out'); setActivityActor(null); setCurrentUser(null); }}
       />
 
       {/* Main Body Area: Sidebar + Main Content */}
@@ -374,27 +388,9 @@ if (!currentUser) {
           setIsCollapsed={setSidebarCollapsed}
           mobileOpen={mobileMenuOpen}
           setMobileOpen={setMobileMenuOpen}
-          onSelectRecent={(caseNum) => {
-            setMobileMenuOpen(false);
-            if (caseNum === 'MCOP-225/2022') {
-              setCurrentEntities(DEFAULT_ENTITIES);
-              setValidationInsights(DEFAULT_VALIDATION);
-              setDocumentContent(apiService.formatDocumentSheet(DEFAULT_ENTITIES, subjectText));
-            } else if (caseNum === 'MCOP-118/2023') {
-              const updated = {
-                ...DEFAULT_ENTITIES,
-                case_details: { ...DEFAULT_ENTITIES.case_details, case_number: "MCOP-118/2023" },
-                financials: { ...DEFAULT_ENTITIES.financials, principal_amount: 892400 },
-                jurisdiction: { ...DEFAULT_ENTITIES.jurisdiction, taluk: "பெருந்துறை" }
-              };
-              setCurrentEntities(updated);
-              setValidationInsights({
-                ...DEFAULT_VALIDATION,
-                grounding_score: 0.78,
-                hallucination_score: 0.22
-              });
-              setDocumentContent(apiService.formatDocumentSheet(updated, subjectText));
-            }
+          onSelectRecent={caseNum => {
+            const record = Object.values(auditLogs).flat().find(row => row.caseNumber === caseNum);
+            if (record) handleRestoreSession(record);
           }}
         />
 
@@ -404,10 +400,18 @@ if (!currentUser) {
           <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1rem', height: '100%' }}>
             {currentUser.role === 'admin' && ['adminDashboard', 'adminTemplates', 'adminUsers', 'adminBackup'].includes(activeView) && (
               <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onNavigate={setActiveView} onRestored={() => {
+          <main className="main-work-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '1.25rem' }}>
+            {activeView === 'myProfile' && <MyProfile currentUser={currentUser} currentLanguage={currentLanguage}
+              onUserUpdated={user => { setActivityActor(user); setCurrentUser(user); }}
+              setLanguage={setLanguage}
+              onBack={() => setActiveView(currentUser.role === 'admin' ? 'adminDashboard' : 'rrAssistant')} />}
+            {currentUser.role === 'admin' && ['adminDashboard', 'adminUsers', 'adminBackup'].includes(activeView) && (
+              <AdminWorkspace key={activeView} view={activeView} currentUser={currentUser} onUserUpdated={user => { setActivityActor(user); setCurrentUser(user); }} onNavigate={setActiveView} onRestored={() => {
+                setActivityActor(null);
                 setCurrentUser(null);
                 setActiveSession(null);
                 setActiveView('rrAssistant');
-                apiService.getAuditLogs().then(setAuditLogs);
+                apiService.getAuditLogs().then(setAuditLogs).catch(error => console.warn('Unable to load saved audit logs:', error));
                 const preferences = JSON.parse(localStorage.getItem('rr_preferences') || 'null');
                 setLanguage(preferences?.language || 'en');
                 setTheme(preferences?.theme || 'dark');
@@ -427,6 +431,7 @@ if (!currentUser) {
             )}
             {activeView === 'rrAssistant' && (
               <RRAssistantView
+                currentUser={currentUser}
                 currentLanguage={currentLanguage}
                 activeSession={activeSession}
                 onSaveAuditLog={async () => {
@@ -546,6 +551,7 @@ if (!currentUser) {
             {(activeView === 'audit' || activeView === 'droQueue') && (
               <AuditLogView
                 currentUser={currentUser}
+                isAdmin={currentUser.role === 'admin'}
                 onRestoreSession={handleRestoreSession}
                 onNavigateToAssistant={() => {
                   setActiveSession(null);

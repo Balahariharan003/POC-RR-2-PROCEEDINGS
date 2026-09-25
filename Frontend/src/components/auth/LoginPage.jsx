@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { authenticate } from '../../services/accountStore.js';
 import './LoginPage.css';
 
 const MOTTO_VARIANTS = [
@@ -20,6 +21,8 @@ export default function LoginPage({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   // Motto variant 1 (English) matches the reference screenshot on initial mount
   const [mottoIndex, setMottoIndex] = useState(1);
   const [isFading, setIsFading] = useState(false);
@@ -36,16 +39,17 @@ export default function LoginPage({ onLogin }) {
     return () => clearInterval(timer);
   }, []);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    // Frontend demo only. Never persist credentials or treat this as authorization.
-    if (onLogin) {
-      onLogin({
-        role,
-        email: email || (role === 'admin' ? 'collector@erode.tn.gov.in' : 'you@tn.gov.in'),
-        name: role === 'admin' ? 'District Collector' : 'S. Ramanathan'
-      });
-    }
+    if (busy) return;
+    setError('');
+    setBusy(true);
+    try {
+      const user = await authenticate(email, password, role);
+      if (!user) { setError('Invalid username or password'); return; }
+      onLogin?.(user);
+    } catch { setError('Invalid username or password'); }
+    finally { setBusy(false); }
   }
 
   const currentMotto = MOTTO_VARIANTS[mottoIndex];
@@ -84,7 +88,7 @@ export default function LoginPage({ onLogin }) {
           </div>
 
           <form onSubmit={handleSubmit}>
-            <fieldset className="login-roles">
+            <fieldset className="login-roles" disabled={busy}>
               <legend className="visually-hidden">Sign in as</legend>
               {[
                 { value: 'user', label: 'User' },
@@ -104,15 +108,16 @@ export default function LoginPage({ onLogin }) {
             </fieldset>
 
             <div className="login-field">
-              <label htmlFor="login-email">Email address/ மின்னஞ்சல் முகவரி</label>
+              <label htmlFor="login-email">Username / Email</label>
               <input
                 id="login-email"
                 name="email"
-                type="email"
-                placeholder="you@tn.gov.in"
+                type="text"
+                disabled={busy}
+                placeholder="Username or email"
                 autoComplete="username"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 required
               />
             </div>
@@ -126,8 +131,10 @@ export default function LoginPage({ onLogin }) {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter password"
                   autoComplete="current-password"
+                  maxLength={128}
+                  disabled={busy}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setError(''); }}
                   required
                 />
                 <button
@@ -141,13 +148,11 @@ export default function LoginPage({ onLogin }) {
               </div>
             </div>
 
-            <button className="login-submit" type="submit">
-              <span>Sign In</span>
-              <ArrowRight size={18} aria-hidden="true" />
+            {error && <p className="login-error" role="alert">{error}</p>}
+            <button className="login-submit" type="submit" disabled={busy}>
+              <span>{busy ? 'Please wait...' : 'Sign In'}</span><ArrowRight size={18} aria-hidden="true" />
             </button>
-            <p className="login-demo">
-              Demo mode <span>Any email and password</span>
-            </p>
+
           </form>
         </section>
       </div>

@@ -1,3 +1,4 @@
+import { recordActivity } from '../../services/activityStore.js';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, 
@@ -24,6 +25,7 @@ import MobileQrModal from '../upload/MobileQrModal.jsx';
 
 export default function RRAssistantView({ 
   currentLanguage = 'en',
+  currentUser,
   onSelectRecent,
   activeSession = null,
   onSaveAuditLog
@@ -39,6 +41,7 @@ export default function RRAssistantView({
   
   // Document Content & Correction
   const [generatedContent, setGeneratedContent] = useState('');
+  const editStart = useRef('');
   const [correctionInstruction, setCorrectionInstruction] = useState('');
   const [isApplyingChanges, setIsApplyingChanges] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -50,6 +53,7 @@ export default function RRAssistantView({
   const [showOriginalDoc, setShowOriginalDoc] = useState(false);
   const [docPreviewUrl, setDocPreviewUrl] = useState(null);
   const [extractedEntities, setExtractedEntities] = useState(null);
+  const [auditError, setAuditError] = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -98,13 +102,39 @@ export default function RRAssistantView({
     console.warn('Could not clear saved draft:', error);
   }
 }, []);
+    apiService.getAuditLogs().catch(err => {
+      setAuditError(err?.message || 'Unable to load saved audit records.');
+    });
+  }, []);
+
+  useEffect(() => {
+    if (activeSession) return;
+    try {
+      const draft = JSON.parse(localStorage.getItem('rr_draft') || 'null');
+      if (draft && typeof draft.content === 'string' && draft.content) {
+        setGeneratedContent(draft.content);
+        setFileInfo({ name: draft.fileName || 'Saved proceedings', sizeFormatted: draft.fileSize || '' });
+        setPromptHistory(Array.isArray(draft.promptHistory) ? draft.promptHistory : []);
+        setCurrentSessionId(draft.sessionId || null);
+        setWorkflowState('generated');
+      }
+    } catch (error) { setAuditError('Unable to load saved draft from browser storage.'); }
+  }, []);
+
+  useEffect(() => {
+    if (workflowState !== 'generated') return;
+    try {
+      localStorage.setItem('rr_draft', JSON.stringify({ content: generatedContent, fileName: fileInfo.name, fileSize: fileInfo.sizeFormatted, promptHistory, sessionId: currentSessionId }));
+    } catch (error) { setAuditError('Draft could not be saved locally. Export the document to keep your changes.'); }
+  }, [workflowState, generatedContent, fileInfo, promptHistory, currentSessionId]);
+
   // Restore session when activeSession prop changes (ChatGPT & Gemini style restore)
   useEffect(() => {
     if (activeSession && activeSession.documentContent) {
       setSelectedFile(null);
       setFileInfo({
         name: activeSession.fileName || activeSession.caseNumber || 'restored_order.pdf',
-        sizeFormatted: activeSession.fileSize || '1.45 MB'
+        sizeFormatted: activeSession.fileSize || 'Size not recorded'
       });
       setGeneratedContent(activeSession.documentContent);
       setPromptHistory(activeSession.promptHistory || []);
@@ -207,31 +237,15 @@ export default function RRAssistantView({
 
       let result;
       if (selectedFile) {
-        result = await apiService.uploadDocument(selectedFile, selectedTemplateCode);
+        result = await apiService.uploadDocument(selectedFile);
       } else {
-        result = await apiService.loadSampleDocument(selectedTemplateCode);
+        throw new Error('Select a source document first.');
       }
 
       clearTimeout(t1);
       clearTimeout(t2);
 
-      const entities = result.entities || {};
-      setExtractedEntities(entities);
-
-      // Render with dynamic template if selected
-      let formattedDoc = '';
-      const matchedTpl = availableTemplates.find(t => t.template_code === selectedTemplateCode);
-      if (matchedTpl) {
-        try {
-          const rendered = await apiService.renderTemplate(matchedTpl.id, entities);
-          formattedDoc = rendered.rendered_content || apiService.formatDocumentSheet(entities);
-        } catch (e) {
-          formattedDoc = apiService.formatDocumentSheet(entities);
-        }
-      } else {
-        formattedDoc = apiService.formatDocumentSheet(entities);
-      }
-
+      const formattedDoc = apiService.formatDocumentSheet(result.entities);
       setGeneratedContent(formattedDoc);
       
       const newSessionId = `AUD-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100 + Math.random() * 900)}`;
@@ -244,52 +258,36 @@ export default function RRAssistantView({
       setPromptHistory([initialPrompt]);
       setCurrentSessionId(newSessionId);
 
-      // Auto-save to Audit Log Trail in PostgreSQL
-      const principalAmt = Number(entities?.financials?.principal_amount || 0);
-      const formattedTotal = principalAmt > 0 ? `₹ ${principalAmt.toLocaleString('en-IN')}/-` : '₹ 0/-';
-
-      await apiService.saveAuditLog({
-        id: newSessionId,
-        caseNumber: entities?.case_details?.case_number || fileInfo.name.replace(/\.[^/.]+$/, ""),
-        fileName: fileInfo.name || "order.pdf",
-        fileSize: fileInfo.sizeFormatted || "1.45 MB",
-        defaulter: entities?.defaulter?.name || "Unknown Defaulter",
-        taluk: entities?.jurisdiction?.taluk || "வட்டம்",
-        district: entities?.jurisdiction?.district || "ஈரோடு",
-        amount: formattedTotal,
-        status: "DRAFT",
-        groundingScore: result.validation_insights?.grounding_score ?? 0.96,
-        hallucinationScore: result.validation_insights?.hallucination_score ?? 0.04,
-        promptHistory: [initialPrompt],
-        documentContent: formattedDoc,
-        notes: "Automated OCR extraction and draft generation completed in RR Assistant."
-      });
-
-      if (onSaveAuditLog) onSaveAuditLog();
       setWorkflowState('generated');
+
+      // Auto-save to Audit Log Trail
+      try {
+        await apiService.saveAuditLog({
+          id: newSessionId,
+          officerId: currentUser?.officerId || currentUser?.id,
+          officerName: currentUser?.name,
+          caseNumber: result.entities?.case_details?.case_number || fileInfo.name.replace(/\.[^/.]+$/, ""),
+          fileName: fileInfo.name || "order.pdf",
+          fileSize: fileInfo.sizeFormatted || "",
+          defaulter: result.entities?.defaulter?.name || "",
+          taluk: result.entities?.jurisdiction?.taluk || "",
+          district: result.entities?.jurisdiction?.district || "",
+          amount: `₹ ${Number(result.entities?.financials?.principal_amount || 0).toLocaleString('en-IN')}/-`,
+          status: "DRAFT",
+          groundingScore: result.validation_insights?.grounding_score ?? 0,
+          hallucinationScore: result.validation_insights?.hallucination_score ?? 0,
+          promptHistory: [initialPrompt],
+          documentContent: formattedDoc,
+          notes: "Automated OCR extraction and draft generation completed in RR Assistant."
+        });
+        if (onSaveAuditLog) await onSaveAuditLog();
+        setAuditError('');
+      } catch (saveErr) {
+        setAuditError(saveErr?.message || 'Unable to save audit record.');
+      }
     } catch (err) {
       alert("Error processing document: " + err.message);
       setWorkflowState('file_selected');
-    }
-  };
-
-  // Switch template dynamically on generated document
-  const handleSwitchTemplate = async (templateCode) => {
-    setSelectedTemplateCode(templateCode);
-    if (!extractedEntities) return;
-
-    const matchedTpl = availableTemplates.find(t => t.template_code === templateCode);
-    if (matchedTpl) {
-      try {
-        const rendered = await apiService.renderTemplate(matchedTpl.id, extractedEntities);
-        if (rendered.rendered_content) {
-          setGeneratedContent(rendered.rendered_content);
-          setLastUpdatedMessage(`Switched template to ${matchedTpl.name}`);
-          setTimeout(() => setLastUpdatedMessage(''), 3000);
-        }
-      } catch (err) {
-        console.warn("Failed to render switched template:", err);
-      }
     }
   };
 
@@ -317,16 +315,20 @@ export default function RRAssistantView({
       setTimeout(() => setLastUpdatedMessage(''), 4000);
 
       // Update Audit Log Trail
-      await apiService.saveAuditLog({
-        id: currentSessionId,
-        caseNumber: fileInfo.name.replace(/\.[^/.]+$/, "") || "MCOP-225/2022",
-        fileName: fileInfo.name || "order.pdf",
-        promptHistory: updatedHistory,
-        documentContent: updatedText,
-        status: "VERIFIED"
-      });
-
-      if (onSaveAuditLog) onSaveAuditLog();
+      try {
+        await apiService.saveAuditLog({
+          id: currentSessionId || `AUD-${Date.now()}`,
+          caseNumber: fileInfo.name.replace(/\.[^/.]+$/, "") || "",
+          fileName: fileInfo.name || "order.pdf",
+          promptHistory: updatedHistory,
+          documentContent: updatedText,
+          status: "VERIFIED"
+        });
+        if (onSaveAuditLog) await onSaveAuditLog();
+        setAuditError('');
+      } catch (saveErr) {
+        setAuditError(saveErr?.message || 'Unable to save audit record.');
+      }
     } catch (err) {
       alert("Failed to apply changes: " + err.message);
     } finally {
@@ -338,6 +340,7 @@ export default function RRAssistantView({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(generatedContent);
+      recordActivity('Proceedings copied', { reference: fileInfo.name });
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
@@ -349,10 +352,12 @@ export default function RRAssistantView({
   const handleDownloadDocx = async () => {
     const filename = `Official_${fileInfo.name.replace(/\.[^/.]+$/, "") || "Document"}.docx`;
     await apiService.exportDocx(generatedContent, filename);
+    recordActivity('Proceedings download requested', { reference: filename });
   };
 
   // Download / Print PDF containing CURRENT edited content (Section 8)
   const handleDownloadPdf = () => {
+    recordActivity('Proceedings print requested', { reference: fileInfo.name });
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       window.print();
@@ -370,7 +375,7 @@ export default function RRAssistantView({
               font-family: 'Noto Sans Tamil', 'Plus Jakarta Sans', Calibri, Arial, sans-serif; 
               font-size: 13.5px; 
               line-height: 1.8; 
-              color: #1e293b; 
+              color: #102C57;
               padding: 25px; 
               background: #fff;
             }
@@ -396,6 +401,7 @@ export default function RRAssistantView({
 
   // Reset to initial upload (Section 9 & 11)
   const handleResetWorkflow = () => {
+    if (generatedContent) recordActivity('Draft cleared', { reference: fileInfo.name });
     try { localStorage.removeItem('rr_draft'); } catch (error) { console.warn('Could not clear draft:', error); }
     setPromptHistory([]);
     setCurrentSessionId(null);
@@ -407,8 +413,8 @@ export default function RRAssistantView({
   };
 
   return (
-    <div style={{
-      maxWidth: workflowState === 'generated' ? 'none' : '1000px',
+    <div className="rr-assistant-compact" style={{
+      maxWidth: workflowState === 'generated' ? 'none' : '900px',
       margin: '0 auto',
       width: '100%',
       display: 'flex',
@@ -417,6 +423,8 @@ export default function RRAssistantView({
       flex: 1,
       minHeight: 0,
       height: '100%'
+      gap: '1.25rem',
+      paddingBottom: '2.5rem'
     }}>
             <input
               type="file"
@@ -429,6 +437,17 @@ export default function RRAssistantView({
               accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf"
               style={{ display: 'none' }}
             />
+      {auditError && (
+        <div className="rr-admin-alert" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', border: '1px solid #DAC0A3' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={18} aria-hidden="true" />
+            <span>{auditError}</span>
+          </div>
+          <button type="button" aria-label="Dismiss error" className="btn btn-ghost" onClick={() => setAuditError('')}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {/* =========================================================================
           STEP 1 & 4: INITIAL CENTERED UPLOAD WORKSPACE (RR ASSISTANT DESIGN)
           ========================================================================= */}
@@ -440,6 +459,7 @@ export default function RRAssistantView({
           justifyContent: 'center',
           flex: 1,
           minHeight: 0,
+          paddingTop: '14px',
           textAlign: 'center',
           animation: 'fadeIn 0.3s ease-out'
         }}>
@@ -451,6 +471,9 @@ export default function RRAssistantView({
               width: '64px',
               height: '64px',
               margin: '0 auto 12px auto',
+              width: '66px',
+              height: '66px',
+              margin: '0 auto 18px auto', 
               display: 'block', 
               objectFit: 'contain',
               filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.08))' 
@@ -459,7 +482,7 @@ export default function RRAssistantView({
 
           {/* Heading & Subheading */}
           <h1 style={{
-            fontSize: '1.75rem',
+            fontSize: '1.55rem',
             fontWeight: 700,
             color: '#102C57',
             margin: '0 0 6px 0',
@@ -468,11 +491,12 @@ export default function RRAssistantView({
             RR Proceedings Assistant
           </h1>
           <p style={{
-            fontSize: '0.95rem',
-            color: '#3A4B63',
-            maxWidth: '540px',
+            fontSize: '0.875rem',
+            color: '#102C57',
+            maxWidth: '490px',
             lineHeight: 1.5,
             margin: '0 auto 20px auto'
+            margin: '0 auto 24px auto'
           }}>
             Upload a source document to generate RR proceedings in the fixed template.
           </p>
@@ -490,6 +514,11 @@ export default function RRAssistantView({
               border: isDragOver ? '2px dashed #102C57' : '2px dashed #DAC0A3',
               borderRadius: '16px',
               padding: '32px 28px',
+              maxWidth: '490px',
+              backgroundColor: isDragOver ? '#FEFAF6' : '#FFFFFF',
+              border: isDragOver ? '2px dashed #102C57' : '2px dashed #DAC0A3',
+              borderRadius: '16px',
+              padding: '36px 28px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -519,7 +548,7 @@ export default function RRAssistantView({
 
             {/* Title & Description */}
             <h3 style={{
-              fontSize: '1.25rem',
+              fontSize: '1.15rem',
               fontWeight: 700,
               color: '#102C57',
               margin: '0 0 6px 0'
@@ -530,6 +559,8 @@ export default function RRAssistantView({
               fontSize: '0.875rem',
               color: '#687991',
               margin: '0 0 16px 0'
+              color: '#102C57',
+              margin: '0 0 22px 0'
             }}>
               Drag &amp; drop your document here
             </p>
@@ -543,8 +574,8 @@ export default function RRAssistantView({
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '6px',
-                padding: '12px 32px',
-                fontSize: '0.95rem',
+                padding: '10px 26px',
+                fontSize: '0.875rem',
                 fontWeight: 600,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -562,6 +593,8 @@ export default function RRAssistantView({
               fontSize: '0.775rem',
               color: '#687991',
               marginTop: '14px',
+              color: '#102C57',
+              marginTop: '18px',
               marginBottom: 0,
               fontWeight: 500
             }}>
@@ -628,23 +661,23 @@ export default function RRAssistantView({
           paddingTop: '2.5rem',
           textAlign: 'center'
         }}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1e293b', margin: '0 0 0.35rem 0' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h2 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#102C57', margin: '0 0 0.35rem 0' }}>
               RR Assistant
             </h2>
-            <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 500, margin: 0 }}>
+            <p style={{ fontSize: '0.9rem', color: '#102C57', fontWeight: 500, margin: 0 }}>
               Document Ready for Content Generation
             </p>
           </div>
 
           <div style={{
             width: '100%',
-            maxWidth: '540px',
+            maxWidth: '490px',
             background: '#ffffff',
-            border: '1px solid #bcd5ee',
+            border: '1px solid #DAC0A3',
             borderRadius: '16px',
-            padding: '2.5rem 2rem',
-            boxShadow: '0 4px 20px rgba(15, 33, 55, 0.06)',
+            padding: '2rem 1.5rem',
+            boxShadow: '0 4px 20px rgba(16, 44, 87, 0.06)',
             textAlign: 'center'
           }}>
             <span style={{
@@ -652,7 +685,7 @@ export default function RRAssistantView({
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
               fontWeight: 700,
-              color: '#64748b'
+              color: '#102C57'
             }}>
               Uploaded Document
             </span>
@@ -662,27 +695,27 @@ export default function RRAssistantView({
               width: '56px',
               height: '56px',
               borderRadius: '10px',
-              background: '#eff6ff',
-              border: '1px solid #dbeafe',
+              background: '#FEFAF6',
+              border: '1px solid #EADBC8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '1rem auto 0.75rem auto'
             }}>
-              <FileText size={28} color="#0e2942" />
+              <FileText size={28} color="#102C57" />
             </div>
 
             <div style={{
               fontSize: '1rem',
               fontWeight: 700,
-              color: '#1e293b',
+              color: '#102C57',
               wordBreak: 'break-all',
               marginBottom: '0.35rem'
             }}>
               {fileInfo.name}
             </div>
 
-            <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '0.8rem', color: '#102C57', marginBottom: '1.25rem' }}>
               File size: {fileInfo.sizeFormatted}
             </div>
 
@@ -692,49 +725,10 @@ export default function RRAssistantView({
                 setWorkflowState('upload');
               }}
               className="btn btn-ghost"
-              style={{ fontSize: '0.785rem', color: '#dc2626', marginBottom: '1.5rem' }}
+              style={{ fontSize: '0.785rem', color: '#102C57', marginBottom: '1.25rem' }}
             >
               [ Change Document ]
             </button>
-
-            {/* Template Selector Dropdown */}
-            {availableTemplates.length > 0 && (
-              <div style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: '#64748b',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  marginBottom: '0.4rem'
-                }}>
-                  Selected Template (PostgreSQL)
-                </label>
-                <select
-                  value={selectedTemplateCode}
-                  onChange={(e) => setSelectedTemplateCode(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.85rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.875rem',
-                    color: '#0e2942',
-                    fontWeight: 600,
-                    backgroundColor: '#f8fafc',
-                    cursor: 'pointer',
-                    outline: 'none'
-                  }}
-                >
-                  {availableTemplates.map(t => (
-                    <option key={t.id} value={t.template_code}>
-                      {t.name} ({t.category || t.department})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             <div>
               <button
@@ -742,14 +736,14 @@ export default function RRAssistantView({
                 className="btn"
                 style={{
                   width: '100%',
-                  background: '#0e2942',
+                  background: '#102C57',
                   color: '#ffffff',
                   fontWeight: 700,
                   fontSize: '0.92rem',
                   padding: '0.85rem',
                   borderRadius: '8px',
                   border: 'none',
-                  boxShadow: '0 4px 14px rgba(14, 41, 66, 0.3)'
+                  boxShadow: '0 4px 14px rgba(16, 44, 87, 0.3)'
                 }}
               >
                 Generate Official Content
@@ -775,44 +769,44 @@ export default function RRAssistantView({
             width: '100%',
             maxWidth: '520px',
             background: '#ffffff',
-            border: '1px solid #bcd5ee',
+            border: '1px solid #DAC0A3',
             borderRadius: '16px',
-            padding: '3rem 2rem',
-            boxShadow: '0 8px 24px rgba(15, 33, 55, 0.08)',
+            padding: '2.25rem 1.5rem',
+            boxShadow: '0 8px 24px rgba(16, 44, 87, 0.08)',
             textAlign: 'center'
           }}>
             <div style={{
               width: '60px',
               height: '60px',
               borderRadius: '50%',
-              background: '#eff6ff',
+              background: '#FEFAF6',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.25rem auto'
             }}>
-              <RefreshCw size={28} color="#0e2942" className="spinner" />
+              <RefreshCw size={28} color="#102C57" className="spinner" />
             </div>
 
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', margin: '0 0 0.5rem 0' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#102C57', margin: '0 0 0.5rem 0' }}>
               Processing document...
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 1.75rem 0' }}>
+            <p style={{ fontSize: '0.85rem', color: '#102C57', margin: '0 0 1.75rem 0' }}>
               {fileInfo.name}
             </p>
 
             {/* Step list progress */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', textAlign: 'left', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 1 ? '#15803d' : '#64748b', fontWeight: processingStageNum === 1 ? 600 : 400 }}>
-                {processingStageNum > 1 ? <Check size={16} color="#15803d" /> : <RefreshCw size={14} className="spinner" color="#0e2942" />}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 1 ? '#102C57' : '#102C57', fontWeight: processingStageNum === 1 ? 600 : 400 }}>
+                {processingStageNum > 1 ? <Check size={16} color="#102C57" /> : <RefreshCw size={14} className="spinner" color="#102C57" />}
                 <span>Extracting document content</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 2 ? (processingStageNum > 2 ? '#15803d' : '#0e2942') : '#94a3b8', fontWeight: processingStageNum === 2 ? 600 : 400 }}>
-                {processingStageNum > 2 ? <Check size={16} color="#15803d" /> : processingStageNum === 2 ? <RefreshCw size={14} className="spinner" color="#0e2942" /> : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 2 ? (processingStageNum > 2 ? '#102C57' : '#102C57') : '#102C57', fontWeight: processingStageNum === 2 ? 600 : 400 }}>
+                {processingStageNum > 2 ? <Check size={16} color="#102C57" /> : processingStageNum === 2 ? <RefreshCw size={14} className="spinner" color="#102C57" /> : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
                 <span>Analyzing structure</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 3 ? '#0e2942' : '#94a3b8', fontWeight: processingStageNum === 3 ? 600 : 400 }}>
-                {processingStageNum === 3 ? <RefreshCw size={14} className="spinner" color="#0e2942" /> : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 3 ? '#102C57' : '#102C57', fontWeight: processingStageNum === 3 ? 600 : 400 }}>
+                {processingStageNum === 3 ? <RefreshCw size={14} className="spinner" color="#102C57" /> : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
                 <span>Generating official content</span>
               </div>
             </div>
@@ -825,10 +819,11 @@ export default function RRAssistantView({
           ========================================================================= */}
       {workflowState === 'generated' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, minHeight: 0, height: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Top Title & Action Bar */}
           <div style={{
             background: '#ffffff',
-            border: '1px solid #e2e8f0',
+            border: '1px solid #EADBC8',
             borderRadius: '10px',
             padding: '1rem 1.5rem',
             display: 'flex',
@@ -841,52 +836,28 @@ export default function RRAssistantView({
           }}>
             {/* Title & Document Info */}
             <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e293b', margin: '0 0 0.2rem 0' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#102C57', margin: '0 0 0.2rem 0' }}>
                 Generated RR Proceedings
               </h2>
-              <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>Document:</span>
-                <strong style={{ color: '#0e2942' }}>{fileInfo.name}</strong>
+              <div style={{ fontSize: '0.8rem', color: '#102C57', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>Document Information:</span>
+                <strong style={{ color: '#102C57' }}>{fileInfo.name}</strong>
               </div>
             </div>
 
-            {/* Template Selector & Download Options */}
+            {/* Download Options (Section 8) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {availableTemplates.length > 0 && (
-                <select
-                  value={selectedTemplateCode}
-                  onChange={(e) => handleSwitchTemplate(e.target.value)}
-                  style={{
-                    padding: '0.45rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    color: '#0e2942',
-                    backgroundColor: '#f8fafc',
-                    cursor: 'pointer'
-                  }}
-                  title="Switch template"
-                >
-                  {availableTemplates.map(t => (
-                    <option key={t.id} value={t.template_code}>
-                      📄 {t.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-
               <button
                 onClick={handleCopy}
                 className="btn btn-outline"
                 style={{
                   fontSize: '0.8rem',
                   padding: '0.5rem 0.85rem',
-                  borderColor: '#cbd5e1',
-                  color: '#334155'
+                  borderColor: '#DAC0A3',
+                  color: '#102C57'
                 }}
               >
-                {copied ? <Check size={14} color="#16a34a" /> : <Copy size={14} />}
+                {copied ? <Check size={14} color="#102C57" /> : <Copy size={14} />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
               </button>
 
@@ -896,9 +867,9 @@ export default function RRAssistantView({
                 style={{
                   fontSize: '0.8rem',
                   padding: '0.5rem 1rem',
-                  borderColor: '#bcd5ee',
-                  color: '#0e2942',
-                  background: '#eff6ff'
+                  borderColor: '#DAC0A3',
+                  color: '#102C57',
+                  background: '#FEFAF6'
                 }}
               >
                 <Printer size={15} />
@@ -911,12 +882,12 @@ export default function RRAssistantView({
                 style={{
                   fontSize: '0.8rem',
                   padding: '0.5rem 1.15rem',
-                  background: '#0e2942',
+                  background: '#102C57',
                   color: '#ffffff',
                   fontWeight: 600,
                   borderRadius: '6px',
                   border: 'none',
-                  boxShadow: '0 2px 6px rgba(14, 41, 66, 0.25)'
+                  boxShadow: '0 2px 6px rgba(16, 44, 87, 0.25)'
                 }}
               >
                 <Download size={15} />
@@ -926,10 +897,10 @@ export default function RRAssistantView({
               <button
                 onClick={handleResetWorkflow}
                 className="btn btn-ghost"
-                style={{ fontSize: '0.785rem', color: '#64748b' }}
+                style={{ fontSize: '0.785rem', color: '#102C57' }}
               >
                 <PlusCircle size={15} />
-                <span>Upload Docs</span>
+                <span>New Upload</span>
               </button>
             </div>
           </div>
@@ -946,7 +917,7 @@ export default function RRAssistantView({
           {/* Editable proceedings: 60% of the workspace */}
           <div className="rr-document-panel" style={{
             background: '#ffffff',
-            border: '1px solid #e2e8f0',
+            border: '1px solid #EADBC8',
             borderRadius: '10px',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
             overflow: 'hidden',
@@ -957,19 +928,19 @@ export default function RRAssistantView({
           }}>
             <div style={{
               padding: '0.75rem 1.25rem',
-              background: '#f8fafc',
-              borderBottom: '1px solid #e2e8f0',
+              background: '#FEFAF6',
+              borderBottom: '1px solid #EADBC8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               fontSize: '0.8rem',
               flexShrink: 0
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#1e293b' }}>
-                <Edit3 size={15} color="#0e2942" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#102C57' }}>
+                <Edit3 size={15} color="#102C57" />
                 <span>Generated Content (Editable)</span>
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.72rem', color: '#102C57' }}>
                 Click directly in the area below to edit text, dates, names, or paragraphs
               </span>
             </div>
@@ -979,6 +950,13 @@ export default function RRAssistantView({
               <textarea
                 aria-label="Editable RR proceedings"
                 value={generatedContent}
+                onFocus={() => { editStart.current = generatedContent; }}
+                onBlur={() => {
+                  if (editStart.current !== generatedContent) {
+                    recordActivity('Proceedings draft edited', { reference: fileInfo.name, recordId: currentSessionId || '', status: 'DRAFT' });
+                    editStart.current = generatedContent;
+                  }
+                }}
                 onChange={(e) => setGeneratedContent(e.target.value)}
                 style={{
                   width: '100%',
@@ -986,9 +964,11 @@ export default function RRAssistantView({
                   minHeight: '0',
                   padding: '1.25rem 1.5rem',
                   border: '1px solid #e2e8f0',
+                  padding: '1.25rem',
+                  border: '1px solid #EADBC8',
                   borderRadius: '8px',
                   background: '#ffffff',
-                  color: '#1e293b',
+                  color: '#102C57',
                   fontFamily: "'TAU-Marutham', 'Noto Sans Tamil', 'Latha', 'Plus Jakarta Sans', sans-serif",
                   fontSize: '0.94rem',
                   lineHeight: '1.85',
@@ -1076,6 +1056,97 @@ export default function RRAssistantView({
                         handleApplyChanges();
                       }
                     }
+          {/* Proceedings chat: 40% of the workspace */}
+          <div className="rr-chat-panel" style={{
+            background: '#ffffff',
+            border: '1px solid #EADBC8',
+            borderRadius: '12px',
+            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div className="rr-chat-heading">
+              <MessageSquare size={18} />
+              <div><h3>RR Assistant</h3><p>Request changes to your proceedings</p></div>
+            </div>
+            <div className="rr-chat-history" role="log" aria-label="Proceedings conversation" aria-live="polite">
+              <div className="rr-chat-message rr-chat-assistant">Your proceedings are ready in the fixed template. Review the document on the left, or send an instruction to revise it.</div>
+              {promptHistory.slice(1).map((item) => (
+                <React.Fragment key={item.id}>
+                  <div className="rr-chat-message rr-chat-user">{item.prompt}</div>
+                  <div className="rr-chat-message rr-chat-assistant">The requested revision has been applied. Review the updated proceedings on the left.</div>
+                </React.Fragment>
+              ))}
+              {isApplyingChanges && <div className="rr-chat-message rr-chat-assistant">Updating proceedings…</div>}
+            </div>
+            {/* Existing correction input and actions */}
+            <textarea
+              rows={3}
+              aria-label="Instructions for RR Assistant"
+              value={correctionInstruction}
+              onChange={(e) => setCorrectionInstruction(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  if (correctionInstruction.trim() && !isApplyingChanges) {
+                    handleApplyChanges();
+                  }
+                }
+              }}
+              placeholder={currentLanguage === 'en' ? "Describe a change to the proceedings… (Enter to send, Shift+Enter for a new line)" : "இங்கே உங்கள் கேள்வியை தட்டச்சு செய்யவும்... (Enter அழுத்தவும்)"}
+              style={{
+                width: '100%',
+                padding: '16px 20px 8px 20px',
+                border: 'none',
+                outline: 'none',
+                fontSize: '0.92rem',
+                fontFamily: "'Noto Sans Tamil', 'Plus Jakarta Sans', sans-serif",
+                color: '#102C57',
+                resize: 'none',
+                background: 'transparent',
+                lineHeight: '1.6'
+              }}
+            />
+
+            {/* Bottom Bar: Action buttons & Send button */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 16px 12px 16px',
+              borderTop: '1px solid #FEFAF6',
+              flexWrap: 'wrap',
+              gap: '8px'
+            }}>
+              {/* Left Action Buttons: Attachment & Voice Input */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    fontSize: '0.825rem',
+                    color: '#102C57',
+                    background: '#ffffff',
+                    border: '1px solid #EADBC8',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Attach file"
+                >
+                  <Paperclip size={14} color="#102C57" />
+                  <span>{currentLanguage === 'en' ? "Attach" : "இணைப்பு"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    alert(currentLanguage === 'en' ? "Voice input listening..." : "குரல் உள்ளீடு பதிவு செய்யப்படுகிறது...");
                   }}
                   placeholder={currentLanguage === 'en' ? "Describe a change to the proceedings… (Enter to send, Shift+Enter for a new line)" : "இங்கே உங்கள் கேள்வியை தட்டச்சு செய்யவும்... (Enter அழுத்தவும்)"}
                   style={{
@@ -1091,6 +1162,30 @@ export default function RRAssistantView({
                     lineHeight: '1.5'
                   }}
                 />
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    fontSize: '0.825rem',
+                    color: '#102C57',
+                    background: '#ffffff',
+                    border: '1px solid #EADBC8',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Voice input"
+                >
+                  <Mic size={14} color="#102C57" />
+                  <span>{currentLanguage === 'en' ? "Voice Input" : "குரல் உள்ளீடு"}</span>
+                </button>
+
+                {lastUpdatedMessage && (
+                  <span style={{ fontSize: '0.8rem', color: '#102C57', fontWeight: 600, marginLeft: '6px' }}>
+                    ✓ {lastUpdatedMessage}
+                  </span>
+                )}
+              </div>
 
                 {/* Bottom Bar: Action buttons & Send button */}
                 <div style={{
@@ -1305,6 +1400,22 @@ export default function RRAssistantView({
                 </div>
               </div>
             )}
+                  gap: '6px',
+                  padding: '6px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  color: isApplyingChanges || !correctionInstruction.trim() ? '#102C57' : '#102C57',
+                  background: isApplyingChanges || !correctionInstruction.trim() ? '#FEFAF6' : '#FEFAF6',
+                  border: '1px solid #EADBC8',
+                  borderRadius: '8px',
+                  cursor: isApplyingChanges || !correctionInstruction.trim() ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>{isApplyingChanges ? (currentLanguage === 'en' ? "Sending..." : "அனுப்புகிறது...") : (currentLanguage === 'en' ? "Send" : "அனுப்பு")}</span>
+                <Send size={13} className={isApplyingChanges ? "spinner" : ""} />
+              </button>
+            </div>
           </div>
           </div>
         </div>

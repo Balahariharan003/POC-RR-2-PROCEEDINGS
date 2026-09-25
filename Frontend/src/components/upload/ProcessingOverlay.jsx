@@ -101,7 +101,7 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
           <h3 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.35rem 0', color: '#102C57' }}>
             5-Step Revenue Recovery Pipeline
           </h3>
-          <p style={{ fontSize: '0.85rem', color: '#3A4B63', margin: 0 }}>
+          <p style={{ fontSize: '0.85rem', color: '#102C57', margin: 0 }}>
             Processing <strong style={{ color: '#102C57' }}>{currentFileName || "source document"}</strong> • {elapsed}s elapsed
           </p>
         </div>
@@ -143,7 +143,7 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: isDone || isCurrent ? '#ffffff' : '#3A4B63',
+                  color: isDone || isCurrent ? '#ffffff' : '#102C57',
                   fontSize: '0.8rem',
                   fontWeight: 700,
                   flexShrink: 0
@@ -155,12 +155,12 @@ export default function ProcessingOverlay({ isProcessing, currentFileName }) {
                   <div style={{ 
                     fontSize: '0.9rem', 
                     fontWeight: isCurrent ? 700 : 600, 
-                    color: isCurrent || isDone ? '#102C57' : '#687991',
+                    color: isCurrent || isDone ? '#102C57' : '#102C57',
                     marginBottom: '0.15rem'
                   }}>
                     {step.title}
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#3A4B63' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#102C57' }}>
                     {step.desc}
                   </div>
                 </div>
