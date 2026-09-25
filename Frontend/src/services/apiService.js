@@ -583,6 +583,10 @@ export const apiService = {
       const updated = { ...current, [month]: [savedEntry, ...monthList.filter(item => item && item.id !== entry.id)] };
 
       localStorage.setItem('rr_audit_logs', JSON.stringify(updated));
+      const ref = savedEntry.caseNumber || savedEntry.id;
+      if (!existing) recordActivity('Proceedings created', { recordId: savedEntry.id, reference: ref, status: savedEntry.status });
+      else if (entry.status && entry.status !== existing.status) recordActivity('Proceedings status updated', { recordId: savedEntry.id, reference: ref, status: savedEntry.status });
+      else if (entry.documentContent !== undefined && entry.documentContent !== existing.documentContent) recordActivity('Proceedings updated', { recordId: savedEntry.id, reference: ref, status: savedEntry.status });
       globalThis.window?.dispatchEvent(new Event('rr-audit-logs-updated'));
       return updated;
     } catch (e) {

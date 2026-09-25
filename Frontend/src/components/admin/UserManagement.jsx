@@ -56,6 +56,7 @@ export default function UserManagement({ currentUser, onUserUpdated }) {
     finally { setBusy(false); }
   }
   const update = event => setEditing({ ...editing, [event.target.name]: event.target.value });
+  const managedUsers = users.filter(user => user.role !== 'admin');
 
   return <section className="rr-admin rr-user-management">
     <header className="rr-admin-heading rr-officers-heading">
@@ -71,13 +72,13 @@ export default function UserManagement({ currentUser, onUserUpdated }) {
       <div className="rr-directory-table">
       <table aria-label="Officers">
         <thead><tr>{['Officer Name', 'Section', 'Status'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
-        <tbody>{users.map(user => <tr key={user.id} onClick={() => openOfficer(user)}>
+        <tbody>{managedUsers.map(user => <tr key={user.id} onClick={() => openOfficer(user)}>
           <td><button type="button" className="rr-officer-name" aria-haspopup="dialog" aria-label={`Edit ${user.name}`} onClick={event => { event.stopPropagation(); openOfficer(user); }}><strong>{user.name}</strong></button></td><td><span className="rr-officer-section">{user.section || user.taluk || 'Not provided'}</span></td>
           <td><span className={`rr-admin-status ${user.status}`}>{user.status === 'active' ? 'Active' : 'Inactive'}</span></td>
         </tr>)}</tbody>
       </table>
       </div>
-      {!loadError && !users.length && <div className="rr-officers-empty"><UsersRound size={28} aria-hidden="true" /><h3>No officers yet</h3><p>Add an officer to get started.</p></div>}
+      {!loadError && !managedUsers.length && <div className="rr-officers-empty"><UsersRound size={28} aria-hidden="true" /><h3>No officers yet</h3><p>Add an officer to get started.</p></div>}
     </article>
     {editing && <Modal title={editing.id ? `Edit User: ${original.name}` : 'Add Official Account'} className="rr-officer-dialog" onClose={closeOfficer}>
       <form onSubmit={saveOfficer}>

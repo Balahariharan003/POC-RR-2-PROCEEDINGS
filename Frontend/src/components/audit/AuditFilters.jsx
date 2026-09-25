@@ -718,7 +718,8 @@ function DateSpinnerGroup({
 export default function AuditFilters({
   filters,
   onChange,
-  officers,
+  officers = [],
+  showOfficer = false,
   records = []
 }) {
 
@@ -995,6 +996,27 @@ export default function AuditFilters({
 
 
 
+
+        {/* OFFICER ID (ADMIN ONLY) */}
+        {showOfficer && (
+          <select
+            className="rr-audit-officer-select"
+            aria-label="Filter by Officer ID"
+            value={filters.officer}
+            onChange={(event) =>
+              update({
+                officer: event.target.value
+              })
+            }
+          >
+            <option value="">Officer ID (All)</option>
+            {officers.map((id) => (
+              <option key={id} value={id}>
+                {id}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* DATE RANGE */}
 

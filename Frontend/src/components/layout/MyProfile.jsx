@@ -7,6 +7,7 @@ import './MyProfile.css';
 const profileFields = user => ({ id: user.id, name: user.name || '', nameTamil: user.nameTamil || '', designation: user.designation || '', identifier: user.username || user.email || '', mobileNumber: user.mobileNumber || '', section: user.section || user.taluk || '' });
 
 export default function MyProfile({ currentUser, currentLanguage, setLanguage, onUserUpdated, onBack }) {
+  const isAdmin = currentUser?.role === 'admin';
   const [details, setDetails] = useState(() => profileFields(currentUser));
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -53,15 +54,15 @@ export default function MyProfile({ currentUser, currentLanguage, setLanguage, o
   ];
   return <section className="rr-admin rr-profile-page">
     <header className="rr-admin-heading rr-official-heading"><div><h1><UserRound size={22} />Official Profile</h1><p>Official credentials, contact information, and departmental assignment.</p></div>
-      {!editing && <button type="button" className="btn btn-outline" onClick={() => { setEditing(true); setMessage(''); }}><Pencil size={16} />Edit User Data</button>}
+      {isAdmin ? (!editing && <button type="button" className="btn btn-outline" onClick={() => { setEditing(true); setMessage(''); }}><Pencil size={16} />Edit User Data</button>) : <span className="rr-profile-chip"><LockKeyhole size={12} />View Only</span>}
     </header>
     {message && <p role="status" className="rr-admin-notice">{message}</p>}
     <article className="rr-admin-card rr-official-card">
-      <header className="rr-official-card-header"><h2><UserRound size={18} />User Data</h2><span className="rr-profile-chip">{editing ? 'Editing user data' : 'Click Edit to modify'}</span></header>
+      <header className="rr-official-card-header"><h2><UserRound size={18} />User Data</h2><span className="rr-profile-chip">{isAdmin ? (editing ? 'Editing user data' : 'Click Edit to modify') : 'Read Only'}</span></header>
       <form onSubmit={saveProfile}>
         {error && <p role="alert" className="rr-admin-alert">{error}</p>}
         <fieldset disabled={busy || passwordBusy} className="rr-official-fields">
-          {fields.map(([name, label, Icon, required]) => <label key={name}>{label}<span className="rr-official-input"><Icon size={16} aria-hidden="true" /><input name={name} required={required} readOnly={!editing} value={details[name]} onChange={update} type={name === 'mobileNumber' ? 'tel' : 'text'} maxLength={name === 'mobileNumber' ? 24 : 160} placeholder={editing ? '' : 'Not provided'} lang={name === 'nameTamil' ? 'ta' : undefined} /></span></label>)}
+          {fields.map(([name, label, Icon, required]) => <label key={name}>{label}<span className="rr-official-input"><Icon size={16} aria-hidden="true" /><input name={name} required={required} readOnly={!isAdmin || !editing} value={details[name]} onChange={update} type={name === 'mobileNumber' ? 'tel' : 'text'} maxLength={name === 'mobileNumber' ? 24 : 160} placeholder={editing ? '' : 'Not provided'} lang={name === 'nameTamil' ? 'ta' : undefined} /></span></label>)}
         </fieldset>
         {editing && <div className="rr-profile-actions"><button type="button" className="btn btn-outline" disabled={busy} onClick={() => { setDetails(original); setError(''); setEditing(false); }}>Cancel</button><button className="btn btn-primary" disabled={!dirty || busy || passwordBusy}>{busy ? 'Saving...' : 'Save Profile'}</button></div>}
       </form>

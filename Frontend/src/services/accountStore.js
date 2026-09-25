@@ -1,5 +1,5 @@
 import { readUsers, saveUsers, USER_KEY } from './adminStore.js';
-import { TEMPORARY_LOGIN } from './temporaryLogin.js';
+import { TEMPORARY_LOGIN, TEMPORARY_USER_LOGIN } from './temporaryLogin.js';
 
 export const INITIAL_ADMIN_LOGIN = 'mtdev8386@gmail.com';
 export const CREDENTIAL_KEY = 'rr_account_credentials';
@@ -66,8 +66,29 @@ export async function authenticate(identifier, password, role) {
     const credential = await makeCredential(password);
     const users = readUsers();
     if (!users.some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-      const admin = { id: crypto.randomUUID(), name: TEMPORARY_LOGIN.name, email: normalized, username: normalized, mobileNumber: '', section: 'Administration', taluk: '', role: 'admin', status: 'active' };
+      const admin = { id: crypto.randomUUID(), officerId: 'OFF-ADMIN-001', name: TEMPORARY_LOGIN.name, email: normalized, username: normalized, mobileNumber: '', section: 'Administration', taluk: '', role: 'admin', status: 'active' };
       commitAccounts([...users, admin], { ...readCredentials(), [admin.id]: credential });
+    }
+  }
+  if ((normalized === TEMPORARY_USER_LOGIN.email || normalized === TEMPORARY_USER_LOGIN.altEmail) && role === 'user' && password === TEMPORARY_USER_LOGIN.password && !readUsers().some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
+    const credential = await makeCredential(password);
+    const users = readUsers();
+    if (!users.some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
+      const officer = {
+        id: crypto.randomUUID(),
+        officerId: TEMPORARY_USER_LOGIN.officerId,
+        name: TEMPORARY_USER_LOGIN.name,
+        nameTamil: TEMPORARY_USER_LOGIN.nameTamil,
+        designation: TEMPORARY_USER_LOGIN.designation,
+        email: normalized,
+        username: normalized,
+        mobileNumber: TEMPORARY_USER_LOGIN.mobileNumber,
+        section: TEMPORARY_USER_LOGIN.section,
+        taluk: '',
+        role: 'user',
+        status: 'active'
+      };
+      commitAccounts([...users, officer], { ...readCredentials(), [officer.id]: credential });
     }
   }
   const user = readUsers().find(item => identifierOf(item) === normalized || (item.email && item.email.toLowerCase() === normalized));
@@ -89,10 +110,14 @@ export async function saveOfficerAccount(fields, password = '') {
   if (!fields.id && !password) throw new Error('Enter a password for the new officer.');
   const credential = password ? await makeCredential(password) : null;
   const users = readUsers();
-  const original = fields.id ? users.find(user => user.id === fields.id) : null;
-  if (fields.id && !original) throw new Error('This officer is no longer in the directory. Reload the page.');
-  if (users.some(user => user.id !== fields.id && (identifierOf(user) === identifier || user.email?.toLowerCase() === identifier))) throw new Error('This username or email is already in use.');
-  const user = { ...original, id: original?.id || crypto.randomUUID(), name: fields.name.trim(), nameTamil: (fields.nameTamil ?? original?.nameTamil ?? '').trim(), designation: (fields.designation ?? original?.designation ?? '').trim(), username: identifier, email: identifier.includes('@') ? identifier : '', mobileNumber: fields.mobileNumber.trim(), section: fields.section.trim(), taluk: original?.taluk || '', role: original?.role || 'user', status: original?.status || 'active' };
+  const original = fields.id ? users.find(user => user.id === fields.id || (fields.role === 'admin' && user.role === 'admin')) : null;
+  if (fields.id && !original && fields.role !== 'admin') throw new Error('This officer is no longer in the directory. Reload the page.');
+  const targetId = original?.id || fields.id || crypto.randomUUID();
+  if (users.some(user => user.id !== targetId && (identifierOf(user) === identifier || user.email?.toLowerCase() === identifier))) throw new Error('This username or email is already in use.');
+  const nextRole = original?.role || (fields.role === 'admin' ? 'admin' : 'user');
+  const existingOfficerCount = users.filter(u => u.role !== 'admin').length;
+  const fallbackOfficerId = nextRole === 'admin' ? 'OFF-ADMIN-001' : `OFF-USER-${String(existingOfficerCount + 1).padStart(3, '0')}`;
+  const user = { ...original, id: targetId, officerId: (fields.officerId ?? original?.officerId ?? fallbackOfficerId).trim(), name: fields.name.trim(), nameTamil: (fields.nameTamil ?? original?.nameTamil ?? '').trim(), designation: (fields.designation ?? original?.designation ?? '').trim(), username: identifier, email: identifier.includes('@') ? identifier : '', mobileNumber: fields.mobileNumber.trim(), section: fields.section.trim(), taluk: original?.taluk || '', role: nextRole, status: original?.status || 'active' };
   const updated = original ? users.map(item => item.id === user.id ? user : item) : [...users, user];
   if (credential) commitAccounts(updated, { ...readCredentials(), [user.id]: credential });
   else saveUsers(updated);

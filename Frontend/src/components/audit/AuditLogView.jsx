@@ -27,6 +27,7 @@ import {
 import AuditFilters from './AuditFilters.jsx';
 import { emptyAuditFilters, availableOfficerIds, matchesAuditFilters, officerId } from './auditFilters.js';
 import { apiService } from '../../services/apiService.js';
+import { readUsers } from '../../services/adminStore.js';
 import { INITIAL_AUDIT_LOGS } from '../../data/adminMockData.js';
 
 export default function AuditLogView({ 
@@ -35,7 +36,7 @@ export default function AuditLogView({
   onRestoreSession, 
   onNavigateToAssistant 
 }) {
-  const isUserAdmin = isAdminProp || !currentUser || currentUser.role === 'admin';
+  const isUserAdmin = Boolean(isAdminProp || currentUser?.role === 'admin');
   const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -168,7 +169,19 @@ export default function AuditLogView({
       return matchesSearch && matchesStatus && matchesOfficer && matchesDate && matchesYear && matchesMonth && matchesDay;
     });
   };
-  const officers = availableOfficerIds(Object.values(auditLogs).flat());
+  const officers = useMemo(() => {
+    const logIds = availableOfficerIds(Object.values(auditLogs).flat());
+    let directoryIds = [];
+    try {
+      directoryIds = readUsers()
+        .filter(u => u.role !== 'admin')
+        .map((u, idx) => u.officerId || `OFF-USER-${String(idx + 1).padStart(3, '0')}`);
+    } catch {
+      directoryIds = [];
+    }
+    const combined = [...new Set([...logIds, ...directoryIds, 'OFF-USER-001', 'OFF-USER-002'].filter(Boolean))];
+    return combined.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [auditLogs]);
   const filterByAuditFilters = entries => entries.filter(entry => matchesAuditFilters(entry, filters));
 
   const entries = filterEntries(filterByAuditFilters(Object.values(auditLogs).flat())).sort((a, b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0));
@@ -303,7 +316,7 @@ export default function AuditLogView({
       )}
 
 
-      <AuditFilters filters={filters} onChange={setFilters} officers={officers} records={Object.values(auditLogs).flat()} />
+      <AuditFilters filters={filters} onChange={setFilters} officers={officers} showOfficer={isUserAdmin} records={Object.values(auditLogs).flat()} />
 
       {/* Showing Count Indicator */}
       <div style={{

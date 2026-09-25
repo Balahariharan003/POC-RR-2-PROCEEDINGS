@@ -3,7 +3,7 @@ const KEYS = [USER_KEY, 'rr_audit_logs', 'rr_draft', 'rr_preferences'];
 const validHistory = value => Array.isArray(value) && value.every(item => item && ['string', 'number'].includes(typeof item.id) && typeof item.prompt === 'string' && (item.timestamp === undefined || typeof item.timestamp === 'string'));
 const validRecord = row => {
   if (!row || typeof row.id !== 'string' || typeof row.caseNumber !== 'string') return false;
-  const strings = ['caseNumber', 'documentContent', 'timestamp', 'status', 'taluk', 'district', 'fileName', 'fileSize', 'defaulter', 'defaulterName', 'officerName', 'notes', 'dispatchReceipt'];
+  const strings = ['caseNumber', 'documentContent', 'timestamp', 'status', 'taluk', 'district', 'fileName', 'fileSize', 'defaulter', 'defaulterName', 'officerName', 'officerId', 'officer_id', 'notes', 'dispatchReceipt'];
   if (strings.some(key => row[key] !== undefined && typeof row[key] !== 'string')) return false;
   if (row.amount !== undefined && !['string', 'number'].includes(typeof row.amount)) return false;
   if (['groundingScore', 'hallucinationScore'].some(key => row[key] !== undefined && (typeof row[key] !== 'number' || !Number.isFinite(row[key])))) return false;
@@ -26,7 +26,7 @@ function validateUsers(users) {
       typeof user.email !== 'string' || (!user.email && !user.username) ||
       (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) ||
       (user.username !== undefined && (typeof user.username !== 'string' || !user.username.trim() || /\s/.test(user.username))) ||
-      ['section', 'mobileNumber', 'nameTamil', 'designation'].some(key => user[key] !== undefined && typeof user[key] !== 'string') ||
+      ['section', 'mobileNumber', 'nameTamil', 'designation', 'officerId', 'office'].some(key => user[key] !== undefined && typeof user[key] !== 'string') ||
       !['admin', 'user'].includes(user.role) || !['active', 'inactive'].includes(user.status) ||
       typeof user.taluk !== 'string' || [user.email, user.username].filter(Boolean).some(value => emails.has(value.toLowerCase()))) {
       throw new Error('Users must have unique IDs and emails, a name, role, status and taluk.');

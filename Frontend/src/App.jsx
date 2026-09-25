@@ -385,7 +385,7 @@ if (!currentUser) {
               }} />
             )}
             {activeView === 'profile' && (
-              <OfficialProfile currentUser={currentUser} />
+              <OfficialProfile currentUser={currentUser} onUserUpdated={setCurrentUser} />
             )}
 
             {activeView === 'upload' && (
