@@ -52,7 +52,7 @@ function AdminWorkspaceContent({ currentUser, onNavigate }) {
     {error && <div className="rr-admin-alert" role="alert">{error}</div>}
     <>
       <div className="rr-admin-metrics">
-        {[[Users, 'Active officers', users.filter(u => u.status === 'active').length, 'In the officer directory'], [FileText, 'Total Proceedings', records.length, 'Saved proceedings sessions'], [CheckCircle2, 'Success', records.filter(r => ['VERIFIED', 'DISPATCHED_TO_DRO', 'DISPATCHED'].includes(r.status)).length, 'Recorded review and dispatch status'], [CircleX, 'Failure', records.filter(r => r.status === 'DRAFT').length, 'Awaiting officer verification']].map(([Icon, label, count, note]) => <article className="rr-admin-card" key={label}><div className="rr-admin-metric-label"><span>{label}</span><Icon size={18} /></div><strong className="rr-admin-number">{count}</strong><p>{note}</p></article>)}
+        {[[Users, 'Active officers', users.filter(u => u.status === 'active').length, 'In the officer directory'], [FileText, 'Total Orders', records.length, 'Saved proceedings sessions'], [CheckCircle2, 'Success', records.filter(r => ['VERIFIED', 'DISPATCHED_TO_DRO', 'DISPATCHED'].includes(r.status)).length, 'Recorded review and dispatch status'], [CircleX, 'Failure', records.filter(r => r.status === 'DRAFT').length, 'Awaiting officer verification']].map(([Icon, label, count, note]) => <article className="rr-admin-card" key={label}><div className="rr-admin-metric-label"><span>{label}</span><Icon size={18} /></div><strong className="rr-admin-number">{count}</strong><p>{note}</p></article>)}
       </div>
       <AdminDashboardContent records={records} onNavigate={onNavigate} />
     </>

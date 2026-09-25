@@ -221,7 +221,7 @@ export default function AuditLogView({
         </div>
       )}
 
-      <AuditFilters filters={filters} onChange={setFilters} officers={officers} />
+      <AuditFilters filters={filters} onChange={setFilters} officers={officers} records={Object.values(auditLogs).flat()} />
 
       {/* Showing Count Indicator */}
       <div style={{
@@ -312,9 +312,8 @@ export default function AuditLogView({
                     <thead>
                       <tr style={{ background: '#FEFAF6', color: '#102C57', borderBottom: '1px solid #EADBC8' }}>
                         <th style={{ padding: '12px 20px', fontWeight: 600 }}>{isAdmin ? 'Order ID' : 'Order ID & Defaulter'}</th>
-                        {isAdmin ? <><th style={{ padding: '12px 16px', fontWeight: 600 }}>Officer ID</th><th style={{ padding: '12px 16px', fontWeight: 600, width: '34%' }}>Details</th></> : <th style={{ padding: '12px 16px', fontWeight: 600 }}>Amount Awarded</th>}
-                        <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>Timestamp</th>
-                        <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                        {isAdmin ? <><th style={{ padding: '12px 16px', fontWeight: 600 }}>Officer ID</th><th style={{ padding: '12px 16px', fontWeight: 600, width: '40%' }}>Details</th></> : <th style={{ padding: '12px 16px', fontWeight: 600 }}>Amount Awarded</th>}
+                        <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Timestamp</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -332,7 +331,7 @@ export default function AuditLogView({
                                 setSelectedLog(entry);
                               }
                             }}
-                            title="Press Enter or click to view audit details and receipt"
+                            title="Click or press Enter to view audit details and receipt"
                             style={{
                               borderBottom: '1px solid #FEFAF6',
                               cursor: 'pointer',
@@ -365,44 +364,8 @@ export default function AuditLogView({
                             </td>}
 
                             {/* Timestamp */}
-                            <td style={{ padding: '14px 16px', color: '#102C57', fontSize: '0.785rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '14px 20px', color: '#102C57', fontSize: '0.785rem', textAlign: 'right' }}>
                               {entry.timestamp || 'Not recorded'}
-                            </td>
-
-                            {/* Actions */}
-                            <td style={{ padding: '14px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                <button
-                                  type="button"
-                                  className="btn btn-outline"
-                                  aria-label={`View details for ${orderLabel}`}
-                                  onClick={(e) => { e.stopPropagation(); setSelectedLog(entry); }}
-                                  style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#102C57', borderColor: '#DAC0A3', background: '#ffffff' }}
-                                >
-                                  <Eye size={14} />
-                                  <span>Details</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-outline"
-                                  aria-label={`Print receipt for ${orderLabel}`}
-                                  onClick={(e) => { e.stopPropagation(); handlePrintAuditReceipt(entry); }}
-                                  style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#102C57', borderColor: '#DAC0A3', background: '#ffffff' }}
-                                >
-                                  <Printer size={14} />
-                                  <span>Receipt</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-primary"
-                                  aria-label={`Open ${orderLabel} in RR Assistant`}
-                                  onClick={(e) => { e.stopPropagation(); onRestoreSession(entry); }}
-                                  style={{ padding: '5px 10px', fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#102C57', color: '#ffffff', border: 'none', borderRadius: '6px' }}
-                                >
-                                  <MessageSquare size={14} />
-                                  <span>Open</span>
-                                </button>
-                              </div>
                             </td>
                           </tr>
                         );

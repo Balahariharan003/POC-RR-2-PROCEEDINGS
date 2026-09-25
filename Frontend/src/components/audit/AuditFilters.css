@@ -1,134 +1,152 @@
 .rr-audit-filters { position: relative; z-index: 20; background: #fff; border: 1px solid #EADBC8; border-radius: 12px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(0,0,0,.04); color: #102C57; overflow: visible; }
 .rr-audit-filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.rr-audit-search { display: flex; align-items: center; gap: 8px; flex: 1 1 200px; min-width: 180px; }
+.rr-audit-search { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-width: 190px; }
 .rr-audit-search input { border: 0; outline: none; width: 100%; min-width: 0; background: transparent; font-size: .85rem; color: inherit; padding: 6px 0; }
 .rr-audit-search > svg { flex-shrink: 0; }
 .rr-audit-filters select { border: 1px solid #DAC0A3; border-radius: 6px; padding: 6px 10px; font-size: .825rem; color: inherit; background: #fff; cursor: pointer; max-width: 190px; }
 
-/* Two-box Date Range Filter matching reference design & existing palette */
-.rr-audit-date-range { display: flex; align-items: center; gap: 12px; }
-.rr-audit-date-picker { position: relative; }
-.rr-audit-date-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 156px;
-  padding: 6px 12px;
-  background: #ffffff;
-  border: 1px solid #DAC0A3;
-  border-radius: 6px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  cursor: text;
-}
-.rr-audit-date-box.active,
-.rr-audit-date-box:focus-within {
-  border-color: #102C57;
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px #102C57;
-}
-.rr-audit-date-box input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: none;
-  padding: 0;
-  background: transparent;
-  color: #102C57;
-  font-size: .825rem;
-  font-variant-numeric: tabular-nums;
-}
-.rr-audit-date-box input::placeholder {
-  color: #102C57;
-  opacity: 0.55;
-}
-.rr-audit-calendar-btn {
+/* Compact Date Range Box in Filter Row */
+.rr-audit-date-dropdown {
+  position: relative;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px !important;
-  color: #102C57;
-  background: transparent;
-  border: 0;
+}
+.rr-audit-date-trigger {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  min-width: 195px;
+  padding: 6px 12px !important;
+  border: 1px solid #DAC0A3 !important;
+  border-radius: 6px;
+  background: #ffffff !important;
+  color: #102C57 !important;
+  font-size: 0.825rem !important;
   cursor: pointer;
-  flex-shrink: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.rr-audit-date-trigger:hover {
+  background: #FEFAF6 !important;
+}
+.rr-audit-date-trigger.active,
+.rr-audit-date-trigger:focus-visible {
+  border-color: #102C57 !important;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px #102C57;
+  outline: none !important;
+}
+.rr-audit-date-trigger-text {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0.72;
+  font-weight: 500;
+}
+.rr-audit-date-trigger.has-value .rr-audit-date-trigger-text {
+  opacity: 1;
+  font-weight: 600;
 }
 
-/* Dropdown Calendar Popover */
-.rr-audit-calendar-popover {
+/* Floating Popup / Dropdown Panel for Start & End Spinner Selector */
+.rr-audit-date-popover {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  width: 268px;
+  z-index: 120;
   background: #ffffff;
   border: 1px solid #EADBC8;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 12px 28px rgba(16, 44, 87, 0.14), 0 2px 6px rgba(16, 44, 87, 0.06);
-  padding: 14px 16px 16px;
-  z-index: 120;
+  padding: 12px 16px 14px;
+  user-select: none;
 }
-.rr-audit-calendar-header {
+.rr-audit-date-popover-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 14px;
 }
-.rr-audit-cal-title {
-  font-size: .86rem;
+.rr-audit-spin-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.rr-audit-spin-label {
+  font-size: 0.7rem;
   font-weight: 700;
   color: #102C57;
+  opacity: 0.8;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
 }
-.rr-audit-cal-nav {
+.rr-audit-spin-row {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+}
+.rr-audit-spin-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0 !important;
+  border: 1px solid #EADBC8;
   border-radius: 6px;
-  color: #102C57;
-}
-.rr-audit-cal-nav:hover {
+  padding: 2px 4px;
   background: #FEFAF6;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
 }
-.rr-audit-calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-  margin-bottom: 6px;
+.rr-audit-spin-unit:hover,
+.rr-audit-spin-unit:focus-within {
+  border-color: #DAC0A3;
+  background-color: #ffffff;
 }
-.rr-audit-calendar-weekdays span {
-  font-size: .75rem;
-  font-weight: 500;
-  color: #102C57;
-  opacity: 0.7;
-  padding: 4px 0;
-}
-.rr-audit-calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  row-gap: 4px;
-  column-gap: 2px;
-}
-.rr-audit-cal-empty {
-  height: 30px;
-}
-.rr-audit-cal-day {
-  height: 30px;
+.rr-spin-day { min-width: 34px; }
+.rr-spin-month { min-width: 44px; }
+.rr-spin-year { min-width: 50px; }
+
+.rr-audit-spin-arrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 2px 0 !important;
+  height: 18px;
   width: 100%;
-  padding: 0 !important;
-  border-radius: 6px;
-  font-size: .8rem !important;
-  font-weight: 500;
+  border: 0;
+  background: transparent;
   color: #102C57;
-  transition: background 0.12s ease;
+  opacity: 0.65;
+  cursor: pointer;
+  line-height: 1;
+  transition: opacity 0.12s ease, background-color 0.12s ease;
 }
-.rr-audit-cal-day:hover {
-  background: #FEFAF6;
+.rr-audit-spin-arrow:hover:not(:disabled) {
+  opacity: 1;
+  background-color: #EADBC8;
+  border-radius: 4px;
 }
-.rr-audit-cal-day.selected {
-  font-weight: 800;
-  background: #EADBC8;
+.rr-audit-spin-arrow:disabled {
+  opacity: 0.22;
+  cursor: default;
+}
+.rr-audit-spin-value {
+  font-size: 0.85rem;
+  font-weight: 700;
   color: #102C57;
+  line-height: 1.4;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+}
+.rr-audit-spin-value:focus-visible {
+  outline: 1.5px solid #102C57;
+  background-color: #EADBC8;
+}
+.rr-audit-spin-sep {
+  color: #102C57;
+  opacity: 0.65;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding-top: 16px;
 }
 
 .rr-audit-filters button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 6px; font: inherit; font-size: .825rem; }
@@ -137,6 +155,7 @@
 @media (min-width: 1250px) { .rr-audit-filter-row { flex-wrap: nowrap; } }
 @media (max-width: 600px) {
   .rr-audit-search { flex-basis: 100%; }
-  .rr-audit-date-range { flex-wrap: wrap; width: 100%; }
-  .rr-audit-date-picker, .rr-audit-date-box { width: 100%; }
+  .rr-audit-date-dropdown, .rr-audit-date-trigger { width: 100%; }
+  .rr-audit-date-popover { left: 0; right: 0; width: 100%; }
+  .rr-audit-date-popover-inner { flex-wrap: wrap; justify-content: center; gap: 10px; }
 }
