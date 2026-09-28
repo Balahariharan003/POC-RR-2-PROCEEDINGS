@@ -173,9 +173,24 @@ Return a JSON object with keys:
             tot_amt = p_amt + pen_amt if (p_amt + pen_amt) > 0 else p_amt
 
         defaulter_name = str(data.get("defaulter_name") or "").strip()
+        # OCR often removes spaces from company names (for example,
+        # "M/sPrismaGarments"). Restore obvious word boundaries without
+        # inventing any document content.
+        defaulter_name = re.sub(r"^M/s\.?\s*", "M/s. ", defaulter_name, flags=re.IGNORECASE)
+        defaulter_name = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", defaulter_name)
         iec_no = data.get("iec_no")
         taluk = str(data.get("taluk_name") or "ஈரோடு").strip()
         district = str(data.get("district_name") or "ஈரோடு").strip()
+        if district.lower().replace(" ", "") in {"tamilnadu", "tamilnad"}:
+            collectorate_match = re.search(
+                r"Collectorate\s*,?\s*(?:First\s*Floor\s*,?\s*)?Collectorate\s*,?\s*([A-Za-z]+)\s*-\s*\d{6}",
+                ocr_text,
+                re.IGNORECASE,
+            )
+            if collectorate_match:
+                district = collectorate_match.group(1).strip()
+            elif taluk:
+                district = taluk
         door_no = str(data.get("door_no") or "").strip()
         street = str(data.get("street_and_locality") or "").strip()
         pincode = str(data.get("pincode") or "").strip()
@@ -325,7 +340,7 @@ Return a JSON object with keys:
 
         # IEC Number
         iec_no = None
-        m_iec = re.search(r"IEC(?:\s*No\.?|\s*:)?\s*([0-9A-Za-z]+)", text, re.IGNORECASE)
+        m_iec = re.search(r"IEC\s*(?:No\.?)?\s*[:\-]?\s*([0-9]{8,15})", text, re.IGNORECASE)
         if m_iec:
             iec_no = m_iec.group(1).strip()
 
@@ -350,27 +365,45 @@ Return a JSON object with keys:
         order_date = dates[0] if len(dates) > 0 else ""
         letter_date = dates[1] if len(dates) > 1 else order_date
 
-        # Amounts
+        # Amounts. OCR commonly removes whitespace ("sumofRs1,73,308") and
+        # confuses zero with the letter O ("9,0oo"), so accept both forms.
+        def parse_ocr_amount(value: str) -> float:
+            normalized = value.replace(",", "").replace("o", "0").replace("O", "0")
+            try:
+                return float(normalized)
+            except (TypeError, ValueError):
+                return 0.0
+
+        amount_token = r"([0-9Oo][0-9Oo,]*(?:\.[0-9Oo]+)?)"
         principal_amt = 0.0
         penalty_amt = 0.0
-        m_pr = re.search(r"(?:sum\s+of\s+Rs\.?|duty\s+of\s+Rs\.?|principal\s+amount\s+Rs\.?)\s*([\d,]+(?:\.\d+)?)", text, re.IGNORECASE)
+        m_pr = re.search(
+            rf"(?:sum\s*of|duty\s*of|principal\s*amount)\s*(?:Rs\.?|₹)\s*{amount_token}",
+            text,
+            re.IGNORECASE,
+        )
         if m_pr:
-            try:
-                principal_amt = float(m_pr.group(1).replace(",", ""))
-            except Exception:
-                pass
+            principal_amt = parse_ocr_amount(m_pr.group(1))
 
-        m_pen = re.search(r"(?:penalty\s+of\s+Rs\.?|penalty\s*Rs\.?)\s*([\d,]+(?:\.\d+)?)", text, re.IGNORECASE)
+        m_pen = re.search(
+            rf"penalty\s*(?:of)?\s*(?:Rs\.?|₹)\s*{amount_token}",
+            text,
+            re.IGNORECASE,
+        )
         if m_pen:
-            try:
-                penalty_amt = float(m_pen.group(1).replace(",", ""))
-            except Exception:
-                pass
+            penalty_amt = parse_ocr_amount(m_pen.group(1))
 
         if principal_amt == 0.0:
-            all_nums = [float(x.replace(",", "")) for x in re.findall(r"(\d[\d,]+(?:\.\d+)?)", text) if len(x.replace(",", "")) >= 4]
-            if all_nums:
-                principal_amt = max(all_nums)
+            # Restrict the fallback to currency-labelled values. Taking the
+            # largest number in a legal document can select an IEC, phone, or
+            # case identifier and turn it into a bogus recovery amount.
+            currency_values = [
+                parse_ocr_amount(value)
+                for value in re.findall(rf"(?:Rs\.?|₹)\s*{amount_token}", text, re.IGNORECASE)
+            ]
+            currency_values = [value for value in currency_values if value > 0]
+            if currency_values:
+                principal_amt = max(currency_values)
 
         tot_amt = principal_amt + penalty_amt
 
@@ -382,7 +415,7 @@ Return a JSON object with keys:
         if m_pin:
             pincode = m_pin.group(1)
 
-        m_addr = re.search(r"Address\s*[:\-]?\s*([^\n]+(?:\n[^\n]+)?)", text, re.IGNORECASE)
+        m_addr = re.search(r"(?:^|\n)\s*Address\s*[:\-]\s*([^\n]+(?:\n[^\n]+)?)", text, re.IGNORECASE)
         if m_addr:
             raw_addr = m_addr.group(1).replace("\n", " ").strip()
             parts = [p.strip() for p in raw_addr.split(",") if p.strip()]

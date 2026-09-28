@@ -41,6 +41,7 @@ export default function RRAssistantView({
   
   // Document Content & Correction
   const [generatedContent, setGeneratedContent] = useState('');
+  const [generatedDocxFilename, setGeneratedDocxFilename] = useState('');
   const editStart = useRef('');
   const [correctionInstruction, setCorrectionInstruction] = useState('');
   const [isApplyingChanges, setIsApplyingChanges] = useState(false);
@@ -215,29 +216,26 @@ export default function RRAssistantView({
     setProcessingStage('Extracting document content');
     setProcessingStageNum(1);
 
-    try {
-      const t1 = setTimeout(() => {
-        setProcessingStage('Analyzing structure');
-        setProcessingStageNum(2);
-      }, 700);
+    const stageTimers = [
+      setTimeout(() => { setProcessingStage('Running OCR'); setProcessingStageNum(2); }, 1200),
+      setTimeout(() => { setProcessingStage('Extracting legal entities with LLM'); setProcessingStageNum(3); }, 10000),
+      setTimeout(() => { setProcessingStage('Validating amounts and jurisdiction'); setProcessingStageNum(4); }, 60000),
+      setTimeout(() => { setProcessingStage('Generating the final official template'); setProcessingStageNum(5); }, 85000),
+    ];
 
-      const t2 = setTimeout(() => {
-        setProcessingStage('Generating official content');
-        setProcessingStageNum(3);
-      }, 1400);
+    try {
 
       let result;
       if (selectedFile) {
-        result = await apiService.uploadDocument(selectedFile);
+        result = await apiService.uploadDocument(selectedFile, selectedTemplateCode);
       } else {
         throw new Error('Select a source document first.');
       }
 
-      clearTimeout(t1);
-      clearTimeout(t2);
-
       const formattedDoc = apiService.formatDocumentSheet(result.entities);
       setGeneratedContent(formattedDoc);
+      setGeneratedDocxFilename(result.generated_docx_filename || '');
+      setExtractedEntities(result.entities);
       
       const newSessionId = `AUD-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100 + Math.random() * 900)}`;
       const initialPrompt = {
@@ -263,7 +261,7 @@ export default function RRAssistantView({
           defaulter: result.entities?.defaulter?.name || "",
           taluk: result.entities?.jurisdiction?.taluk || "",
           district: result.entities?.jurisdiction?.district || "",
-          amount: `₹ ${Number(result.entities?.financials?.principal_amount || 0).toLocaleString('en-IN')}/-`,
+          amount: `₹ ${Number(result.entities?.financials?.total_recoverable_amount || result.entities?.financials?.principal_amount || 0).toLocaleString('en-IN')}/-`,
           status: "DRAFT",
           groundingScore: result.validation_insights?.grounding_score ?? 0,
           hallucinationScore: result.validation_insights?.hallucination_score ?? 0,
@@ -279,6 +277,8 @@ export default function RRAssistantView({
     } catch (err) {
       alert("Error processing document: " + err.message);
       setWorkflowState('file_selected');
+    } finally {
+      stageTimers.forEach(clearTimeout);
     }
   };
 
@@ -341,6 +341,11 @@ export default function RRAssistantView({
 
   // Download DOCX containing CURRENT edited content (Section 8)
   const handleDownloadDocx = async () => {
+    if (generatedDocxFilename) {
+      window.open(apiService.getDownloadUrl(generatedDocxFilename), '_blank');
+      recordActivity('Proceedings download requested', { reference: generatedDocxFilename });
+      return;
+    }
     const filename = `Official_${fileInfo.name.replace(/\.[^/.]+$/, "") || "Document"}.docx`;
     await apiService.exportDocx(generatedContent, filename);
     recordActivity('Proceedings download requested', { reference: filename });
@@ -348,6 +353,11 @@ export default function RRAssistantView({
 
   // Download / Print PDF containing CURRENT edited content (Section 8)
   const handleDownloadPdf = () => {
+    if (generatedDocxFilename) {
+      window.open(apiService.getPdfDownloadUrl(generatedDocxFilename), '_blank');
+      recordActivity('Proceedings PDF download requested', { reference: generatedDocxFilename });
+      return;
+    }
     recordActivity('Proceedings print requested', { reference: fileInfo.name });
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -399,6 +409,8 @@ export default function RRAssistantView({
     setSelectedFile(null);
     setFileInfo({ name: '', sizeFormatted: '' });
     setGeneratedContent('');
+    setGeneratedDocxFilename('');
+    setExtractedEntities(null);
     setCorrectionInstruction('');
     setWorkflowState('upload');
   };
@@ -774,18 +786,25 @@ export default function RRAssistantView({
 
             {/* Step list progress */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', textAlign: 'left', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 1 ? '#102C57' : '#102C57', fontWeight: processingStageNum === 1 ? 600 : 400 }}>
-                {processingStageNum > 1 ? <Check size={16} color="#102C57" /> : <RefreshCw size={14} className="spinner" color="#102C57" />}
-                <span>Extracting document content</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 2 ? '#102C57' : '#102C57', fontWeight: processingStageNum === 2 ? 600 : 400 }}>
-                {processingStageNum > 2 ? <Check size={16} color="#102C57" /> : processingStageNum === 2 ? <RefreshCw size={14} className="spinner" color="#102C57" /> : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
-                <span>Analyzing structure</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: processingStageNum >= 3 ? '#102C57' : '#102C57', fontWeight: processingStageNum === 3 ? 600 : 400 }}>
-                {processingStageNum === 3 ? <RefreshCw size={14} className="spinner" color="#102C57" /> : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
-                <span>Generating official content</span>
-              </div>
+              {[
+                'Reading the uploaded document',
+                'Running OCR',
+                'Extracting legal entities with LLM',
+                'Validating amounts and jurisdiction',
+                'Generating the final official template',
+              ].map((label, index) => {
+                const step = index + 1;
+                return (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#102C57', fontWeight: processingStageNum === step ? 600 : 400 }}>
+                    {processingStageNum > step
+                      ? <Check size={16} color="#102C57" />
+                      : processingStageNum === step
+                        ? <RefreshCw size={14} className="spinner" color="#102C57" />
+                        : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
+                    <span>{label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

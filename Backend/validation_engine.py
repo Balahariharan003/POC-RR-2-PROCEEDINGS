@@ -228,6 +228,12 @@ def _two_digits_to_tamil(n: Any) -> str:
         n = int(round(float(n)))
     except Exception:
         return ""
+    if n < 0:
+        return ""
+    if n >= 100:
+        # Large crore counts are valid for large monetary values. Delegate
+        # them to the full converter instead of indexing past the tens table.
+        return convert_number_to_tamil_words(n)
     if n < 10:
         return TAMIL_ONES[n]
     elif 10 <= n < 20:

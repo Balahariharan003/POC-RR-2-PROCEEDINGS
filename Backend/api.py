@@ -29,7 +29,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import (
     UPLOAD_DIR,
     OUTPUT_DIR,
-    SAMPLE_DIR,
     HOST,
     PORT,
     OLLAMA_MODEL,
@@ -44,7 +43,7 @@ import audit_store
 from pipeline import RevenueRecoveryPipeline
 from schemas import ExtractedLegalEntities
 from validation_engine import ValidationInsightEngine
-from doc_generator import DocumentGenerator, generate_docx_from_content
+from doc_generator import DocumentGenerator, generate_docx_from_content, convert_docx_to_pdf
 
 logger = logging.getLogger("rr_proceedings.api")
 logging.basicConfig(level=logging.INFO)
@@ -377,22 +376,6 @@ async def process_document_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/process-sample")
-async def process_sample_endpoint(template_code: Optional[str] = None):
-    """Processes sample order for immediate UI demonstration."""
-    sample_pdf = SAMPLE_DIR / "sample_mcop_order.pdf"
-    if not sample_pdf.exists():
-        from sample_data.generate_sample import create_sample_pdf
-        sample_pdf = create_sample_pdf()
-
-    result = await asyncio.to_thread(
-        pipeline.process_document,
-        sample_pdf,
-        template_code=template_code
-    )
-    return JSONResponse(content=result)
-
-
 @app.post("/api/regenerate-document")
 async def regenerate_document_endpoint(payload: Dict[str, Any]):
     """Re-generates DOCX with TAU-Marutham font after field edits."""
@@ -509,38 +492,52 @@ async def download_file(filename: str):
     )
 
 
+@app.get("/api/download-pdf/{filename}")
+async def download_pdf_file(filename: str):
+    """Converts the generated DOCX to a layout-identical PDF and downloads it."""
+    safe_name = os.path.basename(filename)
+    if not safe_name.lower().endswith(".docx"):
+        raise HTTPException(status_code=400, detail="A generated DOCX filename is required")
+
+    docx_path = OUTPUT_DIR / safe_name
+    if not docx_path.exists():
+        raise HTTPException(status_code=404, detail="Generated DOCX file not found")
+
+    pdf_path = docx_path.with_suffix(".pdf")
+    try:
+        await asyncio.to_thread(convert_docx_to_pdf, docx_path, pdf_path)
+    except Exception as e:
+        logger.error(f"PDF export failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"PDF export failed: {str(e)}")
+
+    return FileResponse(
+        path=str(pdf_path),
+        filename=pdf_path.name,
+        media_type="application/pdf"
+    )
+
+
 # -------------------------------------------------------------------------
 # 6. RAG Chat Assistant
 # -------------------------------------------------------------------------
 @app.post("/api/chat")
 async def chat_endpoint(payload: Dict[str, Any]):
     """Semantic RAG chat assistant for petition document inquiries."""
-    query = payload.get("query", "").lower()
-    context = payload.get("context", {})
-    case_no = context.get("case_details", {}).get("case_number", "F.NO. 516/2024-ARC")
-    defaulter = context.get("defaulter", {}).get("name", "M/s. Prisma Garments")
-    amt = context.get("financials", {}).get("principal_amount", 173308)
-
-    if "defaulter" in query or "who" in query or "company" in query:
-        return {
-            "answer": f"The defaulter named in the Customs order is **{defaulter}** (IEC No: 3205015860), residing at **Door No. 46, Uzhavan Nagar, 6th Uzhavar Street, Perumal Gounder Thottam, Erode - 638009**.",
-            "citations": [
-                {"id": "box-1", "page": 1, "label": "Defaulter Title [Page 1]"},
-                {"id": "box-2", "page": 1, "label": "Address [Page 1]"}
-            ]
-        }
-    elif "amount" in query or "duty" in query or "penalty" in query:
-        return {
-            "answer": f"The customs duty demanded is **Rs. 1,73,308/-** along with a penalty of **Rs. 9,000/-**, making the total recoverable amount **Rs. 1,82,308/-** under Section 142(1)(c)(ii) of the Customs Act 1962 and Section 5 of TN Revenue Recovery Act 1864.",
-            "citations": [
-                {"id": "box-3", "page": 1, "label": "Demand Paragraph [Page 1]"}
-            ]
-        }
-    
-    return {
-        "answer": f"Under order **{case_no}**, Customs Commissionerate Chennai directed recovery of **Rs. 1,82,308/-** against **{defaulter}**.",
-        "citations": [{"id": "box-1", "page": 1, "label": "Customs Certificate [Page 1]"}]
-    }
+    context = payload.get("context") or {}
+    case_no = (context.get("case_details") or {}).get("case_number")
+    if not case_no:
+        raise HTTPException(status_code=400, detail="Upload a document before asking about proceedings.")
+    query = str(payload.get("query", "")).lower()
+    defaulter = (context.get("defaulter") or {}).get("name")
+    financials = context.get("financials") or {}
+    if any(word in query for word in ("defaulter", "who", "company")):
+        answer = f"Defaulter recorded for {case_no}: {defaulter}." if defaulter else "The uploaded document has no extracted defaulter name."
+    elif any(word in query for word in ("amount", "duty", "penalty")):
+        amounts = [("Principal", financials.get("principal_amount")), ("Penalty", financials.get("penalty_amount")), ("Total recoverable", financials.get("total_recoverable_amount"))]
+        answer = "; ".join(f"{label}: Rs. {value}" for label, value in amounts if value is not None) or "No amounts have been extracted from the uploaded document."
+    else:
+        answer = f"Current order: {case_no}. Ask about its extracted defaulter or recovery amounts."
+    return {"answer": answer, "citations": []}
 
 
 # Mount Frontend static files

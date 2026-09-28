@@ -34,33 +34,6 @@ export const apiService = {
   },
 
   /**
-   * Step 1-5 Pipeline: Uploads and processes a petition file
-   */
-  async uploadDocument(file) {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await fetch(`${API_BASE}/process-document`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error(`Server returned ${res.status}: ${await res.text()}`);
-      }
-
-      const data = await res.json();
-      return this._normalizePipelineResult(data, file.name);
-    } catch (err) {
-      console.warn("Backend process-document failed or offline, using fallback client synthesis:", err);
-      // Create a resilient client simulation so the user can test the UI regardless
-      await new Promise(r => setTimeout(r, 1200));
-      return this._createSimulatedResult(file.name);
-    }
-  },
-
-  /**
    * Processes the built-in sample MCOP order
    */
   async loadSampleDocument() {
@@ -115,16 +88,14 @@ export const apiService = {
     }
   },
 
-  async uploadDocument(file) {
-    try {
-      const formData = new FormData(); formData.append('file', file);
-      const res = await fetch(`${API_BASE}/process-document`, { method: 'POST', body: formData });
-      if (!res.ok) throw new Error(`Document processing failed: ${await res.text()}`);
-      return this._normalizePipelineResult(await res.json(), file?.name || 'scanned_document.pdf');
-    } catch (err) {
-      console.warn("Backend process-document offline/error, falling back to simulated pipeline:", err);
-      return this._createSimulatedResult(file?.name || 'scanned_petition.jpg');
-    }
+  async uploadDocument(file, templateCode = '') {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (templateCode) formData.append('template_code', templateCode);
+
+    const res = await fetch(`${API_BASE}/process-document`, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(`Document processing failed: ${await res.text()}`);
+    return this._normalizePipelineResult(await res.json(), file?.name || 'scanned_document.pdf');
   },
 
   async getTemplates() {
@@ -168,7 +139,10 @@ export const apiService = {
     const taluk = j.taluk || "ஈரோடு";
     const collectorName = j.collector_name || "திரு.ச.கந்தசாமி,இ.ஆ.ப.,";
 
-    const total = penalty > 0 ? principal + penalty : principal;
+    const principal = Number(f.principal_amount || 0);
+    const penalty = Number(f.penalty_amount || 0);
+    const reportedTotal = Number(f.total_recoverable_amount || 0);
+    const total = reportedTotal > 0 ? reportedTotal : principal + penalty;
 
     const formattedAmt = f.formatted_amount || (
       penalty > 0
@@ -461,6 +435,10 @@ export const apiService = {
    */
   getDownloadUrl(filename) {
     return `${API_BASE}/download/${filename}`;
+  },
+
+  getPdfDownloadUrl(filename) {
+    return `${API_BASE}/download-pdf/${filename}`;
   },
 
   /**

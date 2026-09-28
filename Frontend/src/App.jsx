@@ -139,7 +139,7 @@ export default function App() {
       } else {
         result = await apiService.loadSampleDocument();
       }
-      applyPipelineResult(result, incomingFileName);
+      applyPipelineResult(result);
     } catch (err) {
       alert("Sample pipeline error: " + err.message);
     } finally {
@@ -147,18 +147,17 @@ export default function App() {
     }
   };
 
-  const applyPipelineResult = (result, fileNameOverride) => {
+  const applyPipelineResult = (result) => {
     recordActivity('Proceedings generated', { reference: result.entities?.case_details?.case_number || result.generated_docx_filename });
     setCurrentEntities(result.entities);
     setValidationInsights(result.validation_insights);
-    setCurrentDocxFilename(fileNameOverride || result.generated_docx_filename);
+    setCurrentDocxFilename(result.generated_docx_filename || '');
     setRawOcrText(result.rawOcrText);
     setBoundingBoxes(result.bounding_boxes || []);
 
     // Format the new document content
-    const initialSubject = `"உங்களைத் தேடி உங்கள் ஊரில்" திட்டம் — ${result.entities.jurisdiction.district} மாவட்டம், ${result.entities.jurisdiction.taluk} வட்டத்தில் மோட்டார் விபத்து இழப்பீட்டுத் தொகை ரூ.${Number(result.entities.financials.principal_amount).toLocaleString('en-IN')}/- ஐ வசூலித்து ஒப்படைக்க உத்தரவிடுதல்.`;
-    setSubjectText(initialSubject);
-    setDocumentContent(apiService.formatDocumentSheet(result.entities, initialSubject));
+    setSubjectText('');
+    setDocumentContent(apiService.formatDocumentSheet(result.entities));
 
     setActiveView('workspace');
     setWorkspaceMode('editor');
@@ -213,6 +212,12 @@ export default function App() {
 
   // Download / Print as PDF
   const handleDownloadPdf = () => {
+    if (currentDocxFilename) {
+      recordActivity('Proceedings PDF download requested', { reference: currentDocxFilename });
+      window.open(apiService.getPdfDownloadUrl(currentDocxFilename), '_blank');
+      return;
+    }
+
     recordActivity('Proceedings print requested', { reference: currentEntities?.case_details?.case_number || '' });
     const printWindow = window.open('', '_blank');
     if (!printWindow) {

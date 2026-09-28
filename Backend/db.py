@@ -170,30 +170,8 @@ def init_db():
     );
     """
     execute_query(schema_sql)
-    _seed_default_users()
     _seed_default_templates()
     logger.info("PostgreSQL database tables initialized and verified.")
-
-
-def _seed_default_users():
-    """Seeds default admin and user officers if not already present."""
-    count_row = execute_query("SELECT count(*) as c FROM app_users", fetch_one=True)
-    count = count_row["c"] if count_row else 0
-    if count == 0:
-        default_users = [
-            ("admin-1", "நிர்வாகி (District Collectorate)", "collector.erode@tn.gov.in", "admin", "active", "ஈரோடு", "Revenue Administration", "+91 94450 00001"),
-            ("user-1", "வருவாய் வட்டாட்சியர் (Tahsildar Erode)", "tahsildar.erode@tn.gov.in", "user", "active", "ஈரோடு", "Taluk Revenue Office", "+91 94450 00002"),
-            ("user-2", "பிரிவு எழுத்தர் (Section Officer - E Section)", "so.erevenue@tn.gov.in", "user", "active", "ஈரோடு", "Revenue Recovery Cell", "+91 94450 00003"),
-            ("user-3", "வருவாய் வட்டாட்சியர் (Tahsildar Perundurai)", "tahsildar.perundurai@tn.gov.in", "user", "active", "பெருந்துறை", "Taluk Revenue Office", "+91 94450 00004"),
-        ]
-        insert_sql = """
-        INSERT INTO app_users (id, name, email, role, status, taluk, department, mobile_number)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (email) DO NOTHING
-        """
-        for u in default_users:
-            execute_query(insert_sql, u)
-        logger.info(f"Seeded {len(default_users)} default users into PostgreSQL app_users table.")
 
 
 def _seed_default_templates():
@@ -202,7 +180,7 @@ def _seed_default_templates():
     count = count_row["c"] if count_row else 0
     if count == 0:
         templates = [
-            # 1. Customs Act Proceedings (செயல்முறைகள்) - Reference from M/s Prisma Garments
+            # 1. Customs Act Proceedings (செயல்முறைகள்)
             {
                 "id": "tpl-customs-proc",
                 "code": "customs_proceedings",
