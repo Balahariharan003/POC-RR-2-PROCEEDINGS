@@ -1,0 +1,217 @@
+// Archived admin demo records. Never seed these into the application.
+// Retained only for reference and identifying unchanged legacy demo copies.
+export const INITIAL_AUDIT_LOGS = {
+  "September 2026": [
+    {
+      id: "AUD-2026-09-001",
+      timestamp: "2026-09-05 11:22:14",
+      caseNumber: "MCOP-225/2022",
+      fileName: "MCOP_225_2022_Order.pdf",
+      fileSize: "1.45 MB",
+      petitioner: "Cholamandalam MS General Insurance Co. Ltd.",
+      defaulter: "திரு.T.P.ராமலிங்கம்",
+      taluk: "கொடுமுடி",
+      district: "ஈரோடு",
+      amount: "₹ 4,60,690/-",
+      status: "DISPATCHED",
+      officerId: "TN-SO-ERD-441",
+      officerName: "S. Ramanathan",
+      officerRole: "Tahsildar • RR & Grievance Cell",
+      dispatchReceipt: "DRO-TN-2026-9666-884A",
+      groundingScore: 0.96,
+      hallucinationScore: 0.04,
+      docHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      promptHistory: [
+        { id: 1, prompt: "Extract all legal entities from MCOP order and generate formal Form 5 notice.", timestamp: "11:22 AM" },
+        { id: 2, prompt: "Add Tahsildar Kodumudi bank attachment order under Section 5 of TN RR Act.", timestamp: "11:24 AM" }
+      ],
+      documentContent: `தமிழ்நாடு அரசு
+வருவாய்த்துறை மற்றும் பேரிடர் மேலாண்மைத் துறை
+
+செயல்முறை ஆணை எண்: MCOP-225/2022 (வ.வ.சட்டம் பிரிவு 5)
+நாள்: 26.03.2026
+
+முன்னிலை: திரு. S. இராமநாதன், B.Sc., B.L.,
+வருவாய் வட்டாட்சியர், கொடுமுடி வட்டம், ஈரோடு மாவட்டம்
+
+பொருள்:
+வருவாய் வசூல் சட்டம் 1864 பிரிவு 5 — ஈரோடு மாவட்டம், கொடுமுடி வட்டம், சிவகிரி கிராமம் — மோட்டார் விபத்து இழப்பீட்டுத் தொகை ரூ.4,60,690/- ஐ எதிர்மனுதாரர் திரு. T.P. ராமலிங்கம் அவர்களிடமிருந்து வசூலித்து ஒப்படைக்க உத்தரவிடுதல் — தொடர்பாக.
+
+பார்வை:
+1. ஈரோடு சிறப்பு சார்பு நீதிமன்றம் / மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம் ஆணை MCOP-225/2022, நாள்: 26.03.2026.
+2. மோட்டார் வாகனச் சட்டம் 1988 பிரிவு 174-ன் கீழ் வழங்கப்பட்ட சான்றிதழ்.
+3. சோழமண்டலம் எம்.எஸ் ஜெனரல் இன்சூரன்ஸ் நிறுவனத்தின் கோரிக்கை மனு.
+
+ஆணை:
+பார்வை (1) மற்றும் (2)-ல் குறிப்பிட்டுள்ள நீதிமன்றத் தீர்ப்பின்படி, கொடுமுடி வட்டம், சிவகிரி கிராமம், சந்தை மேடு, கதவு எண் 90/6-ல் வசிக்கும் திரு. T.P. ராமலிங்கம் (த/பெ. பழனிச்சாமி) என்பவர் இழப்பீட்டுத் தொகையான ரூ.4,60,690/- (ரூபாய் நான்கு இலட்சத்து அறுபதாயிரத்து அறுநூற்றி தொண்ணூறு மட்டும்) மற்றும் 7.5% வட்டியுடன் நீதிமன்றத்தில் செலுத்த தவறினார்.
+
+எனவே, தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வழங்கப்பட்டுள்ள அதிகாரங்களின்படி, மேற்படி எதிர்மனுதாரரின் அசையும் மற்றும் அசையா சொத்துக்களை உடனடியாக ஜப்தி செய்து, நிலுவைத் தொகையினை வசூலித்து அரசு கணக்கில் செலுத்த உத்தரவிடப்படுகிறது.
+
+இணைப்பு:
+1. நீதிமன்றத் தீர்ப்பு நகல்.
+2. படிவம் எண் 5 (Form 5 Notice).
+
+(ஒப்பம்)
+வருவாய் வட்டாட்சியர்
+கொடுமுடி வட்டம், ஈரோடு மாவட்டம்`,
+      notes: "Auto-verified via RapidOCR + Local LLM. Dispatched to DRO Portal with Form 5 Notice."
+    },
+    {
+      id: "AUD-2026-09-002",
+      timestamp: "2026-09-04 16:45:09",
+      caseNumber: "MCOP-118/2023",
+      fileName: "MCOP_118_2023_Perundurai.pdf",
+      fileSize: "2.10 MB",
+      petitioner: "United India Insurance Co. Ltd.",
+      defaulter: "சுப்பிரமணியன், த/பெ.முத்துசாமி",
+      taluk: "பெருந்துறை",
+      district: "ஈரோடு",
+      amount: "₹ 8,92,400/-",
+      status: "FLAGGED",
+      officerId: "TN-SO-ERD-441",
+      officerName: "S. Ramanathan",
+      officerRole: "Tahsildar • RR & Grievance Cell",
+      dispatchReceipt: null,
+      groundingScore: 0.78,
+      hallucinationScore: 0.22,
+      docHash: "7d793037a0760186574b0282f2f435e7b1e50774690f697e411b41bb4faec8e7",
+      promptHistory: [
+        { id: 1, prompt: "Draft recovery proceedings for Perundurai defaulter with 8.92 Lakhs award.", timestamp: "04:45 PM" }
+      ],
+      documentContent: `தமிழ்நாடு அரசு
+வருவாய்த்துறை மற்றும் பேரிடர் மேலாண்மைத் துறை
+
+செயல்முறை ஆணை எண்: MCOP-118/2023
+நாள்: 04.09.2026
+
+முன்னிலை: திரு. S. இராமநாதன், B.Sc., B.L.,
+வருவாய் வட்டாட்சியர், பெருந்துறை வட்டம், ஈரோடு மாவட்டம்
+
+பொருள்:
+வருவாய் வசூல் சட்டம் 1864 பிரிவு 5 — பெருந்துறை வட்டம் — மோட்டார் விபத்து இழப்பீட்டுத் தொகை ரூ.8,92,400/- வசூலிக்க உத்தரவிடுதல்.
+
+ஆணை:
+எதிர்மனுதாரர் திரு. சுப்பிரமணியன் (த/பெ. முத்துசாமி) என்பவரிடமிருந்து இழப்பீட்டுத் தொகை ரூ.8,92,400/- ஐ உடனடியாக வசூலித்து ஒப்படைக்க உத்தரவிடப்படுகிறது.
+
+(ஒப்பம்)
+வருவாய் வட்டாட்சியர்`,
+      notes: "Hallucination score breached threshold (>0.20) due to blurred claimant address. Awaiting manual officer validation."
+    }
+  ],
+  "August 2026": [
+    {
+      id: "AUD-2026-08-089",
+      timestamp: "2026-08-28 14:10:33",
+      caseNumber: "RERA-EXEC-401/2024",
+      fileName: "TNRERA_Execution_401.pdf",
+      fileSize: "3.40 MB",
+      petitioner: "G. Anand & Others (Homebuyers Association)",
+      defaulter: "M/s Greenfield Promoters Pvt. Ltd.",
+      taluk: "பவானி",
+      district: "ஈரோடு",
+      amount: "₹ 45,10,000/-",
+      status: "DISPATCHED",
+      officerId: "TN-SO-ERD-412",
+      officerName: "S. Priya",
+      officerRole: "Section Officer • RR Cell",
+      dispatchReceipt: "DRO-TN-2026-8812-401B",
+      groundingScore: 0.98,
+      hallucinationScore: 0.02,
+      docHash: "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
+      promptHistory: [
+        { id: 1, prompt: "Generate TNRERA section 40(1) recovery order for Bhavani Taluk.", timestamp: "02:10 PM" }
+      ],
+      documentContent: `தமிழ்நாடு அரசு
+வருவாய்த்துறை மற்றும் பேரிடர் மேலாண்மைத் துறை
+
+செயல்முறை ஆணை எண்: TNRERA-401/2024
+நாள்: 28.08.2026
+
+முன்னிலை: திருமதி. S. பிரியா, M.A.,
+பிரிவு அலுவலர் (வருவாய் வசூல்), ஈரோடு மாவட்ட ஆட்சியரகம்
+
+பொருள்:
+தமிழ்நாடு ரியல் எஸ்டேட் ஒழுங்குமுறை ஆணையம் (TNRERA) ஆணை — பவானி வட்டம் — ரூ.45,10,000/- நிலுவைத் தொகை வசூலிக்க உத்தரவிடுதல்.
+
+ஆணை:
+TNRERA சட்டப்பிரிவு 40(1)-ன் கீழ் M/s Greenfield Promoters Pvt. Ltd. நிறுவனத்தின் சொத்துக்களை முடக்கி ரூ.45,10,000/- வசூலிக்க பவானி வட்டாட்சியருக்கு உத்தரவிடப்படுகிறது.
+
+(ஒப்பம்)
+பிரிவு அலுவலர், ஈரோடு`,
+      notes: "Section 40(1) Recovery of Real Estate Regulatory Authority. Order served to Tahsildar Bhavani."
+    },
+    {
+      id: "AUD-2026-08-088",
+      timestamp: "2026-08-25 10:15:00",
+      caseNumber: "MCOP-410/2021",
+      fileName: "MCOP_410_2021_Order.pdf",
+      fileSize: "1.15 MB",
+      petitioner: "The New India Assurance Co. Ltd.",
+      defaulter: "செல்வராஜ், த/பெ.காளியண்ணன்",
+      taluk: "ஈரோடு",
+      district: "ஈரோடு",
+      amount: "₹ 2,35,000/-",
+      status: "VERIFIED",
+      officerId: "TN-SO-ERD-441",
+      officerName: "S. Ramanathan",
+      officerRole: "Tahsildar • RR & Grievance Cell",
+      dispatchReceipt: "DRO-TN-2026-8790-112C",
+      groundingScore: 0.94,
+      hallucinationScore: 0.06,
+      docHash: "f0e1d2c3b4a5968778695a4b3c2d1e0f0123456789abcdef0123456789abcdef",
+      promptHistory: [
+        { id: 1, prompt: "Draft Form 5 notice for vehicle compensation recovery.", timestamp: "10:15 AM" }
+      ],
+      documentContent: `தமிழ்நாடு அரசு
+வருவாய்த்துறை — ஈரோடு வட்டம்
+
+செயல்முறை ஆணை எண்: MCOP-410/2021
+நாள்: 25.08.2026
+
+பொருள்:
+மோட்டார் விபத்து இழப்பீட்டுத் தொகை ரூ.2,35,000/- வசூலித்தல்.
+
+ஆணை:
+எதிர்மனுதாரர் செல்வராஜ் என்பவரிடமிருந்து ரூ.2,35,000/- வசூலித்து அரசு கணக்கில் செலுத்த உத்தரவிடப்படுகிறது.`,
+      notes: "Completed standard proceedings generation. Remittance DD requested."
+    }
+  ],
+  "July 2026": [
+    {
+      id: "AUD-2026-07-045",
+      timestamp: "2026-07-19 15:30:20",
+      caseNumber: "MCOP-88/2023",
+      fileName: "Anthiyur_MCOP_88.pdf",
+      fileSize: "1.80 MB",
+      petitioner: "Royal Sundaram General Insurance Co.",
+      defaulter: "வேலுசாமி, த/பெ.கருப்பண்ணன்",
+      taluk: "அந்தியூர்",
+      district: "ஈரோடு",
+      amount: "₹ 3,45,000/-",
+      status: "DISPATCHED",
+      officerId: "TN-SO-ERD-412",
+      officerName: "S. Priya",
+      officerRole: "Section Officer • RR Cell",
+      dispatchReceipt: "DRO-TN-2026-7734-998D",
+      groundingScore: 0.95,
+      hallucinationScore: 0.05,
+      docHash: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      promptHistory: [
+        { id: 1, prompt: "Generate Anthiyur Taluk revenue recovery proceeding for 3.45 Lakhs.", timestamp: "03:30 PM" }
+      ],
+      documentContent: `தமிழ்நாடு அரசு
+வருவாய்த்துறை — அந்தியூர் வட்டம்
+
+செயல்முறை ஆணை எண்: MCOP-88/2023
+நாள்: 19.07.2026
+
+பொருள்:
+அந்தியூர் வட்டம் — மோட்டார் விபத்து இழப்பீட்டுத் தொகை ரூ.3,45,000/- வசூலித்தல்.
+
+ஆணை:
+எதிர்மனுதாரர் வேலுசாமி என்பவரிடமிருந்து நிலுவைத் தொகையினை வசூலிக்க உத்தரவிடப்படுகிறது.`,
+      notes: "Order dispatched to Anthiyur Taluk. Revenue recovery proceeding completed."
+    }
+  ]
+};
+
