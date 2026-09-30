@@ -11,6 +11,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import { APP_CONFIG } from '../../config/appConfig.js';
 
 export default function AppHeader({ 
   currentLanguage = 'en', 
@@ -57,19 +58,19 @@ export default function AppHeader({
         </button>
 
         <img 
-          src="/assets/tn_emblem.svg" 
+          src={APP_CONFIG.brand.emblemPath}
           alt="Tamil Nadu Government Emblem" 
           className="emblem-logo"
         />
         <div className="topbar-title-group">
           <span className="topbar-title">
-            <span className="topbar-title-full">RR Assistant</span>
-            <span className="topbar-title-short">RR Assistant</span>
+            <span className="topbar-title-full">{APP_CONFIG.brand.name}</span>
+            <span className="topbar-title-short">{APP_CONFIG.brand.name}</span>
           </span>
           <span className="topbar-subtitle" style={{ color: 'var(--soft-sand, #EADBC8)' }}>
             {isTamil 
               ? 'வருவாய் வசூல் செயல்முறைகள் (Revenue Recovery Proceedings)'
-              : 'Revenue Recovery Proceedings'}
+              : APP_CONFIG.brand.subtitle}
           </span>
         </div>
       </div>

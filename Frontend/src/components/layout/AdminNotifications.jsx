@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Bell, Check, X } from 'lucide-react';
 import { ACTIVITY_EVENT, readActivities } from '../../services/activityStore.js';
 import './AdminNotifications.css';
+import { STORAGE_KEYS } from '../../config/appConfig.js';
 
 export default function AdminNotifications({ user, onViewActivity }) {
   const [open, setOpen] = useState(false);
@@ -10,7 +11,7 @@ export default function AdminNotifications({ user, onViewActivity }) {
   const [error, setError] = useState('');
   const ref = useRef(null);
   const trigger = useRef(null);
-  const key = `rr_notifications_seen_${user.id}`;
+  const key = `${STORAGE_KEYS.notificationPrefix}${user.id}`;
   useEffect(() => {
     const refresh = () => {
       try {

@@ -1,18 +1,19 @@
 # RR Assistant frontend
 
-This application is for Revenue Recovery proceedings: uploaded source data populates the existing fixed proceedings templates. Use RR Assistant terminology rather than GDP, grievance processing, or petition OCR branding.
+React/Vite client for Revenue Recovery proceedings. The frontend uses the FastAPI backend for authentication, OCR processing, document revision, template-preserving DOCX/PDF export, and audit synchronization.
 
-The admin workspace follows the supplied GDP dashboard reference visually, tailored to RR proceedings. Admin login opens Dashboard, User Management and Backup; officer login opens RR Assistant. Keep the generated proceedings editor and correction chat in the desktop 60/40 layout.
+## Configuration
 
-## Current admin scope
+Copy `.env.example` to `.env.local` when a deployment needs values different from the defaults. Runtime constants, storage keys, accepted upload types, branding, and empty data shapes are centralized in `src/config/appConfig.js`.
 
-- Frontend-only demo login; selecting Admin is not server authorization.
-- User Management stores an editable local officer directory with roles, taluks and active/inactive status. It does not provision accounts or change login access.
-- Dashboard counts saved browser-local proceedings sessions; it does not report database health or server-wide totals.
-- Backup exports local officer records, audit records, latest edited RR draft, and preferences as versioned JSON.
-- Restore validates and previews the file, then replaces these local records and signs out after confirmation.
-- Original source uploads, backend templates, generated server files, databases, credentials, and accounts are outside this backup. Download generated documents separately.
+The development server proxies `/api` to `VITE_BACKEND_PROXY_URL`. Production deployments can either serve the frontend and backend on the same origin or set `VITE_API_BASE_URL` before building.
 
-## Verification
+## Commands
 
-Run `npm run build` and `node --test src/services/adminStore.test.js` from this directory.
+```powershell
+npm ci
+npm test
+npm run build
+```
+
+The generated document editor preserves the backend-provided Word layout. User edits are sent with every DOCX/PDF export, and downloads are rejected if the backend response does not have a valid DOCX or PDF signature.

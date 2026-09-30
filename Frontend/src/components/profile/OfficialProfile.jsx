@@ -21,16 +21,16 @@ function deriveProfileDetails(currentUser) {
 
   const isAdmin = currentUser?.role === 'admin';
   return {
-    id: savedRecord?.id || currentUser?.id || (isAdmin ? 'admin-local' : 'user-local'),
-    fullNameEn: savedRecord?.name || currentUser?.name || (isAdmin ? 'Local Administrator' : 'S. Ramanathan'),
-    fullNameTa: savedRecord?.nameTamil || currentUser?.nameTamil || 'எஸ். இராமநாதன்',
-    officialEmail: savedRecord?.email || savedRecord?.username || currentUser?.email || currentUser?.username || (isAdmin ? 'admin@rr.local' : 'ramanathan@tn.gov.in'),
-    mobileNumber: savedRecord?.mobileNumber || currentUser?.mobileNumber || '9842011222',
-    departmentUnit: savedRecord?.section || currentUser?.section || currentUser?.taluk || 'D Section',
-    designation: savedRecord?.designation || currentUser?.designation || (isAdmin ? 'District Collector' : 'Department Officer'),
-    officerId: savedRecord?.officerId || currentUser?.officerId || (isAdmin ? 'OFF-ADMIN-001' : 'OFF-USER-001'),
+    id: savedRecord?.id || currentUser?.id || '',
+    fullNameEn: savedRecord?.name || currentUser?.name || currentUser?.full_name || '',
+    fullNameTa: savedRecord?.nameTamil || currentUser?.nameTamil || '',
+    officialEmail: savedRecord?.email || savedRecord?.username || currentUser?.email || currentUser?.username || '',
+    mobileNumber: savedRecord?.mobileNumber || currentUser?.mobileNumber || '',
+    departmentUnit: savedRecord?.section || currentUser?.section || currentUser?.taluk || '',
+    designation: savedRecord?.designation || currentUser?.designation || '',
+    officerId: savedRecord?.officerId || currentUser?.officerId || '',
     accessRole: isAdmin ? 'System Administrator' : 'Department User',
-    assignedOffice: savedRecord?.office || currentUser?.office || 'Erode District Collectorate, Tamil Nadu'
+    assignedOffice: savedRecord?.office || currentUser?.office || currentUser?.district || ''
   };
 }
 

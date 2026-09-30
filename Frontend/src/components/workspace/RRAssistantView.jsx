@@ -1,27 +1,11 @@
 import { recordActivity } from '../../services/activityStore.js';
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  FileText, 
-  UploadCloud, 
-  Download, 
-  RefreshCw, 
-  Check, 
-  Copy, 
-  PlusCircle, 
-  Printer, 
-  X, 
-  AlertCircle,
-  FileCheck,
-  Edit3,
-  ArrowRight,
-  MessageSquare,
-  Send,
-  Paperclip,
-  Mic,
-  Smartphone
-} from 'lucide-react';
+import { FileText, Download, RefreshCw, Copy, PlusCircle, Printer, X, Send, Paperclip, Check, Edit3, MessageSquare } from 'lucide-react';
 import { apiService } from '../../services/apiService.js';
-import MobileQrModal from '../upload/MobileQrModal.jsx';
+import { APP_CONFIG, STORAGE_KEYS, UPLOAD_CONFIG } from '../../config/appConfig.js';
+import { layoutToText } from '../../utils/documentLayout.js';
+import './RRAssistantView.css';
+import TemplateDocumentEditor from './TemplateDocumentEditor.jsx';
 
 export default function RRAssistantView({ 
   currentLanguage = 'en',
@@ -32,51 +16,63 @@ export default function RRAssistantView({
 }) {
   // Workflow States: 'upload' | 'file_selected' | 'processing' | 'generated'
   const [workflowState, setWorkflowState] = useState('upload');
-  const [showMobileQr, setShowMobileQr] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [generatedDocuments, setGeneratedDocuments] = useState([]);
   const [fileInfo, setFileInfo] = useState({ name: '', sizeFormatted: '' });
-  const [isDragOver, setIsDragOver] = useState(false);
+
   const [processingStage, setProcessingStage] = useState('Extracting document content...');
-  const [processingStageNum, setProcessingStageNum] = useState(1);
   
   // Document Content & Correction
   const [generatedContent, setGeneratedContent] = useState('');
   const [generatedDocxFilename, setGeneratedDocxFilename] = useState('');
-  const editStart = useRef('');
+  const [documentLayout, setDocumentLayout] = useState(null);
+  const [documentEdits, setDocumentEdits] = useState({});
+  const editsRef = useRef({});
+  const [isExporting, setIsExporting] = useState(false);
+
+  const updateDocumentEdits = (layout, edits) => {
+    editsRef.current = edits;
+    setDocumentEdits(edits);
+    setGeneratedContent(layoutToText(layout, edits));
+  };
+  const handleParagraphChange = (id, text) => {
+    updateDocumentEdits(documentLayout, { ...editsRef.current, [id]: text });
+  };
+
   const [correctionInstruction, setCorrectionInstruction] = useState('');
   const [isApplyingChanges, setIsApplyingChanges] = useState(false);
   const [copied, setCopied] = useState(false);
   const [lastUpdatedMessage, setLastUpdatedMessage] = useState('');
   const [promptHistory, setPromptHistory] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
-  const [availableTemplates, setAvailableTemplates] = useState([]);
-  const [selectedTemplateCode, setSelectedTemplateCode] = useState('CUSTOMS_PROCEEDINGS');
-  const [showOriginalDoc, setShowOriginalDoc] = useState(false);
-  const [docPreviewUrl, setDocPreviewUrl] = useState(null);
+
+  const [selectedTemplateCode, setSelectedTemplateCode] = useState(APP_CONFIG.defaults.templateCode);
+
+
   const [extractedEntities, setExtractedEntities] = useState(null);
   const [auditError, setAuditError] = useState('');
+  const [composerNotice, setComposerNotice] = useState('');
 
   const fileInputRef = useRef(null);
+  const editStart = useRef('');
+  const [sourceFile, setSourceFile] = useState(null);
+  const [docPreviewUrl, setDocPreviewUrl] = useState('');
+  const [showOriginalDoc, setShowOriginalDoc] = useState(false);
 
   useEffect(() => {
-    if (!selectedFile) return;
-    if (selectedFile.previewUrl) {
-      setDocPreviewUrl(selectedFile.previewUrl);
-    } else if (selectedFile.dataUrl) {
-      setDocPreviewUrl(selectedFile.dataUrl);
-    } else if (selectedFile instanceof File) {
-      const url = URL.createObjectURL(selectedFile);
-      setDocPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [selectedFile]);
+    if (!sourceFile) { setDocPreviewUrl(''); return; }
+    const url = URL.createObjectURL(sourceFile);
+    setDocPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [sourceFile]);
+
 
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
         const tpls = await apiService.getTemplates();
         if (tpls && tpls.length > 0) {
-          setAvailableTemplates(tpls);
+
           if (!tpls.some(t => t.template_code === selectedTemplateCode)) {
             setSelectedTemplateCode(tpls[0].template_code);
           }
@@ -89,11 +85,6 @@ export default function RRAssistantView({
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.removeItem('rr_draft');
-    } catch (error) {
-      console.warn('Could not clear saved draft:', error);
-    }
     apiService.getAuditLogs().catch(err => {
       setAuditError(err?.message || 'Unable to load saved audit records.');
     });
@@ -102,9 +93,13 @@ export default function RRAssistantView({
   useEffect(() => {
     if (activeSession) return;
     try {
-      const draft = JSON.parse(localStorage.getItem('rr_draft') || 'null');
+      const draft = JSON.parse(localStorage.getItem(STORAGE_KEYS.draft) || 'null');
       if (draft && typeof draft.content === 'string' && draft.content) {
         setGeneratedContent(draft.content);
+        setDocumentLayout(draft.layout || null);
+        setGeneratedDocxFilename(draft.layout?.filename || '');
+        setDocumentEdits(draft.edits || {});
+        editsRef.current = draft.edits || {};
         setFileInfo({ name: draft.fileName || 'Saved proceedings', sizeFormatted: draft.fileSize || '' });
         setPromptHistory(Array.isArray(draft.promptHistory) ? draft.promptHistory : []);
         setCurrentSessionId(draft.sessionId || null);
@@ -116,19 +111,26 @@ export default function RRAssistantView({
   useEffect(() => {
     if (workflowState !== 'generated') return;
     try {
-      localStorage.setItem('rr_draft', JSON.stringify({ content: generatedContent, fileName: fileInfo.name, fileSize: fileInfo.sizeFormatted, promptHistory, sessionId: currentSessionId }));
+      localStorage.setItem(STORAGE_KEYS.draft, JSON.stringify({ content: generatedContent, layout: documentLayout, edits: documentEdits, fileName: fileInfo.name, fileSize: fileInfo.sizeFormatted, promptHistory, sessionId: currentSessionId }));
     } catch (error) { setAuditError('Draft could not be saved locally. Export the document to keep your changes.'); }
-  }, [workflowState, generatedContent, fileInfo, promptHistory, currentSessionId]);
+  }, [workflowState, generatedContent, documentLayout, documentEdits, fileInfo, promptHistory, currentSessionId]);
 
   // Restore session when activeSession prop changes (ChatGPT & Gemini style restore)
   useEffect(() => {
     if (activeSession && activeSession.documentContent) {
-      setSelectedFile(null);
+      setSelectedFiles([]);
+      setGeneratedDocuments([]);
+      setSourceFile(null);
+      setShowOriginalDoc(false);
       setFileInfo({
         name: activeSession.fileName || activeSession.caseNumber || 'restored_order.pdf',
         sizeFormatted: activeSession.fileSize || 'Size not recorded'
       });
       setGeneratedContent(activeSession.documentContent);
+      setDocumentLayout(activeSession.documentLayout || null);
+      setGeneratedDocxFilename(activeSession.documentLayout?.filename || '');
+      setDocumentEdits(activeSession.documentEdits || {});
+      editsRef.current = activeSession.documentEdits || {};
       setPromptHistory(activeSession.promptHistory || []);
       setCurrentSessionId(activeSession.id || `AUD-${Date.now()}`);
       setWorkflowState('generated');
@@ -145,99 +147,75 @@ export default function RRAssistantView({
   };
 
   // Handle file selection
-  const handleFile = (file) => {
-    if (!file) return;
+  const handleFiles = async (files) => {
+    const validFiles = [];
+    const rejected = [];
+    for (const file of files) {
 
     // Supported document & image validation
-    const validExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
     const fileNameLower = file.name.toLowerCase();
-    const isValid = validExtensions.some(ext => fileNameLower.endsWith(ext)) || 
-                    file.type.startsWith('image/') || 
+    const header = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+    const isWord = (header[0] === 0x50 && header[1] === 0x4b) ||
+      (header[0] === 0xd0 && header[1] === 0xcf && header[2] === 0x11 && header[3] === 0xe0);
+    const isValid = isWord || UPLOAD_CONFIG.extensions.some(ext => fileNameLower.endsWith(ext)) ||
                     file.type === 'application/pdf';
 
     if (!isValid) {
-      alert("Please upload a valid document format (PDF, JPG, PNG, or WEBP).");
-      return;
+      rejected.push(file.name);
+      continue;
     }
-
-    setSelectedFile(file);
-    setFileInfo({
-      name: file.name,
-      sizeFormatted: formatFileSize(file.size)
+    validFiles.push(file);
+    }
+    setComposerNotice(rejected.length ? `Unsupported files: ${rejected.join(', ')}. Use ${UPLOAD_CONFIG.supportedLabel}.` : '');
+    if (!validFiles.length) return;
+    setSelectedFiles(previous => {
+      const combined = workflowState === 'file_selected' ? [...previous] : [];
+      for (const file of validFiles) {
+        if (!combined.some(item => item.name === file.name && item.size === file.size && item.lastModified === file.lastModified)) combined.push(file);
+      }
+      return combined;
     });
     setWorkflowState('file_selected');
   };
 
-  // Drag & drop handlers
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  // Load sample demonstration PDF
-  const handleLoadSample = async () => {
-    const sampleFile = {
-      name: "sample_mcop_order.pdf",
-      sizeFormatted: "1.45 MB"
-    };
-    setSelectedFile(null);
-    setFileInfo(sampleFile);
-    setWorkflowState('file_selected');
-  };
-
-  // Handle mobile petition upload from MobileQrModal
-  const handleMobileUpload = async (uploadedDoc) => {
-    if (uploadedDoc && (uploadedDoc.fileName || uploadedDoc.name)) {
-      const incomingFileName = uploadedDoc.fileName || uploadedDoc.name;
-      const incomingSize = uploadedDoc.fileSize || uploadedDoc.sizeFormatted || "1.8 MB";
-
-      if (uploadedDoc.file) {
-        setSelectedFile(uploadedDoc.file);
-      } else {
-        setSelectedFile(null);
-      }
-
-      setFileInfo({
-        name: incomingFileName,
-        sizeFormatted: incomingSize
-      });
-      setWorkflowState('file_selected');
-    } else {
-      handleLoadSample();
-    }
-  };
-
   // Trigger processing
   const handleGenerateContent = async () => {
+    if (!selectedFiles.length) return;
+    const completed = [];
+    const failed = [];
+    const failures = [];
+    setGeneratedDocuments([]);
+    setComposerNotice('');
     setWorkflowState('processing');
     setProcessingStage('Extracting document content');
-    setProcessingStageNum(1);
 
-    const stageTimers = [
-      setTimeout(() => { setProcessingStage('Running OCR'); setProcessingStageNum(2); }, 1200),
-      setTimeout(() => { setProcessingStage('Extracting legal entities with LLM'); setProcessingStageNum(3); }, 10000),
-      setTimeout(() => { setProcessingStage('Validating amounts and jurisdiction'); setProcessingStageNum(4); }, 60000),
-      setTimeout(() => { setProcessingStage('Generating the final official template'); setProcessingStageNum(5); }, 85000),
-    ];
-
+    for (const [index, selectedFile] of selectedFiles.entries()) {
+    const fileInfo = { name: selectedFile.name, sizeFormatted: formatFileSize(selectedFile.size) };
+    setFileInfo(fileInfo);
+    setProcessingStage(`Processing document ${index + 1} of ${selectedFiles.length}`);
     try {
 
       let result;
-      if (selectedFile) {
-        result = await apiService.uploadDocument(selectedFile, selectedTemplateCode);
+      let layout;
+      const header = new Uint8Array(await selectedFile.slice(0, 4).arrayBuffer());
+      if (/\.docx?$/i.test(selectedFile.name) || (header[0] === 0x50 && header[1] === 0x4b) ||
+        (header[0] === 0xd0 && header[1] === 0xcf && header[2] === 0x11 && header[3] === 0xe0)) {
+        layout = await apiService.importWordDocument(selectedFile);
+        result = { generated_docx_filename: layout.filename, entities: {}, validation_insights: {} };
       } else {
-        throw new Error('Select a source document first.');
+        result = await apiService.uploadDocument(selectedFile, selectedTemplateCode);
+        layout = await apiService.getDocumentLayout(result.generated_docx_filename);
       }
-
-      const formattedDoc = apiService.formatDocumentSheet(result.entities);
+      let edits = {};
+      if (correctionInstruction.trim()) {
+        edits = await apiService.reviseDocument(layout, edits, correctionInstruction.trim());
+      }
+      const formattedDoc = layoutToText(layout, edits);
       setGeneratedContent(formattedDoc);
-      setGeneratedDocxFilename(result.generated_docx_filename || '');
+      setGeneratedDocxFilename(result.generated_docx_filename);
       setExtractedEntities(result.entities);
       
-      const newSessionId = `AUD-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100 + Math.random() * 900)}`;
+      const newSessionId = `AUD-${crypto.randomUUID()}`;
       const initialPrompt = {
         id: 1,
         prompt: `Ingested source order "${fileInfo.name || 'order.pdf'}" and synthesized draft proceedings.`,
@@ -247,7 +225,7 @@ export default function RRAssistantView({
       setPromptHistory([initialPrompt]);
       setCurrentSessionId(newSessionId);
 
-      setWorkflowState('generated');
+      completed.push({ fileInfo, sourceFile: selectedFile, content: formattedDoc, filename: result.generated_docx_filename || '', layout, edits, entities: result.entities, promptHistory: [initialPrompt], sessionId: newSessionId });
 
       // Auto-save to Audit Log Trail
       try {
@@ -267,6 +245,8 @@ export default function RRAssistantView({
           hallucinationScore: result.validation_insights?.hallucination_score ?? 0,
           promptHistory: [initialPrompt],
           documentContent: formattedDoc,
+          documentLayout: layout,
+          documentEdits: edits,
           notes: "Automated OCR extraction and draft generation completed in RR Assistant."
         });
         if (onSaveAuditLog) await onSaveAuditLog();
@@ -275,12 +255,44 @@ export default function RRAssistantView({
         setAuditError(saveErr?.message || 'Unable to save audit record.');
       }
     } catch (err) {
-      alert("Error processing document: " + err.message);
+      failed.push(selectedFile);
+      failures.push(`${selectedFile.name}: ${err.message}`);
+    }
+    }
+    setGeneratedDocuments(completed);
+    setSelectedFiles(failed);
+    setComposerNotice(failures.length ? `Failed documents (reattach to retry): ${failures.join('; ')}` : '');
+    if (completed.length) {
+      openGeneratedDocument(completed[0]);
+      setCorrectionInstruction('');
+    } else {
       setWorkflowState('file_selected');
-    } finally {
-      stageTimers.forEach(clearTimeout);
     }
   };
+
+  const openGeneratedDocument = (document) => {
+    setDocumentLayout(document.layout || null);
+    editsRef.current = document.edits || {};
+    setDocumentEdits(document.edits || {});
+    setSourceFile(document.sourceFile || null);
+    setShowOriginalDoc(false);
+    setFileInfo(document.fileInfo);
+    setGeneratedContent(document.content);
+    setGeneratedDocxFilename(document.filename);
+    setExtractedEntities(document.entities);
+    setPromptHistory(document.promptHistory);
+    setCurrentSessionId(document.sessionId);
+    setLastUpdatedMessage('');
+    setWorkflowState('generated');
+  };
+
+  // Keep edits and revisions when switching between batch results.
+  useEffect(() => {
+    if (workflowState !== 'generated') return;
+    setGeneratedDocuments(previous => previous.map(document => document.sessionId === currentSessionId
+      ? { ...document, content: generatedContent, filename: generatedDocxFilename, layout: documentLayout, edits: documentEdits, promptHistory }
+      : document));
+  }, [workflowState, currentSessionId, generatedContent, generatedDocxFilename, documentLayout, documentEdits, promptHistory]);
 
   // Apply AI Correction / Modification (Section 7 & 8)
   const handleApplyChanges = async () => {
@@ -291,8 +303,10 @@ export default function RRAssistantView({
 
     try {
       const currentPromptText = correctionInstruction;
-      const updatedText = await apiService.modifyContent(generatedContent, currentPromptText);
-      setGeneratedContent(updatedText);
+      if (!documentLayout) throw new Error('Reopen the Word document to revise it with its original template.');
+      const edits = await apiService.reviseDocument(documentLayout, editsRef.current, currentPromptText);
+      updateDocumentEdits(documentLayout, edits);
+      const updatedText = layoutToText(documentLayout, edits);
       
       const newPromptItem = {
         id: promptHistory.length + 1,
@@ -313,6 +327,8 @@ export default function RRAssistantView({
           fileName: fileInfo.name || "order.pdf",
           promptHistory: updatedHistory,
           documentContent: updatedText,
+          documentLayout,
+          documentEdits: edits,
           status: "VERIFIED"
         });
         if (onSaveAuditLog) await onSaveAuditLog();
@@ -339,482 +355,98 @@ export default function RRAssistantView({
     }
   };
 
-  // Download DOCX containing CURRENT edited content (Section 8)
-  const handleDownloadDocx = async () => {
-    if (generatedDocxFilename) {
-      window.open(apiService.getDownloadUrl(generatedDocxFilename), '_blank');
-      recordActivity('Proceedings download requested', { reference: generatedDocxFilename });
+  const handleDownload = async (format) => {
+    if (isExporting || isApplyingChanges) return;
+    if (!documentLayout) {
+      setComposerNotice('Reopen the original Word document to export this saved draft with its template.');
       return;
     }
-    const filename = `Official_${fileInfo.name.replace(/\.[^/.]+$/, "") || "Document"}.docx`;
-    await apiService.exportDocx(generatedContent, filename);
-    recordActivity('Proceedings download requested', { reference: filename });
+    setIsExporting(true);
+    try {
+      await apiService.downloadEditedDocument(documentLayout, editsRef.current, format);
+      recordActivity('Proceedings download requested', { reference: fileInfo.name });
+    } catch (error) {
+      setComposerNotice(error.message);
+    } finally {
+      setIsExporting(false);
+    }
   };
-
-  // Download / Print PDF containing CURRENT edited content (Section 8)
-  const handleDownloadPdf = () => {
-    if (generatedDocxFilename) {
-      window.open(apiService.getPdfDownloadUrl(generatedDocxFilename), '_blank');
-      recordActivity('Proceedings PDF download requested', { reference: generatedDocxFilename });
-      return;
-    }
-    recordActivity('Proceedings print requested', { reference: fileInfo.name });
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      window.print();
-      return;
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${fileInfo.name.replace(/\.[^/.]+$/, "") || "Official_Document"}</title>
-          <style>
-            @page { size: A4; margin: 20mm; }
-            body { 
-              font-family: 'Noto Sans Tamil', 'Plus Jakarta Sans', Calibri, Arial, sans-serif; 
-              font-size: 13.5px; 
-              line-height: 1.8; 
-              color: #102C57;
-              padding: 25px; 
-              background: #fff;
-            }
-            pre { 
-              font-family: inherit; 
-              white-space: pre-wrap; 
-              word-wrap: break-word; 
-              font-size: 13.5px; 
-              line-height: 1.8; 
-            }
-          </style>
-        </head>
-        <body>
-          <pre>${generatedContent}</pre>
-          <script>
-            window.onload = function() { window.print(); }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
+  const handleDownloadDocx = () => handleDownload('docx');
+  const handleDownloadPdf = () => handleDownload('pdf');
 
   // Reset to initial upload (Section 9 & 11)
   const handleResetWorkflow = () => {
+    setDocumentLayout(null);
+    setDocumentEdits({});
+    editsRef.current = {};
+    setSourceFile(null);
+    setShowOriginalDoc(false);
     if (generatedContent) recordActivity('Draft cleared', { reference: fileInfo.name });
-    try { localStorage.removeItem('rr_draft'); } catch (error) { console.warn('Could not clear draft:', error); }
+    try { localStorage.removeItem(STORAGE_KEYS.draft); } catch (error) { console.warn('Could not clear draft:', error); }
     setPromptHistory([]);
     setCurrentSessionId(null);
-    setSelectedFile(null);
+    setSelectedFiles([]);
+    setGeneratedDocuments([]);
     setFileInfo({ name: '', sizeFormatted: '' });
     setGeneratedContent('');
     setGeneratedDocxFilename('');
     setExtractedEntities(null);
     setCorrectionInstruction('');
+    setComposerNotice('');
     setWorkflowState('upload');
   };
 
+  const busy = workflowState === 'processing' || isApplyingChanges || isExporting;
+  const isUploadScreen = workflowState === 'upload' || workflowState === 'file_selected';
+  const handleComposerSubmit = async (event) => {
+    event.preventDefault();
+    if (busy) return;
+    if (workflowState === 'file_selected' && selectedFiles.length) {
+      // Apply the accompanying instruction after extraction.
+      await handleGenerateContent();
+    } else if (workflowState === 'generated' && correctionInstruction.trim()) {
+      await handleApplyChanges();
+    } else {
+      setComposerNotice('Attach a source document using the paperclip.');
+    }
+  };
+
   return (
-    <div className="rr-assistant-compact" style={{
-      maxWidth: workflowState === 'generated' ? 'none' : '900px',
-      margin: '0 auto',
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1.25rem',
-      flex: 1,
-      minHeight: 0,
-      height: '100%',
-      paddingBottom: '2.5rem'
-    }}>
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={(e) => {
-          if (e.target.files && e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-          }
-        }}
-        accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf"
-        style={{ display: 'none' }}
-      />
+    <section className="rr-assistant-chat" aria-label="RR Proceedings Assistant">
+      <input type="file" multiple ref={fileInputRef}
+        aria-label="Attach source documents"
+        accept={UPLOAD_CONFIG.accept}
+        onChange={(event) => {
+          handleFiles(Array.from(event.target.files || []));
+          event.target.value = '';
+        }} hidden />
+      {auditError && <div className="rr-assistant-chat__notice" role="alert">
+        <span>{auditError}</span>
+        <button type="button" aria-label="Dismiss error" onClick={() => setAuditError('')}><X size={16} /></button>
+      </div>}
 
-      {auditError && (
-        <div className="rr-admin-alert" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', border: '1px solid #DAC0A3' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={18} aria-hidden="true" />
-            <span>{auditError}</span>
+      <div className="rr-assistant-chat__body">
+        {(workflowState === 'upload' || workflowState === 'file_selected') && (
+          <div className="rr-assistant-chat__hero">
+            <img src={APP_CONFIG.brand.emblemPath} alt="Tamil Nadu Government" />
+            <h1>RR Proceedings Assistant</h1>
+            <p>Upload a source document to generate RR proceedings in the fixed template.</p>
           </div>
-          <button type="button" aria-label="Dismiss error" className="btn btn-ghost" onClick={() => setAuditError('')}>
-            <X size={16} />
-          </button>
-        </div>
-      )}
+        )}
 
-      {/* =========================================================================
-          STEP 1 & 4: INITIAL CENTERED UPLOAD WORKSPACE (RR ASSISTANT DESIGN)
-          ========================================================================= */}
-      {workflowState === 'upload' && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: 1,
-          minHeight: 0,
-          paddingTop: '14px',
-          textAlign: 'center',
-          animation: 'fadeIn 0.3s ease-out'
-        }}>
-          {/* Tamil Nadu State Seal Emblem */}
-          <img 
-            src="/assets/tn_emblem.svg" 
-            alt="Tamil Nadu Government" 
-            style={{ 
-              width: '66px',
-              height: '66px',
-              margin: '0 auto 18px auto', 
-              display: 'block', 
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.08))' 
-            }} 
-          />
-
-          {/* Heading & Subheading */}
-          <h1 style={{
-            fontSize: '1.55rem',
-            fontWeight: 700,
-            color: '#102C57',
-            margin: '0 0 6px 0',
-            letterSpacing: '-0.01em'
-          }}>
-            RR Proceedings Assistant
-          </h1>
-          <p style={{
-            fontSize: '0.875rem',
-            color: '#102C57',
-            maxWidth: '490px',
-            lineHeight: 1.5,
-            margin: '0 auto 24px auto'
-          }}>
-            Upload a source document to generate RR proceedings in the fixed template.
-          </p>
-
-          {/* Centered White Upload Card */}
-          <div
-            onDrop={handleDrop}
-            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: '100%',
-              maxWidth: '490px',
-              backgroundColor: isDragOver ? '#FEFAF6' : '#FFFFFF',
-              border: isDragOver ? '2px dashed #102C57' : '2px dashed #DAC0A3',
-              borderRadius: '16px',
-              padding: '36px 28px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(16, 44, 87, 0.05)',
-              transition: 'all 0.25s ease'
-            }}
-          >
-            {/* Upload Icon Circle */}
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              backgroundColor: '#FEFAF6',
-              border: '1px solid #EADBC8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#102C57',
-              marginBottom: '14px'
-            }}>
-              <UploadCloud size={30} color="#102C57" />
-            </div>
-
-            {/* Title & Description */}
-            <h3 style={{
-              fontSize: '1.15rem',
-              fontWeight: 700,
-              color: '#102C57',
-              margin: '0 0 6px 0'
-            }}>
-              Upload Source Document
-            </h3>
-            <p style={{
-              fontSize: '0.875rem',
-              color: '#102C57',
-              margin: '0 0 22px 0'
-            }}>
-              Drag &amp; drop your document here
-            </p>
-
-            {/* Dark Navy Browse Button */}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-              style={{
-                backgroundColor: '#102C57',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '10px 26px',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '10px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(16, 44, 87, 0.2)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span>Browse Document</span>
-            </button>
-
-            {/* Supported Formats */}
-            <p style={{
-              fontSize: '0.775rem',
-              color: '#102C57',
-              marginTop: '18px',
-              marginBottom: 0,
-              fontWeight: 500
-            }}>
-              PDF • JPG • PNG • WEBP
-            </p>
-
-            {/* OR Divider */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              width: '60%',
-              margin: '16px 0 10px 0',
-              color: '#DAC0A3',
-              fontSize: '0.75rem',
-              fontWeight: 600
-            }}>
-              <span style={{ flex: 1, height: '1px', backgroundColor: '#DAC0A3' }} />
-              <span style={{ padding: '0 12px', color: '#DAC0A3' }}>OR</span>
-              <span style={{ flex: 1, height: '1px', backgroundColor: '#DAC0A3' }} />
-            </div>
-
-            {/* Mobile Scan Option */}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowMobileQr(true); }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#102C57',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                padding: '6px 12px',
-                borderRadius: '6px'
-              }}
-            >
-              <Smartphone size={18} />
-              <span>Scan using mobile</span>
-            </button>
+        {workflowState === 'processing' && (
+          <div className="rr-assistant-chat__hero" role="status" aria-live="polite">
+            <RefreshCw size={28} className="spinner" aria-hidden="true" />
+            <h2>Preparing your proceedings</h2>
+            <p>{processingStage}</p>
+            <p>{fileInfo.name}</p>
+            <p>Reading the document, extracting details and preparing the fixed template. This may take a few minutes.</p>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Mobile QR Intake Modal */}
-      <MobileQrModal 
-        isOpen={showMobileQr} 
-        onClose={() => setShowMobileQr(false)} 
-        onDocumentUploaded={handleMobileUpload}
-        onSimulateMobileUpload={handleMobileUpload} 
-      />
-
-      {/* =========================================================================
-          STEP 2 & 5: FILE SELECTED — DOCUMENT INFO & GENERATE ACTION
-          ========================================================================= */}
-      {workflowState === 'file_selected' && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingTop: '2.5rem',
-          textAlign: 'center'
-        }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h2 style={{ fontSize: '1.55rem', fontWeight: 800, color: '#102C57', margin: '0 0 0.35rem 0' }}>
-              RR Assistant
-            </h2>
-            <p style={{ fontSize: '0.9rem', color: '#102C57', fontWeight: 500, margin: 0 }}>
-              Document Ready for Content Generation
-            </p>
-          </div>
-
-          <div style={{
-            width: '100%',
-            maxWidth: '490px',
-            background: '#ffffff',
-            border: '1px solid #DAC0A3',
-            borderRadius: '16px',
-            padding: '2rem 1.5rem',
-            boxShadow: '0 4px 20px rgba(16, 44, 87, 0.06)',
-            textAlign: 'center'
-          }}>
-            <span style={{
-              fontSize: '0.75rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              fontWeight: 700,
-              color: '#102C57'
-            }}>
-              Uploaded Document
-            </span>
-
-            {/* PDF File Card Icon */}
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '10px',
-              background: '#FEFAF6',
-              border: '1px solid #EADBC8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '1rem auto 0.75rem auto'
-            }}>
-              <FileText size={28} color="#102C57" />
-            </div>
-
-            <div style={{
-              fontSize: '1rem',
-              fontWeight: 700,
-              color: '#102C57',
-              wordBreak: 'break-all',
-              marginBottom: '0.35rem'
-            }}>
-              {fileInfo.name}
-            </div>
-
-            <div style={{ fontSize: '0.8rem', color: '#102C57', marginBottom: '1.25rem' }}>
-              File size: {fileInfo.sizeFormatted}
-            </div>
-
-            <button
-              onClick={() => {
-                setSelectedFile(null);
-                setWorkflowState('upload');
-              }}
-              className="btn btn-ghost"
-              style={{ fontSize: '0.785rem', color: '#102C57', marginBottom: '1.25rem' }}
-            >
-              [ Change Document ]
-            </button>
-
-            <div>
-              <button
-                onClick={handleGenerateContent}
-                className="btn"
-                style={{
-                  width: '100%',
-                  background: '#102C57',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '0.92rem',
-                  padding: '0.85rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  boxShadow: '0 4px 14px rgba(16, 44, 87, 0.3)'
-                }}
-              >
-                Generate Official Content
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          STEP 3 & 5: PROCESSING STATE
-          ========================================================================= */}
-      {workflowState === 'processing' && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingTop: '3.5rem',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '100%',
-            maxWidth: '520px',
-            background: '#ffffff',
-            border: '1px solid #DAC0A3',
-            borderRadius: '16px',
-            padding: '2.25rem 1.5rem',
-            boxShadow: '0 8px 24px rgba(16, 44, 87, 0.08)',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              background: '#FEFAF6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.25rem auto'
-            }}>
-              <RefreshCw size={28} color="#102C57" className="spinner" />
-            </div>
-
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#102C57', margin: '0 0 0.5rem 0' }}>
-              Processing document...
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#102C57', margin: '0 0 1.75rem 0' }}>
-              {fileInfo.name}
-            </p>
-
-            {/* Step list progress */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', textAlign: 'left', fontSize: '0.85rem' }}>
-              {[
-                'Reading the uploaded document',
-                'Running OCR',
-                'Extracting legal entities with LLM',
-                'Validating amounts and jurisdiction',
-                'Generating the final official template',
-              ].map((label, index) => {
-                const step = index + 1;
-                return (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#102C57', fontWeight: processingStageNum === step ? 600 : 400 }}>
-                    {processingStageNum > step
-                      ? <Check size={16} color="#102C57" />
-                      : processingStageNum === step
-                        ? <RefreshCw size={14} className="spinner" color="#102C57" />
-                        : <span style={{ width: '14px', display: 'inline-block', textAlign: 'center' }}>○</span>}
-                    <span>{label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          STEP 6, 7, 8, 9, 10, 11: GENERATED OFFICIAL CONTENT SCREEN & CORRECTIONS
-          ========================================================================= */}
       {workflowState === 'generated' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, minHeight: 0, height: '100%' }}>
+        <div className="rr-restored-workspace" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, minHeight: 0, height: '100%' }}>
+          {composerNotice && <p role="status">{composerNotice}</p>}
           {/* Top Title & Action Bar */}
           <div style={{
             background: '#ffffff',
@@ -829,16 +461,19 @@ export default function RRAssistantView({
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
             flexShrink: 0
           }}>
-            {/* Title & Document Info */}
-            <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#102C57', margin: '0 0 0.2rem 0' }}>
-                Generated RR Proceedings
-              </h2>
-              <div style={{ fontSize: '0.8rem', color: '#102C57', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>Document Information:</span>
-                <strong style={{ color: '#102C57' }}>{fileInfo.name}</strong>
-              </div>
-            </div>
+            <label className="rr-assistant-chat__status rr-document-switch">
+              Document
+              <select aria-label="Select generated document" value={currentSessionId || ''}
+                disabled={busy || generatedDocuments.length < 2}
+                onChange={event => {
+                  const document = generatedDocuments.find(item => item.sessionId === event.target.value);
+                  if (document) openGeneratedDocument(document);
+                }}>
+                {generatedDocuments.length ? generatedDocuments.map(document => (
+                  <option key={document.sessionId} value={document.sessionId}>{document.fileInfo.name}</option>
+                )) : <option value={currentSessionId || ''}>{fileInfo.name || 'Current document'}</option>}
+              </select>
+            </label>
 
             {/* Download Options */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -858,6 +493,7 @@ export default function RRAssistantView({
 
               <button
                 onClick={handleDownloadPdf}
+                disabled={busy}
                 className="btn btn-outline"
                 style={{
                   fontSize: '0.8rem',
@@ -873,6 +509,7 @@ export default function RRAssistantView({
 
               <button
                 onClick={handleDownloadDocx}
+                disabled={busy}
                 className="btn"
                 style={{
                   fontSize: '0.8rem',
@@ -891,8 +528,9 @@ export default function RRAssistantView({
 
               <button
                 onClick={handleResetWorkflow}
-                className="btn btn-ghost"
-                style={{ fontSize: '0.785rem', color: '#102C57' }}
+                disabled={busy}
+                className="btn btn-outline"
+                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', borderColor: '#DAC0A3', color: '#102C57', background: '#FEFAF6' }}
               >
                 <PlusCircle size={15} />
                 <span>New Upload</span>
@@ -940,37 +578,10 @@ export default function RRAssistantView({
                 </span>
               </div>
 
-              {/* Official Document Textarea Editor */}
-              <div className="rr-document-editor" style={{ padding: '1rem', flex: 1, minHeight: 0, display: 'flex' }}>
-                <textarea
-                  aria-label="Editable RR proceedings"
-                  value={generatedContent}
-                  onFocus={() => { editStart.current = generatedContent; }}
-                  onBlur={() => {
-                    if (editStart.current !== generatedContent) {
-                      recordActivity('Proceedings draft edited', { reference: fileInfo.name, recordId: currentSessionId || '', status: 'DRAFT' });
-                      editStart.current = generatedContent;
-                    }
-                  }}
-                  onChange={(e) => setGeneratedContent(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    minHeight: '0',
-                    padding: '1.25rem',
-                    border: '1px solid #EADBC8',
-                    borderRadius: '8px',
-                    background: '#ffffff',
-                    color: '#102C57',
-                    fontFamily: "'TAU-Marutham', 'Noto Sans Tamil', 'Latha', 'Plus Jakarta Sans', sans-serif",
-                    fontSize: '0.94rem',
-                    lineHeight: '1.85',
-                    outline: 'none',
-                    resize: 'none',
-                    overflowY: 'auto',
-                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
-                  }}
-                />
+              <div className="rr-document-editor" style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+                {documentLayout ? <TemplateDocumentEditor key={documentLayout.filename}
+                  layout={documentLayout} edits={documentEdits} onChange={handleParagraphChange} disabled={busy} />
+                  : <textarea aria-label="Saved proceedings" value={generatedContent} readOnly style={{ width: '100%', padding: '1rem' }} />}
               </div>
             </div>
 
@@ -1040,6 +651,7 @@ export default function RRAssistantView({
                   <textarea
                     rows={2}
                     aria-label="Instructions for RR Assistant"
+                    disabled={isApplyingChanges}
                     value={correctionInstruction}
                     onChange={(e) => setCorrectionInstruction(e.target.value)}
                     onKeyDown={(e) => {
@@ -1075,54 +687,8 @@ export default function RRAssistantView({
                     flexWrap: 'wrap',
                     gap: '8px'
                   }}>
-                    {/* Left Action Buttons: Attachment & Voice Input */}
+                    {/* Revision status */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '5px 12px',
-                          fontSize: '0.825rem',
-                          color: '#102C57',
-                          background: '#ffffff',
-                          border: '1px solid #EADBC8',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                        title="Attach file"
-                      >
-                        <Paperclip size={14} color="#102C57" />
-                        <span>{currentLanguage === 'en' ? "Attach" : "இணைப்பு"}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          alert(currentLanguage === 'en' ? "Voice input listening..." : "குரல் உள்ளீடு பதிவு செய்யப்படுகிறது...");
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '5px 12px',
-                          fontSize: '0.825rem',
-                          color: '#102C57',
-                          background: '#ffffff',
-                          border: '1px solid #EADBC8',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                        title="Voice input"
-                      >
-                        <Mic size={14} color="#102C57" />
-                        <span>{currentLanguage === 'en' ? "Voice Input" : "குரல் உள்ளீடு"}</span>
-                      </button>
-
                       {lastUpdatedMessage && (
                         <span style={{ fontSize: '0.8rem', color: '#102C57', fontWeight: 600, marginLeft: '6px' }}>
                           ✓ {lastUpdatedMessage}
@@ -1185,13 +751,6 @@ export default function RRAssistantView({
                       <span style={{ color: '#EADBC8' }}>Original Scanned Petition</span>
                     </div>
 
-                    {/* Page Controls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: '#CBD5E1', fontFamily: 'var(--font-mono)' }}>
-                      <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', color: '#94A3B8' }}>‹</button>
-                      <span>1 / 1</span>
-                      <button type="button" className="btn btn-ghost" style={{ padding: '2px 6px', color: '#94A3B8' }}>›</button>
-                    </div>
-
                     {/* Close button */}
                     <button
                       type="button"
@@ -1228,60 +787,10 @@ export default function RRAssistantView({
                     background: '#040d1a'
                   }}>
                     {docPreviewUrl ? (
-                      <img 
-                        src={docPreviewUrl} 
-                        alt="Scanned Petition Original Document" 
-                        style={{
-                          maxWidth: '100%',
-                          maxHeight: '100%',
-                          objectFit: 'contain',
-                          borderRadius: '4px',
-                          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)'
-                        }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: '100%',
-                        maxWidth: '420px',
-                        background: '#FDFCF7',
-                        color: '#1e293b',
-                        borderRadius: '4px',
-                        padding: '1.75rem 1.5rem',
-                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #d4c5b2',
-                        fontFamily: "'Noto Sans Tamil', 'TAU-Marutham', cursive, serif",
-                        fontSize: '0.85rem',
-                        lineHeight: '1.85'
-                      }}>
-                        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem' }}>
-                          நெமிலிச்சேரி<br />21.11.2025
-                        </div>
-                        <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#0f172a' }}>
-                          அனுப்புநர்:<br />
-                          <span style={{ fontWeight: 500 }}>தலைமையாசிரியர்,<br />அரசு உயர்நிலைப்பள்ளி,<br />நெமிலிச்சேரி.</span>
-                        </div>
-                        <div style={{ fontWeight: 700, marginBottom: '0.75rem', color: '#0f172a' }}>
-                          பெறுநர்:<br />
-                          <span style={{ fontWeight: 500 }}>கல்வி இயக்குநர்,<br />District Administration,<br />ஈரோடு.</span>
-                        </div>
-                        <div style={{ marginBottom: '1rem', fontStyle: 'italic', background: 'rgba(234, 219, 200, 0.35)', padding: '0.5rem', borderRadius: '4px' }}>
-                          பொருள்: பள்ளி வளர்ச்சி திட்டங்கள் மற்றும் மோட்டார் விபத்து இழப்பீட்டுத் தொகை பெறக் கோருதல்.
-                        </div>
-                        <p style={{ margin: '0 0 1rem 0', textIndent: '1.5rem' }}>
-                          மதிப்பிற்குரிய அம்மா / ஐயா, எங்கள் பள்ளியில் பயிலும் மாணவர்கள் பயன்பெறும் வகையில் உதவித் தொகை மற்றும் நீதிமன்ற வசூல் ஆணையை உடனடியாக நிறைவேற்றி ஒப்படைக்க தாழ்மையுடன் கேட்டுக்கொள்கிறோம்.
-                        </p>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px dashed #cbd5e1' }}>
-                          <div style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700 }}>
-                            [Verified Tamil Mobile Scan]
-                          </div>
-                          <div style={{ textAlign: 'right', fontWeight: 700 }}>
-                            ஒப்பம்/-<br />
-                            <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>தலைமையாசிரியர்</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                      sourceFile?.type === 'application/pdf' || sourceFile?.name.toLowerCase().endsWith('.pdf')
+                        ? <iframe src={docPreviewUrl} title="Original scanned petition" style={{ width: '100%', height: '100%', border: 0 }} />
+                        : <img src={docPreviewUrl} alt="Original scanned petition" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    ) : <p style={{ color: '#EADBC8' }}>The original file is not available in this saved session. Attach it again to view it.</p>}
                   </div>
 
                   {/* Bottom Status Bar */}
@@ -1306,6 +815,43 @@ export default function RRAssistantView({
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      {isUploadScreen && <div className="rr-assistant-chat__composer-wrap">
+        <div className="rr-assistant-chat__attachments">
+        {workflowState === 'file_selected' && selectedFiles.map((file, index) => (
+          <div className="rr-assistant-chat__attachment" key={`${file.name}-${file.size}-${file.lastModified}`}>
+            <FileText size={17} aria-hidden="true" />
+            <span>{file.name}</span>
+            <button type="button" aria-label={`Remove ${file.name}`} onClick={() => {
+              setSelectedFiles(previous => previous.filter((_, fileIndex) => fileIndex !== index));
+              if (selectedFiles.length === 1) setWorkflowState(generatedContent ? 'generated' : 'upload');
+            }}><X size={16} /></button>
+          </div>
+        ))}
+        </div>
+        {composerNotice && <p className="rr-assistant-chat__status" role="status">{composerNotice}</p>}
+        <form className="rr-assistant-chat__composer" onSubmit={handleComposerSubmit}>
+          <button type="button" className="rr-assistant-chat__attach" aria-label="Attach source documents"
+            title="Attach source documents" disabled={busy} onClick={() => fileInputRef.current?.click()}>
+            <Paperclip size={21} aria-hidden="true" />
+          </button>
+          <textarea rows={1} aria-label="Message to RR Assistant"
+            placeholder="Type your message or attach a source document…"
+            value={correctionInstruction} disabled={busy}
+            onChange={(event) => { setCorrectionInstruction(event.target.value); setComposerNotice(''); }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                event.currentTarget.form.requestSubmit();
+              }
+            }} />
+          <button type="submit" className="rr-assistant-chat__send" aria-label="Send message"
+            title="Send message" disabled={busy || (!correctionInstruction.trim() && !(workflowState === 'file_selected' && selectedFiles.length))}>
+            {busy ? <RefreshCw size={19} className="spinner" /> : <Send size={19} />}
+          </button>
+        </form>
+      </div>}
+    </section>
   );
 }

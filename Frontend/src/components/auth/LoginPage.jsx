@@ -1,20 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { apiService } from '../../services/apiService.js';
+import { APP_CONFIG } from '../../config/appConfig.js';
 import './LoginPage.css';
-
-const MOTTO_VARIANTS = [
-  {
-    lang: 'ta',
-    line1: 'மக்களின் குரல்,',
-    line2: 'அரசின் செயல்.'
-  },
-  {
-    lang: 'en',
-    line1: 'Listening to Citizens,',
-    line2: 'Acting with Precision.'
-  }
-];
 
 export default function LoginPage({ onLogin }) {
   const [role, setRole] = useState('user');
@@ -52,14 +40,14 @@ export default function LoginPage({ onLogin }) {
     finally { setBusy(false); }
   }
 
-  const currentMotto = MOTTO_VARIANTS[mottoIndex];
+  const currentMotto = APP_CONFIG.brand.mottos[mottoIndex];
 
   return (
     <main className="login-page">
       <aside className="login-identity" aria-label="Government of Tamil Nadu">
         <header className="login-brand">
-          <h2>Erode Collectorate</h2>
-          <p>RR Assistant</p>
+          <h2>{APP_CONFIG.brand.officeName}</h2>
+          <p>{APP_CONFIG.brand.name}</p>
         </header>
 
         <div className="login-emblem" aria-hidden="true" />

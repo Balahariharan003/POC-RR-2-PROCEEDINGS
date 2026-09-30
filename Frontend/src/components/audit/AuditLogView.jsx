@@ -4,7 +4,6 @@ import AuditFilters from './AuditFilters.jsx';
 import { emptyAuditFilters, availableOfficerIds, matchesAuditFilters, officerId } from './auditFilters.js';
 import { apiService } from '../../services/apiService.js';
 import { readUsers } from '../../services/adminStore.js';
-import { INITIAL_AUDIT_LOGS } from '../../data/adminMockData.js';
 
 export default function AuditLogView({ 
   currentUser,
@@ -13,7 +12,7 @@ export default function AuditLogView({
   onNavigateToAssistant 
 }) {
   const isUserAdmin = Boolean(isAdminProp || currentUser?.role === 'admin');
-  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
+  const [auditLogs, setAuditLogs] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -53,10 +52,9 @@ export default function AuditLogView({
     setError('');
     try {
       const logs = await apiService.getAuditLogs();
-      setAuditLogs((logs && typeof logs === 'object' && Object.keys(logs).length > 0) ? logs : INITIAL_AUDIT_LOGS);
+      setAuditLogs(logs && typeof logs === 'object' && !Array.isArray(logs) ? logs : {});
     } catch (err) {
       console.error("Error loading audit logs:", err);
-      setAuditLogs(INITIAL_AUDIT_LOGS);
       setAuditLogs({});
       setError(err?.message || 'Unable to load saved audit records.');
     } finally {
@@ -143,11 +141,12 @@ export default function AuditLogView({
     try {
       directoryIds = readUsers()
         .filter(u => u.role !== 'admin')
-        .map((u, idx) => u.officerId || `OFF-USER-${String(idx + 1).padStart(3, '0')}`);
+        .map((u) => u.officerId)
+        .filter(Boolean);
     } catch {
       directoryIds = [];
     }
-    const combined = [...new Set([...logIds, ...directoryIds, 'OFF-USER-001', 'OFF-USER-002'].filter(Boolean))];
+    const combined = [...new Set([...logIds, ...directoryIds].filter(Boolean))];
     return combined.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [auditLogs]);
   const filterByAuditFilters = entries => entries.filter(entry => matchesAuditFilters(entry, filters));

@@ -1,8 +1,7 @@
 import { readUsers, saveUsers, USER_KEY } from './adminStore.js';
-import { TEMPORARY_LOGIN, TEMPORARY_USER_LOGIN } from './temporaryLogin.js';
+import { STORAGE_KEYS } from '../config/appConfig.js';
 
-export const INITIAL_ADMIN_LOGIN = 'mtdev8386@gmail.com';
-export const CREDENTIAL_KEY = 'rr_account_credentials';
+export const CREDENTIAL_KEY = STORAGE_KEYS.credentials;
 const ITERATIONS = 600000;
 const identifierOf = user => (user.username || user.email || '').trim().toLowerCase();
 
@@ -42,55 +41,8 @@ function commitAccounts(users, credentials) {
   }
 }
 
-export function canInitializeAdministrator() {
-  const credentials = readCredentials();
-  const users = readUsers();
-  const admin = users.find(user => identifierOf(user) === INITIAL_ADMIN_LOGIN);
-  return (!admin || (admin.role === 'admin' && admin.status === 'active')) && !users.some(user => user.role === 'admin' && Object.hasOwn(credentials, user.id));
-}
-
-export async function initializeAdministrator(password) {
-  if (!canInitializeAdministrator()) throw new Error('Administrator access has already been configured.');
-  const credential = await makeCredential(password);
-  if (!canInitializeAdministrator()) throw new Error('Administrator access has already been configured.');
-  const users = readUsers();
-  const existing = users.find(user => identifierOf(user) === INITIAL_ADMIN_LOGIN);
-  const admin = existing || { id: crypto.randomUUID(), name: 'District Collector', username: INITIAL_ADMIN_LOGIN, email: INITIAL_ADMIN_LOGIN, mobileNumber: '', section: 'Administration', taluk: '', role: 'admin', status: 'active' };
-  commitAccounts(existing ? users : [...users, admin], { ...readCredentials(), [admin.id]: credential });
-  return admin;
-}
-
 export async function authenticate(identifier, password, role) {
   const normalized = identifier.trim().toLowerCase();
-  if (normalized === TEMPORARY_LOGIN.email && role === 'admin' && password === TEMPORARY_LOGIN.password && !readUsers().some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-    const credential = await makeCredential(password);
-    const users = readUsers();
-    if (!users.some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-      const admin = { id: crypto.randomUUID(), officerId: 'OFF-ADMIN-001', name: TEMPORARY_LOGIN.name, email: normalized, username: normalized, mobileNumber: '', section: 'Administration', taluk: '', role: 'admin', status: 'active' };
-      commitAccounts([...users, admin], { ...readCredentials(), [admin.id]: credential });
-    }
-  }
-  if ((normalized === TEMPORARY_USER_LOGIN.email || normalized === TEMPORARY_USER_LOGIN.altEmail) && role === 'user' && password === TEMPORARY_USER_LOGIN.password && !readUsers().some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-    const credential = await makeCredential(password);
-    const users = readUsers();
-    if (!users.some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-      const officer = {
-        id: crypto.randomUUID(),
-        officerId: TEMPORARY_USER_LOGIN.officerId,
-        name: TEMPORARY_USER_LOGIN.name,
-        nameTamil: TEMPORARY_USER_LOGIN.nameTamil,
-        designation: TEMPORARY_USER_LOGIN.designation,
-        email: normalized,
-        username: normalized,
-        mobileNumber: TEMPORARY_USER_LOGIN.mobileNumber,
-        section: TEMPORARY_USER_LOGIN.section,
-        taluk: '',
-        role: 'user',
-        status: 'active'
-      };
-      commitAccounts([...users, officer], { ...readCredentials(), [officer.id]: credential });
-    }
-  }
   const user = readUsers().find(item => identifierOf(item) === normalized || (item.email && item.email.toLowerCase() === normalized));
   if (!user || user.status !== 'active' || user.role !== role) return null;
   const credential = readCredentials()[user.id];
@@ -115,8 +67,7 @@ export async function saveOfficerAccount(fields, password = '') {
   const targetId = original?.id || fields.id || crypto.randomUUID();
   if (users.some(user => user.id !== targetId && (identifierOf(user) === identifier || user.email?.toLowerCase() === identifier))) throw new Error('This username or email is already in use.');
   const nextRole = original?.role || (fields.role === 'admin' ? 'admin' : 'user');
-  const existingOfficerCount = users.filter(u => u.role !== 'admin').length;
-  const fallbackOfficerId = nextRole === 'admin' ? 'OFF-ADMIN-001' : `OFF-USER-${String(existingOfficerCount + 1).padStart(3, '0')}`;
+  const fallbackOfficerId = `OFF-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   const user = { ...original, id: targetId, officerId: (fields.officerId ?? original?.officerId ?? fallbackOfficerId).trim(), name: fields.name.trim(), nameTamil: (fields.nameTamil ?? original?.nameTamil ?? '').trim(), designation: (fields.designation ?? original?.designation ?? '').trim(), username: identifier, email: identifier.includes('@') ? identifier : '', mobileNumber: fields.mobileNumber.trim(), section: fields.section.trim(), taluk: original?.taluk || '', role: nextRole, status: original?.status || 'active' };
   const updated = original ? users.map(item => item.id === user.id ? user : item) : [...users, user];
   if (credential) commitAccounts(updated, { ...readCredentials(), [user.id]: credential });

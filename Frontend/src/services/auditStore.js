@@ -2,11 +2,12 @@
  * Audit Store - Manages local and synchronized audit ledger records.
  * Clean, production storage reader without simulated fixtures.
  */
+import { STORAGE_KEYS } from '../config/appConfig.js';
 
 export function readSavedAuditLogs() {
   let saved;
   try {
-    saved = JSON.parse(localStorage.getItem('rr_audit_logs') || '{}');
+    saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.auditLogs) || '{}');
   } catch {
     throw new Error('Unable to load saved audit records.');
   }

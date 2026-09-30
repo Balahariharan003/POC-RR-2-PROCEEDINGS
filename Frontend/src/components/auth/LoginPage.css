@@ -1,5 +1,5 @@
-/* ==========================================================================
-   LOGIN PAGE STYLES - ERODE COLLECTORATE AI ADMINISTRATIVE CO-PILOT
+/* ===========================================================================
+   LOGIN PAGE STYLES - RR ASSISTANT
    ========================================================================== */
 
 
@@ -334,22 +334,6 @@
 
 .login-submit:active {
   background: var(--primary-900, #102C57);
-}
-
-.login-demo {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  margin-top: 28px;
-  font-size: 12px;
-  color: var(--text-secondary, #102C57);
-}
-
-.login-demo span {
-  padding-left: 10px;
-  border-left: 1px solid var(--border-subtle, #EADBC8);
-  color: var(--text-muted, #102C57);
 }
 
 .visually-hidden {

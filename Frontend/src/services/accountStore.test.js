@@ -1,9 +1,8 @@
 import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
-import { authenticate, canInitializeAdministrator, initializeAdministrator, saveOfficerAccount, changeOwnPassword, INITIAL_ADMIN_LOGIN, CREDENTIAL_KEY } from './accountStore.js';
+import { authenticate, saveOfficerAccount, changeOwnPassword, CREDENTIAL_KEY } from './accountStore.js';
 import { readUsers, saveUsers, createBackup } from './adminStore.js';
-import { TEMPORARY_LOGIN } from './temporaryLogin.js';
 
 let values;
 beforeEach(() => {
@@ -16,40 +15,6 @@ beforeEach(() => {
   };
 });
 const fields = { name: 'Test Officer', identifier: 'officer.test', mobileNumber: '9876543210', section: 'Revenue' };
-
-test('temporary login requires correct credentials and preserves existing accounts and changed passwords', async () => {
-  const existing = await initializeAdministrator('Existing-admin-123');
-  assert.equal(await authenticate(TEMPORARY_LOGIN.email, 'incorrect', 'admin'), null);
-  assert.equal(await authenticate(TEMPORARY_LOGIN.email, TEMPORARY_LOGIN.password, 'user'), null);
-  assert.equal(readUsers().length, 1);
-  const temporary = await authenticate(TEMPORARY_LOGIN.email, TEMPORARY_LOGIN.password, 'admin');
-  assert.equal(temporary.role, 'admin');
-  assert.equal(readUsers().length, 2);
-  assert.equal((await authenticate(INITIAL_ADMIN_LOGIN, 'Existing-admin-123', 'admin')).id, existing.id);
-  await changeOwnPassword(temporary, TEMPORARY_LOGIN.password, 'Changed-admin-456');
-  assert.equal(await authenticate(TEMPORARY_LOGIN.email, TEMPORARY_LOGIN.password, 'admin'), null);
-  assert.equal((await authenticate(TEMPORARY_LOGIN.email, 'Changed-admin-456', 'admin')).id, temporary.id);
-  assert.equal(readUsers().length, 2);
-});
-
-test('initializes only the designated admin and verifies credentials and selected role', async () => {
-  const admin = await initializeAdministrator('Admin-test-123');
-  assert.equal(admin.email, INITIAL_ADMIN_LOGIN);
-  assert.equal(canInitializeAdministrator(), false);
-  await assert.rejects(initializeAdministrator('Different-123'), /already/);
-  assert.equal((await authenticate(INITIAL_ADMIN_LOGIN.toUpperCase(), 'Admin-test-123', 'admin')).id, admin.id);
-  assert.equal(await authenticate(INITIAL_ADMIN_LOGIN, 'wrong-password', 'admin'), null);
-  assert.equal(await authenticate(INITIAL_ADMIN_LOGIN, 'Admin-test-123', 'user'), null);
-  assert.equal(await authenticate('unknown', 'Admin-test-123', 'admin'), null);
-});
-
-test('initial password preserves the existing administrator identity and details', async () => {
-  saveUsers([{ id: 'existing', name: 'Existing Admin', email: INITIAL_ADMIN_LOGIN, role: 'admin', status: 'active', taluk: 'District administration' }]);
-  const admin = await initializeAdministrator('Admin-test-123');
-  assert.equal(admin.id, 'existing');
-  assert.equal(admin.name, 'Existing Admin');
-  assert.equal(readUsers().length, 1);
-});
 
 test('officer creation stores salted hashes separately and backups exclude credentials', async () => {
   const user = await saveOfficerAccount(fields, 'Officer-test-123');
@@ -97,14 +62,14 @@ test('rejects invalid fields and rolls back both records when credentials cannot
 
 
 test('self-service password changes verify current password and preserve account details', async () => {
-  const admin = await initializeAdministrator('Original-test-123');
+  const admin = await saveOfficerAccount(fields, 'Original-test-123');
   const before = readUsers();
   await assert.rejects(changeOwnPassword(admin, 'incorrect-password', 'Changed-test-456'), /Current password/);
-  assert.ok(await authenticate(INITIAL_ADMIN_LOGIN, 'Original-test-123', 'admin'));
+  assert.ok(await authenticate(fields.identifier, 'Original-test-123', 'user'));
   await assert.rejects(changeOwnPassword(admin, 'Original-test-123', 'short'), /8 to 128/);
   await changeOwnPassword(admin, 'Original-test-123', 'Changed-test-456');
-  assert.equal(await authenticate(INITIAL_ADMIN_LOGIN, 'Original-test-123', 'admin'), null);
-  assert.ok(await authenticate(INITIAL_ADMIN_LOGIN, 'Changed-test-456', 'admin'));
+  assert.equal(await authenticate(fields.identifier, 'Original-test-123', 'user'), null);
+  assert.ok(await authenticate(fields.identifier, 'Changed-test-456', 'user'));
   assert.deepEqual(readUsers(), before);
 });
 

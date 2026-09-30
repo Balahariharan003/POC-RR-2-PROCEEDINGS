@@ -1,0 +1,6 @@
+.rr-template-scroll { width: 100%; height: 100%; overflow: auto; background: #eee; padding: 16px; }
+.rr-template-page { box-sizing: border-box; background: white; color: black; margin: 0 auto; box-shadow: 0 1px 6px #0002; font-family: 'TAU-Marutham', 'Noto Sans Tamil', serif; }
+.rr-template-page p { outline: none; overflow-wrap: break-word; }
+.rr-template-page p:focus { outline: 1px dashed #dac0a3; outline-offset: 3px; }
+.rr-template-page table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.rr-template-page td { vertical-align: top; padding: 0 5px; }

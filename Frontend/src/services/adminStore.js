@@ -1,5 +1,7 @@
-export const USER_KEY = 'rr_admin_users';
-const KEYS = [USER_KEY, 'rr_audit_logs', 'rr_draft', 'rr_preferences'];
+import { STORAGE_KEYS } from '../config/appConfig.js';
+
+export const USER_KEY = STORAGE_KEYS.users;
+const KEYS = [USER_KEY, STORAGE_KEYS.auditLogs, STORAGE_KEYS.draft, STORAGE_KEYS.preferences];
 const validHistory = value => Array.isArray(value) && value.every(item => item && ['string', 'number'].includes(typeof item.id) && typeof item.prompt === 'string' && (item.timestamp === undefined || typeof item.timestamp === 'string'));
 const validRecord = row => {
   if (!row || typeof row.id !== 'string' || typeof row.caseNumber !== 'string') return false;
@@ -51,13 +53,13 @@ export function validateBackup(backup) {
   for (const [key, value] of Object.entries(backup.data)) {
     if (value === null) continue;
     if (key === USER_KEY) validateUsers(value);
-    else if (key === 'rr_audit_logs') {
+    else if (key === STORAGE_KEYS.auditLogs) {
       if (typeof value !== 'object' || Array.isArray(value) || Object.values(value).some(rows => !Array.isArray(rows) || rows.some(row => !validRecord(row)))) {
         throw new Error('Invalid proceedings or audit records.');
       }
-    } else if (key === 'rr_draft') {
+    } else if (key === STORAGE_KEYS.draft) {
       if (typeof value !== 'object' || typeof value.content !== 'string' || typeof value.fileName !== 'string' || (value.promptHistory !== undefined && !validHistory(value.promptHistory)) || (value.fileSize !== undefined && typeof value.fileSize !== 'string') || (value.sessionId != null && typeof value.sessionId !== 'string')) throw new Error('Invalid saved draft.');
-    } else if (key === 'rr_preferences') {
+    } else if (key === STORAGE_KEYS.preferences) {
       if (!['en', 'ta'].includes(value.language) || !['light', 'dark'].includes(value.theme)) throw new Error('Invalid preferences.');
     }
   }

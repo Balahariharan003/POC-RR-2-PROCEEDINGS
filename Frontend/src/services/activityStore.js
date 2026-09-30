@@ -1,5 +1,7 @@
-export const ACTIVITY_KEY = 'rr_activity_history';
-export const ACTIVITY_EVENT = 'rr-activity-updated';
+import { APP_EVENTS, STORAGE_KEYS } from '../config/appConfig.js';
+
+export const ACTIVITY_KEY = STORAGE_KEYS.activity;
+export const ACTIVITY_EVENT = APP_EVENTS.activityUpdated;
 let actor = null;
 
 export function setActivityActor(user) {

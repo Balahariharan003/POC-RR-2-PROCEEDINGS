@@ -3,8 +3,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createBackup, restoreBackup, validateBackup } from '../../services/adminStore.js';
 import Modal from '../common/Modal.jsx';
 import './BackupPage.css';
+import { STORAGE_KEYS } from '../../config/appConfig.js';
 
-const HISTORY_KEY = 'rr_backup_history';
+const HISTORY_KEY = STORAGE_KEYS.backupHistory;
 function readHistory() {
   const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
   if (!Array.isArray(history)) throw new Error('Unable to load recent backups.');
