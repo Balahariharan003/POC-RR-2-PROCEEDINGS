@@ -29,6 +29,22 @@ from app.core.config import settings
 from app.api.dependencies import get_current_user
 from app.domain.models import User, DocumentTemplate, AuditLedgerEntry, ProceedingsCase
 from template_builder import set_font_formatting
+import re
+
+
+def parse_amount_float(val: Any) -> float:
+    if val is None:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    if isinstance(val, str):
+        cleaned = re.sub(r"[^\d.]", "", val.replace(",", ""))
+        try:
+            return float(cleaned) if cleaned else 0.0
+        except ValueError:
+            return 0.0
+    return 0.0
+
 
 router = APIRouter()
 
@@ -312,12 +328,11 @@ async def get_system_analytics_report(
         department_counts = {"CUSTOMS": 0, "TNRERA": 0, "MCOP": 0, "GST": 0, "OTHER": 0}
         status_counts = {"DISPATCHED": 0, "VERIFIED": 0, "DRAFT": 0}
         taluk_counts: Dict[str, int] = {}
-
         seen_ids = set()
 
         for c in cases:
             seen_ids.add(c.id)
-            amt = float(c.total_amount or 0.0)
+            amt = parse_amount_float(c.total_amount)
             total_amount_sum += amt
             dept = (c.department_type or "CUSTOMS").upper()
             department_counts[dept if dept in department_counts else "OTHER"] = department_counts.get(dept if dept in department_counts else "OTHER", 0) + 1
@@ -352,7 +367,7 @@ async def get_system_analytics_report(
             details = a.details if isinstance(a.details, dict) else {}
             if not details:
                 continue
-            amt = float(details.get("amount") or details.get("total_amount") or 0.0)
+            amt = parse_amount_float(details.get("amount") or details.get("total_amount"))
             case_no = details.get("caseNumber") or details.get("case_no") or a.file_id or "RR-2026"
             defaulter = details.get("defaulter") or details.get("defaulterName") or "M/s Prisma Garments"
             dept = (details.get("department_type") or ("CUSTOMS" if "சுங்க" in str(details) else "MCOP")).upper()

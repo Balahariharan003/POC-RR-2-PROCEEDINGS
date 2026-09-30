@@ -134,21 +134,7 @@ export default function AuditLogView({
   };
   const officers = useMemo(() => {
     const logIds = availableOfficerIds(Object.values(auditLogs).flat());
-<<<<<<< HEAD
-    let directoryIds = [];
-    try {
-      directoryIds = readUsers()
-        .filter(u => u.role !== 'admin')
-        .map((u) => u.officerId)
-        .filter(Boolean);
-    } catch {
-      directoryIds = [];
-    }
-    const combined = [...new Set([...logIds, ...directoryIds].filter(Boolean))];
-    return combined.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-=======
     return [...new Set(logIds.filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
->>>>>>> feature/backend-and-live-api
   }, [auditLogs]);
   const filterByAuditFilters = entries => entries.filter(entry => matchesAuditFilters(entry, filters));
 
