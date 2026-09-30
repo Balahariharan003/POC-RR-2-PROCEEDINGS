@@ -443,6 +443,23 @@
   }
 }
 
-.login-error { padding: .75rem 1rem; margin: 0 0 1rem; border: 1px solid var(--tan-warm); border-left: 3px solid var(--deep-navy); border-radius: var(--radius-sm); background: var(--sand-soft); color: var(--deep-navy); font-size: .85rem; }
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  margin: 0 0 24px;
+  border-radius: 6px;
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #991b1b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.login-error-icon {
+  flex-shrink: 0;
+  color: #dc2626;
+  margin-top: 2px;
+}
 .login-setup-toggle { display: block; margin: 1.1rem auto 0; border: 0; background: transparent; color: var(--deep-navy); font: inherit; font-size: .8rem; text-decoration: underline; cursor: pointer; }
 .login-submit:disabled { opacity: .65; cursor: wait; }

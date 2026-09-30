@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { authenticate } from '../../services/accountStore.js';
+import { ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { apiService } from '../../services/apiService.js';
 import './LoginPage.css';
 
 const MOTTO_VARIANTS = [
@@ -45,10 +45,10 @@ export default function LoginPage({ onLogin }) {
     setError('');
     setBusy(true);
     try {
-      const user = await authenticate(email, password, role);
-      if (!user) { setError('Invalid username or password'); return; }
-      onLogin?.(user);
-    } catch { setError('Invalid username or password'); }
+      const authRes = await apiService.login(email, password, role);
+      if (!authRes || !authRes.user) { setError('Invalid username or password'); return; }
+      onLogin?.(authRes.user);
+    } catch (e) { setError(e.message || 'Invalid username or password'); }
     finally { setBusy(false); }
   }
 
@@ -148,7 +148,12 @@ export default function LoginPage({ onLogin }) {
               </div>
             </div>
 
-            {error && <p className="login-error" role="alert">{error}</p>}
+            {error && (
+              <div className="login-error" role="alert">
+                <AlertCircle className="login-error-icon" size={18} aria-hidden="true" />
+                <span>{error}</span>
+              </div>
+            )}
             <button className="login-submit" type="submit" disabled={busy}>
               <span>{busy ? 'Please wait...' : 'Sign In'}</span><ArrowRight size={18} aria-hidden="true" />
             </button>

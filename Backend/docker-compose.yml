@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tn_rr_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-postgres123}
+      POSTGRES_DB: ${PG_DATABASE:-rr_proceedings_db}
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres} -d ${PG_DATABASE:-rr_proceedings_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tn_rr_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - DATABASE_URL=postgresql+asyncpg://${PG_USER:-postgres}:${PG_PASSWORD:-postgres123}@postgres:5432/${PG_DATABASE:-rr_proceedings_db}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./templates:/app/templates
+
+volumes:
+  pgdata:

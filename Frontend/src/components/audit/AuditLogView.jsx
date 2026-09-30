@@ -1,29 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  History, 
-  Search, 
-  Filter, 
-  Download, 
-  ShieldCheck, 
-  AlertTriangle, 
-  CheckCircle2, 
-  FileText, 
-  ExternalLink,
-  Calendar,
-  Layers,
-  ChevronDown,
-  X,
-  RefreshCw,
-  MessageSquare,
-  ArrowRight,
-  Inbox,
-  User,
-  Check,
-  Printer,
-  Sparkles,
-  Eye,
-  FileCheck
-} from 'lucide-react';
+import { RefreshCw, AlertTriangle, Inbox } from 'lucide-react';
 import AuditFilters from './AuditFilters.jsx';
 import { emptyAuditFilters, availableOfficerIds, matchesAuditFilters, officerId } from './auditFilters.js';
 import { apiService } from '../../services/apiService.js';
@@ -69,8 +45,7 @@ export default function AuditLogView({
     return Array.from(names).sort();
   }, [auditLogs]);
 
-  // Modal State for Side-by-Side Comparison & Inspection (Phase 3 & 4)
-  const [selectedLog, setSelectedLog] = useState(null);
+  
 
   // Load audit logs on mount (Phase 1)
   const loadLogs = async () => {
@@ -99,14 +74,7 @@ export default function AuditLogView({
     };
   }, []);
 
-  useEffect(() => {
-    if (!selectedLog) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setSelectedLog(null);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedLog]);
+  
 
   // Handle Refresh Button
   const handleRefresh = async () => {
@@ -187,6 +155,25 @@ export default function AuditLogView({
   const entries = filterEntries(filterByAuditFilters(Object.values(auditLogs).flat())).sort((a, b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0));
   const totalFilteredCount = entries.length;
 
+  const handleOpenChat = (entry) => {
+    const orderLabel = entry.orderId || entry.order_id || entry.caseNumber || entry.caseId || entry.id;
+    const initialPrompt = {
+      id: 1,
+      prompt: entry.notes || `Ingested source order "${entry.fileName || orderLabel}" and synthesized draft proceedings.`,
+      timestamp: entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    const payload = {
+      ...entry,
+      documentContent: entry.documentContent || `Draft proceedings recorded for ${orderLabel}.`,
+      promptHistory: (Array.isArray(entry.promptHistory) && entry.promptHistory.length > 0) ? entry.promptHistory : [initialPrompt]
+    };
+    if (onRestoreSession) {
+      onRestoreSession(payload);
+    } else if (onNavigateToAssistant) {
+      onNavigateToAssistant();
+    }
+  };
+
   // Export Audit Ledger to JSON (Phase 4)
   const exportToJson = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditLogs, null, 2));
@@ -198,51 +185,7 @@ export default function AuditLogView({
     downloadAnchor.remove();
   };
 
-  // Print / PDF Export for Individual Audit Receipt
-  const handlePrintAuditReceipt = (log) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Audit_Receipt_${log.caseNumber || log.id}</title>
-          <style>
-            @page { size: A4; margin: 20mm; }
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; line-height: 1.6; color: #102C57; padding: 20px; }
-            .header { border-bottom: 2px solid #102C57; padding-bottom: 12px; margin-bottom: 20px; }
-            .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; background: #EADBC8; color: #102C57; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th, td { border: 1px solid #DAC0A3; padding: 8px 12px; text-align: left; }
-            th { background: #FEFAF6; font-weight: 600; width: 30%; }
-            pre { background: #FEFAF6; padding: 12px; border-radius: 6px; white-space: pre-wrap; font-family: inherit; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h2>Tamil Nadu Revenue Recovery — Compliance Audit Receipt</h2>
-            <p style="color: #102C57; margin: 4px 0 0 0;">RR Assistant Automated Ledger Verification Record</p>
-          </div>
-          <table>
-            <tr><th>Audit Log Reference</th><td><strong>${log.id}</strong></td></tr>
-            <tr><th>Order / Case No</th><td><strong>${log.caseNumber}</strong></td></tr>
-            <tr><th>Timestamp</th><td>${log.timestamp}</td></tr>
-            <tr><th>Officer Name &amp; Seat</th><td>${log.officerName} (${log.officerRole || 'Revenue Department'})</td></tr>
-            <tr><th>Target Beneficiary / Defaulter</th><td>${log.defaulter} • ${log.taluk}, ${log.district}</td></tr>
-            <tr><th>Amount Directed</th><td><strong>${log.amount}</strong></td></tr>
-            <tr><th>AI Grounding Confidence</th><td>${Math.round((log.groundingScore || 0.96) * 100)}% (Risk: ${log.hallucinationScore || 0.04})</td></tr>
-            <tr><th>DRO Portal Sync Receipt</th><td>${log.dispatchReceipt || 'Pending Verification'}</td></tr>
-            <tr><th>Cryptographic Hash</th><td><code>${log.docHash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}</code></td></tr>
-          </table>
-          <h4 style="margin-top: 25px; margin-bottom: 8px;">Final Proceedings Document Record:</h4>
-          <pre>${log.documentContent || 'Document content recorded.'}</pre>
-          <script>window.onload = function() { window.print(); }</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
+  
 
   return (
     <div style={{
@@ -419,15 +362,15 @@ export default function AuditLogView({
                           <tr 
                             key={entry.id}
                             tabIndex={0}
-                            aria-label={`Audit entry ${orderLabel}`}
-                            onClick={() => setSelectedLog(entry)}
+                            aria-label={`Open chat for ${orderLabel}`}
+                            onClick={() => handleOpenChat(entry)}
                             onKeyDown={(e) => {
                               if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
                                 e.preventDefault();
-                                setSelectedLog(entry);
+                                handleOpenChat(entry);
                               }
                             }}
-                            title="Click or press Enter to view audit details and receipt"
+                            title="Click to open this proceedings chat in RR Assistant"
                             style={{
                               borderBottom: '1px solid #FEFAF6',
                               cursor: 'pointer',
@@ -478,287 +421,6 @@ export default function AuditLogView({
         </div>
       )}
 
-      {/* =========================================================================
-          PHASE 3 & 4: SIDE-BY-SIDE VERIFICATION & INSPECTION MODAL
-          ========================================================================= */}
-      {selectedLog && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="rr-audit-modal-title"
-          onClick={(e) => { if (e.target === e.currentTarget) setSelectedLog(null); }}
-          style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(16, 44, 87, 0.75)',
-          backdropFilter: 'blur(6px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 200,
-          padding: '1.5rem'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '1050px',
-            maxHeight: '92vh',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-            overflow: 'hidden'
-          }}>
-            {/* Modal Header */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '16px 24px',
-              background: '#102C57',
-              color: '#ffffff',
-              borderBottom: '2px solid #102C57'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <ShieldCheck size={22} color="#DAC0A3" />
-                <div>
-                  <h3 id="rr-audit-modal-title" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>
-                    Audit Verification: {selectedLog.caseNumber || selectedLog.id}
-                  </h3>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#EADBC8' }}>
-                    Officer: {selectedLog.officerName} • Timestamp: {selectedLog.timestamp}
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => onRestoreSession(selectedLog)}
-                  style={{
-                    backgroundColor: '#102C57',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '6px 14px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <MessageSquare size={14} />
-                  <span>Resume in RR Assistant</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handlePrintAuditReceipt(selectedLog)}
-                  style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '6px',
-                    padding: '6px 12px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Printer size={14} />
-                  <span>Print Receipt</span>
-                </button>
-
-                <button
-                  type="button"
-                  aria-label="Close audit details"
-                  onClick={() => setSelectedLog(null)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#ffffff',
-                    cursor: 'pointer',
-                    padding: '4px'
-                  }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body: Side-by-Side Comparison (Phase 3) */}
-            <div style={{
-              padding: '20px 24px',
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px'
-            }}>
-              {/* Top Summary Badges */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '12px'
-              }}>
-                <div style={{ background: '#FEFAF6', border: '1px solid #EADBC8', borderRadius: '8px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#102C57', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Grounding Score
-                  </div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: selectedLog.hallucinationScore > 0.20 ? '#102C57' : '#102C57' }}>
-                    {Math.round((selectedLog.groundingScore || 0.96) * 100)}%
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#102C57' }}>
-                    Hallucination Risk: {selectedLog.hallucinationScore || 0.04}
-                  </div>
-                </div>
-
-                <div style={{ background: '#FEFAF6', border: '1px solid #EADBC8', borderRadius: '8px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#102C57', textTransform: 'uppercase', fontWeight: 600 }}>
-                    DRO Portal Dispatch
-                  </div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#102C57', marginTop: '2px' }}>
-                    {selectedLog.dispatchReceipt || 'Draft In-Progress'}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#102C57' }}>
-                    State Portal Sync Verified
-                  </div>
-                </div>
-
-                <div style={{ background: '#FEFAF6', border: '1px solid #EADBC8', borderRadius: '8px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#102C57', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Award / Recovery Target
-                  </div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#102C57' }}>
-                    {selectedLog.amount || '—'}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#102C57' }}>
-                    Taluk: {selectedLog.taluk}
-                  </div>
-                </div>
-              </div>
-
-              {/* Side-by-Side Columns */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1.2fr',
-                gap: '16px',
-                marginTop: '6px'
-              }}>
-                {/* Left Column: Original Scanned OCR & Prompt History */}
-                <div style={{
-                  background: '#FEFAF6',
-                  border: '1px solid #EADBC8',
-                  borderRadius: '10px',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #EADBC8', paddingBottom: '8px' }}>
-                    <FileText size={16} color="#102C57" />
-                    <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#102C57' }}>
-                      Input Order &amp; AI Prompt Activity
-                    </h4>
-                  </div>
-
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: '#102C57', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Source Document
-                    </span>
-                    <p style={{ margin: '2px 0 8px 0', fontSize: '0.825rem', fontWeight: 600, color: '#102C57' }}>
-                      📄 {selectedLog.fileName || `${selectedLog.caseNumber}.pdf`} ({selectedLog.fileSize || 'Size not recorded'})
-                    </p>
-                  </div>
-
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: '#102C57', textTransform: 'uppercase', fontWeight: 600 }}>
-                      User Prompt &amp; Conversation Trail
-                    </span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                      {(selectedLog.promptHistory && selectedLog.promptHistory.length > 0) ? (
-                        selectedLog.promptHistory.map((p, idx) => (
-                          <div key={idx} style={{
-                            background: '#ffffff',
-                            border: '1px solid #EADBC8',
-                            borderRadius: '6px',
-                            padding: '8px 10px',
-                            fontSize: '0.785rem',
-                            color: '#102C57'
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                              <strong style={{ color: '#102C57' }}>Step {idx + 1}</strong>
-                              <span style={{ color: '#102C57', fontSize: '0.7rem' }}>{p.timestamp}</span>
-                            </div>
-                            <div>"{p.prompt}"</div>
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ fontSize: '0.785rem', color: '#102C57', fontStyle: 'italic' }}>
-                          Initial automated ingestion and entity extraction.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: '#102C57', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Audit Verification Notes
-                    </span>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.785rem', color: '#102C57', lineHeight: 1.5 }}>
-                      {selectedLog.notes || 'Automated RapidOCR extraction validated by officer.'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right Column: Final Generated Official Document */}
-                <div style={{
-                  background: '#ffffff',
-                  border: '1px solid #DAC0A3',
-                  borderRadius: '10px',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #EADBC8', paddingBottom: '8px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <FileCheck size={16} color="#102C57" />
-                      <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#102C57' }}>
-                        Officer Validated Proceedings Sheet
-                      </h4>
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: '#102C57', background: '#FEFAF6', padding: '2px 8px', borderRadius: '4px' }}>
-                      Tamil Unicode
-                    </span>
-                  </div>
-
-                  <pre style={{
-                    fontFamily: "'Noto Sans Tamil', 'Plus Jakarta Sans', serif",
-                    fontSize: '0.8rem',
-                    lineHeight: '1.7',
-                    color: '#102C57',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    background: '#FEFAF6',
-                    border: '1px solid #EADBC8',
-                    borderRadius: '6px',
-                    padding: '14px',
-                    maxHeight: '380px',
-                    overflowY: 'auto',
-                    margin: 0
-                  }}>
-                    {selectedLog.documentContent || 'No document content stored for this record.'}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -179,12 +179,12 @@ export default function RRAssistantView({
 
   // Load sample demonstration PDF
   const handleLoadSample = async () => {
-    const mockFile = {
+    const sampleFile = {
       name: "sample_mcop_order.pdf",
       sizeFormatted: "1.45 MB"
     };
     setSelectedFile(null);
-    setFileInfo(mockFile);
+    setFileInfo(sampleFile);
     setWorkflowState('file_selected');
   };
 

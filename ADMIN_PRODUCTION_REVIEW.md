@@ -22,7 +22,7 @@ This was a source review with local checks, not a live deployment penetration te
 
 7. **High — failed audit saves are silently accepted.** `apiService.js:280` catches storage failures and returns null. Callers in `RRAssistantView.jsx:173` and `:224` await the call without checking its result, so completion can appear successful without a saved audit record. `activityStore.js:26` similarly logs failures only to the console. An isolated quota-failure check reproduced the null result. Propagate failure and show an actionable error; make the operation and audit event transactional where required.
 
-8. **Medium — receipts still invent validation information.** `AuditLogView.jsx:122` substitutes 96% grounding and 0.04 risk, and `:124` substitutes a fixed hash. These are remaining fabricated fallback values despite the mock-data cleanup. Display “Not recorded” when absent and preserve legitimate zero values with nullish checks.
+8. **Medium — receipts still invent validation information.** `AuditLogView.jsx:122` substitutes 96% grounding and 0.04 risk, and `:124` substitutes a fixed hash. These are remaining fabricated fallback values despite the synthetic-data cleanup. Display “Not recorded” when absent and preserve legitimate zero values with nullish checks.
 
 9. **Medium — Period filter display does not represent state.** `AuditFilters.jsx:28` provides only today/week/month options, but `auditFilters.js:1` initializes/resets to an empty value and manual dates set custom. Neither value has a matching option. The displayed selection can therefore imply a period that is not applied. Restore matching placeholder/custom options or deliberately redesign the state mapping.
 

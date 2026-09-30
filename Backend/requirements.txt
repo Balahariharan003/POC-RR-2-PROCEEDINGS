@@ -1,30 +1,35 @@
-# AI Administrative Co-Pilot (Revenue Recovery Assistant) - Backend Dependencies
-# Optimized for Intel i5 CPU / 8GB RAM local deployment
+# Tamil Nadu Revenue Recovery Proceedings Generation Engine - Production Dependencies
+# High-concurrency enterprise stack without RapidOCR or local heavy ONNX weights
 
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 pydantic>=2.6.0
+pydantic-settings>=2.2.0
 python-multipart>=0.0.9
 
+# Async HTTP Client & Datalab Chandra OCR Integration
+httpx>=0.27.0
+requests>=2.31.0
+
 # Document Ingestion & Image Rendering
-pymupdf>=1.24.0
+pypdfium2>=4.28.0
 pillow>=10.2.0
-numpy>=1.26.0
 
-# Local LLM Integration (Ollama qwen2.5:7b)
-ollama>=0.2.0
-
-# Document Generation & Templating (.docx)
+# Document Generation & Templating (.docx) with TAU-Marutham font
 python-docx>=1.1.0
 docxtpl>=0.17.0
 
-# Database Layer (PostgreSQL)
+# Security, JWT & Anti-Brute-Force Cryptography
+python-jose[cryptography]>=3.3.0
+
+# Database Layer (PostgreSQL with Async SQLAlchemy)
+sqlalchemy>=2.0.28
+asyncpg>=0.29.0
 psycopg2-binary>=2.9.9
 
-# Utilities
-requests>=2.31.0
+# Environment & Utilities
 python-dotenv>=1.0.0
 
-# Optional OCR Extraction Engine (Requires Python <= 3.12 due to onnxruntime wheels)
-# On Python 3.10 - 3.12: pip install rapidocr_onnxruntime
-# rapidocr_onnxruntime>=1.3.0
+# Testing
+pytest>=8.1.0
+pytest-asyncio>=0.23.0
