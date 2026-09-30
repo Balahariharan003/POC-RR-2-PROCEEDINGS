@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     templates,
     audit,
     chat,
+    system,
 )
 
 api_router = APIRouter()
@@ -25,3 +26,5 @@ api_router.include_router(documents.router, prefix="/documents", tags=["Document
 api_router.include_router(templates.router, prefix="/templates", tags=["Templates"])
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])
+api_router.include_router(system.router, prefix="/system", tags=["System"])
+

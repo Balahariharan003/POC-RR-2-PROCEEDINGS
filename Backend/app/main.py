@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException, status
+from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -19,7 +19,10 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.logging import setup_logging, logger
-from app.core.database import engine, Base
+from app.core.database import engine, Base, get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
+import json
 from app.core.exceptions import AppException
 from app.api.v1.router import api_router
 from app.services.pipeline_service import PipelineService
@@ -45,11 +48,12 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database schema synchronized successfully.")
 
-        # Seed default accounts
-        from app.core.seed import seed_default_accounts
+        # Seed default accounts & templates
+        from app.core.seed import seed_default_accounts, seed_default_templates
         from app.core.database import AsyncSessionLocal
         async with AsyncSessionLocal() as session:
             await seed_default_accounts(session)
+            await seed_default_templates(session)
     except Exception as db_err:
         logger.warning(f"Database table sync skipped or deferred: {db_err}")
 
@@ -122,10 +126,10 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.post("/api/process-document")
 @app.post("/api/upload-pdf")
 @app.post("/api/generate-content")
-async def legacy_process_document(file: UploadFile = File(...)):
+async def legacy_process_document(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     clean_name = f"{uuid.uuid4().hex[:8]}_{Path(file.filename).name}"
     saved_path = storage_provider.save_upload(file.file, clean_name)
-    result = await pipeline_service.execute_pipeline(saved_path)
+    result = await pipeline_service.execute_pipeline(saved_path, db=db)
     
     # Map into structure expected by Frontend/app.js
     entities = result["entities"]
@@ -142,7 +146,7 @@ async def legacy_process_document(file: UploadFile = File(...)):
         "validation_insights": {
             "math_valid": result["validation"]["is_valid"],
             "tamil_amount_words": fin.get("amount_in_words_tamil", ""),
-            "jurisdiction_taluk": entities.get("taluk_name", "ஈரோடு")
+            "jurisdiction_taluk": entities.get("taluk_name", "")
         },
         "entities": {
             "case_details": {
@@ -151,7 +155,7 @@ async def legacy_process_document(file: UploadFile = File(...)):
                 "ia_number": ref.get("ia_or_mp_no", ""),
                 "court_order_date": ref.get("order_date", "")
             },
-            "proceedings_roc_number": entities.get("roc_number", "ந.க. 1248/2026/ஈ2"),
+            "proceedings_roc_number": entities.get("roc_number", ""),
             "proceedings_date": entities.get("proceedings_date", ""),
             "defaulter": {
                 "name": first_d.get("name", ""),
@@ -162,10 +166,10 @@ async def legacy_process_document(file: UploadFile = File(...)):
                 "pincode": first_d.get("pincode", "")
             },
             "jurisdiction": {
-                "district": entities.get("district_name", "ஈரோடு"),
-                "taluk": entities.get("taluk_name", "ஈரோடு"),
-                "tahsildar_title": entities.get("assigned_tahsildar", "வருவாய் வட்டாட்சியர், ஈரோடு"),
-                "collector_name": entities.get("collector_name", "திரு.ச.கந்தசாமி, இ.ஆ.ப.")
+                "district": entities.get("district_name", ""),
+                "taluk": entities.get("taluk_name", ""),
+                "tahsildar_title": entities.get("assigned_tahsildar", ""),
+                "collector_name": entities.get("collector_name", "")
             },
             "financials": {
                 "principal_amount": fin.get("principal_amount", 0),
@@ -179,8 +183,8 @@ async def legacy_process_document(file: UploadFile = File(...)):
                 "address": entities.get("payment_instructions", {}).get("dispatch_address", "")
             },
             "legal_acts": {
-                "primary_act": ref.get("statutory_act_and_section", "சுங்கச் சட்டம் 1962"),
-                "recovery_act": "வருவாய் வசூல் சட்டம் 1864"
+                "primary_act": ref.get("statutory_act_and_section", ""),
+                "recovery_act": entities.get("recovery_act", "")
             }
         },
         "crypto_audit": result.get("crypto_audit", {})
@@ -227,45 +231,45 @@ async def legacy_process_document_from_result(result: Dict[str, Any]):
         "validation_insights": {
             "math_valid": True,
             "tamil_amount_words": fin.get("amount_in_words_tamil", ""),
-            "jurisdiction_taluk": entities.get("taluk_name", "ஈரோடு")
+            "jurisdiction_taluk": entities.get("taluk_name", "")
         },
         "entities": {
             "case_details": {
-                "court_name": ref.get("issuing_authority_name", "Office of the Commissioner of Customs (Chennai IV)"),
-                "case_number": ref.get("case_or_file_no", "F.NO. 516/2024-ARC"),
-                "ia_number": ref.get("ia_or_mp_no", "105790/2024"),
-                "court_order_date": ref.get("order_date", "24-12-2025")
+                "court_name": ref.get("issuing_authority_name", ""),
+                "case_number": ref.get("case_or_file_no", ""),
+                "ia_number": ref.get("ia_or_mp_no", ""),
+                "court_order_date": ref.get("order_date", "")
             },
-            "proceedings_roc_number": entities.get("roc_number", "ந.க. 1248/2026/ஈ2"),
+            "proceedings_roc_number": entities.get("roc_number", ""),
             "proceedings_date": entities.get("proceedings_date", ""),
             "defaulter": {
-                "name": first_d.get("name", "M/s Prisma Garments"),
+                "name": first_d.get("name", ""),
                 "father_or_husband_name": first_d.get("father_or_spouse_name", ""),
-                "door_no": first_d.get("door_no", "46"),
-                "street_area": first_d.get("street_and_locality", "6th Uzhavar Street, Perumal Gounder Thottam"),
-                "village": first_d.get("village", "Uzhavan Nagar"),
-                "pincode": first_d.get("pincode", "638009")
+                "door_no": first_d.get("door_no", ""),
+                "street_area": first_d.get("street_and_locality", ""),
+                "village": first_d.get("village", ""),
+                "pincode": first_d.get("pincode", "")
             },
             "jurisdiction": {
-                "district": entities.get("district_name", "ஈரோடு"),
-                "taluk": entities.get("taluk_name", "ஈரோடு"),
-                "tahsildar_title": entities.get("assigned_tahsildar", "வருவாய் வட்டாட்சியர், ஈரோடு"),
-                "collector_name": entities.get("collector_name", "திரு.ச.கந்தசாமி, இ.ஆ.ப.")
+                "district": entities.get("district_name", ""),
+                "taluk": entities.get("taluk_name", ""),
+                "tahsildar_title": entities.get("assigned_tahsildar", ""),
+                "collector_name": entities.get("collector_name", "")
             },
             "financials": {
-                "principal_amount": fin.get("principal_amount", 173308.0),
-                "penalty_amount": fin.get("penalty_amount", 9000.0),
-                "total_recoverable_amount": fin.get("total_recoverable_amount", 182308.0),
-                "formatted_amount": f"{fin.get('total_recoverable_amount', 182308.0):,.0f}",
-                "amount_in_words_tamil": fin.get("amount_in_words_tamil", "ரூபாய் ஒரு இலட்சத்து எண்பத்தி இரண்டாயிரத்து முந்நூற்றி எட்டு மட்டும்")
+                "principal_amount": fin.get("principal_amount", 0),
+                "penalty_amount": fin.get("penalty_amount", 0),
+                "total_recoverable_amount": fin.get("total_recoverable_amount", 0),
+                "formatted_amount": f"{fin.get('total_recoverable_amount', 0):,.0f}",
+                "amount_in_words_tamil": fin.get("amount_in_words_tamil", "")
             },
             "beneficiary": {
-                "name": entities.get("payment_instructions", {}).get("dd_favour_of", "Commissioner of Customs, Export Commissionerate (Chennai IV)"),
-                "address": entities.get("payment_instructions", {}).get("dispatch_address", "Custom House, 60, Rajaji Salai, Chennai- 600 001.")
+                "name": entities.get("payment_instructions", {}).get("dd_favour_of", ""),
+                "address": entities.get("payment_instructions", {}).get("dispatch_address", "")
             },
             "legal_acts": {
-                "primary_act": "சுங்கச் சட்டம் 1962 பிரிவு 142(1)(c)(i)",
-                "recovery_act": "வருவாய் வசூல் சட்டம் 1864"
+                "primary_act": ref.get("statutory_act_and_section", ""),
+                "recovery_act": entities.get("recovery_act", "")
             }
         }
     }
@@ -293,8 +297,8 @@ async def legacy_regenerate_document(payload: Dict[str, Any]):
             name=d.get("name", ""),
             door_no=d.get("door_no", ""),
             street_and_locality=f"{d.get('street_area', '')}, {d.get('village', '')}",
-            taluk=j.get("taluk", "ஈரோடு"),
-            district=j.get("district", "ஈரோடு"),
+            taluk=j.get("taluk", ""),
+            district=j.get("district", ""),
             pincode=d.get("pincode", "")
         )],
         financials=FinancialDetails(
@@ -313,9 +317,9 @@ async def legacy_regenerate_document(payload: Dict[str, Any]):
             dd_favour_of=b.get("name", ""),
             dispatch_address=b.get("address", "")
         ),
-        district_name=j.get("district", "ஈரோடு"),
-        taluk_name=j.get("taluk", "ஈரோடு"),
-        collector_name=j.get("collector_name", "திரு.ச.கந்தசாமி, இ.ஆ.ப.")
+        district_name=j.get("district", ""),
+        taluk_name=j.get("taluk", ""),
+        collector_name=j.get("collector_name", "")
     )
 
     docx_file = doc_service.generate_docx(model_entities)
@@ -354,6 +358,116 @@ async def legacy_download_pdf(filename: str):
 async def legacy_chat(payload: Dict[str, Any]):
     from app.api.v1.endpoints.chat import query_legal_assistant
     return await query_legal_assistant(question=payload.get("query", ""), context=str(payload.get("context", "")))
+
+
+@app.post("/api/dispatch-dro")
+async def legacy_dispatch_dro(payload: Dict[str, Any], db: AsyncSession = Depends(get_db)):
+    case_no = payload.get("case_details", {}).get("case_number") or payload.get("reference_details", {}).get("case_or_file_no") or "RR-2026-CASE"
+    defaulter = payload.get("defaulter", {}).get("name") or "Defaulter"
+    amount = payload.get("financials", {}).get("total_recoverable_amount") or payload.get("financials", {}).get("principal_amount", 0)
+    taluk = payload.get("jurisdiction", {}).get("taluk") or "Erode"
+    district = payload.get("jurisdiction", {}).get("district") or "Erode"
+    dispatch_id = f"DRO-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    audit_entry = {
+        "id": f"audit-{uuid.uuid4().hex[:8]}",
+        "action": "DISPATCHED_TO_DRO",
+        "status": "DISPATCHED_TO_DRO",
+        "caseNumber": case_no,
+        "orderId": case_no,
+        "defaulter": defaulter,
+        "defaulterName": defaulter,
+        "amount": amount,
+        "taluk": taluk,
+        "district": district,
+        "timestamp": timestamp,
+        "officerName": "District Collector / DRO Erode",
+        "officerId": "OFF-ADMIN-001",
+        "dispatchReceipt": dispatch_id,
+        "notes": f"Dispatched order {case_no} to Tamil Nadu DRO Portal.",
+        "details": payload
+    }
+
+    # Save to immutable audit ledger
+    from app.repositories.audit_repository import AuditRepository
+    from app.services.audit_service import AuditService
+    audit_repo = AuditRepository()
+    audit_service = AuditService()
+    sig = audit_service.generate_hybrid_signature(extracted_data=payload, raw_ocr_text=str(payload))
+    await audit_repo.create_entry(
+        db=db,
+        action="DISPATCHED_TO_DRO",
+        file_id=case_no,
+        user_id="OFF-ADMIN-001",
+        details=audit_entry,
+        signature=sig["signature"]
+    )
+
+    return {
+        "success": True,
+        "dispatchId": dispatch_id,
+        "dispatchedAt": timestamp,
+        "status": "DISPATCHED_TO_DRO",
+        "auditEntry": audit_entry
+    }
+
+
+@app.post("/api/regenerate-with-prompt")
+async def legacy_regenerate_with_prompt(payload: Dict[str, Any]):
+    prompt = payload.get("prompt", "")
+    entities = payload.get("entities", {})
+    subject = payload.get("subject", "")
+    
+    regen_res = await legacy_regenerate_document({"entities": entities})
+    
+    return {
+        "success": True,
+        "entities": regen_res["entities"],
+        "generated_docx_filename": regen_res["generated_docx_filename"],
+        "documentContent": prompt + "\n\n" + str(regen_res["entities"])
+    }
+
+
+@app.post("/api/modify-content")
+async def legacy_modify_content(payload: Dict[str, Any]):
+    content = payload.get("content", "")
+    instruction = payload.get("instruction", "")
+    
+    from app.services.llm_service import LLMService
+    llm = LLMService()
+    modified = await llm.chat_completion(
+        prompt=f"Instruction: {instruction}\n\nExisting Document Content:\n{content}",
+        system_instruction="You are an official Revenue Administration drafting clerk for the Government of Tamil Nadu. Apply the requested modification to the Tamil proceedings text accurately while maintaining official formatting, headers, references, and signatures. Output the complete modified text."
+    )
+    return {"success": True, "content": modified.strip() if modified else content}
+
+
+@app.post("/api/export-docx")
+async def legacy_export_docx(payload: Dict[str, Any]):
+    content = payload.get("content", "")
+    filename = payload.get("filename", "Official_Proceedings.docx")
+    safe_name = os.path.basename(filename)
+    if not safe_name.endswith(".docx"):
+        safe_name += ".docx"
+    
+    import docx
+    from app.services.document_service import enforce_document_font
+    doc = docx.Document()
+    for line in content.split("\n"):
+        p = doc.add_paragraph(line)
+        p.paragraph_format.line_spacing = 1.3
+        p.paragraph_format.space_after = docx.shared.Pt(3)
+    enforce_document_font(doc)
+    
+    out_path = settings.OUTPUT_DIR / safe_name
+    doc.save(str(out_path))
+    
+    return {
+        "success": True,
+        "filename": safe_name,
+        "download_url": f"/api/download/{safe_name}"
+    }
 
 
 # ------------------------------------------------------------------------------

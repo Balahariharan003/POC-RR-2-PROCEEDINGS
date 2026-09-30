@@ -1,36 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { User, ShieldCheck, Lock, Mail, Phone, Building, Briefcase, Key, Pencil, CheckCircle2, AlertTriangle, X } from 'lucide-react';
-import { readUsers } from '../../services/adminStore.js';
-import { saveOfficerAccount } from '../../services/accountStore.js';
+import { apiService } from '../../services/apiService.js';
 import { recordActivity } from '../../services/activityStore.js';
 
 function deriveProfileDetails(currentUser) {
-  let savedRecord = null;
-  try {
-    const users = readUsers();
-    savedRecord = users.find(
-      u =>
-        (currentUser?.id && u.id === currentUser.id) ||
-        (currentUser?.email && u.email?.toLowerCase() === currentUser.email.toLowerCase()) ||
-        (currentUser?.username && u.username?.toLowerCase() === currentUser.username.toLowerCase()) ||
-        (currentUser?.role === 'admin' && u.role === 'admin')
-    );
-  } catch {
-    savedRecord = null;
-  }
-
   const isAdmin = currentUser?.role === 'admin';
   return {
-    id: savedRecord?.id || currentUser?.id || (isAdmin ? 'admin-local' : 'user-local'),
-    fullNameEn: savedRecord?.name || currentUser?.name || (isAdmin ? 'Local Administrator' : 'S. Ramanathan'),
-    fullNameTa: savedRecord?.nameTamil || currentUser?.nameTamil || 'எஸ். இராமநாதன்',
-    officialEmail: savedRecord?.email || savedRecord?.username || currentUser?.email || currentUser?.username || (isAdmin ? 'admin@rr.local' : 'ramanathan@tn.gov.in'),
-    mobileNumber: savedRecord?.mobileNumber || currentUser?.mobileNumber || '9842011222',
-    departmentUnit: savedRecord?.section || currentUser?.section || currentUser?.taluk || 'D Section',
-    designation: savedRecord?.designation || currentUser?.designation || (isAdmin ? 'District Collector' : 'Department Officer'),
-    officerId: savedRecord?.officerId || currentUser?.officerId || (isAdmin ? 'OFF-ADMIN-001' : 'OFF-USER-001'),
+    id: currentUser?.id || (isAdmin ? 'admin-local' : 'user-local'),
+    fullNameEn: currentUser?.full_name || currentUser?.name || '',
+    fullNameTa: currentUser?.nameTamil || '',
+    officialEmail: currentUser?.email || currentUser?.username || '',
+    mobileNumber: currentUser?.mobileNumber || '',
+    departmentUnit: currentUser?.section || currentUser?.jurisdiction_taluk || currentUser?.taluk || '',
+    designation: currentUser?.designation || (isAdmin ? 'District Collector' : 'Department Officer'),
+    officerId: currentUser?.officerId || currentUser?.id || '',
     accessRole: isAdmin ? 'System Administrator' : 'Department User',
-    assignedOffice: savedRecord?.office || currentUser?.office || 'Erode District Collectorate, Tamil Nadu'
+    assignedOffice: currentUser?.office 
   };
 }
 
@@ -85,27 +70,19 @@ export default function OfficialProfile({ currentUser, onUserUpdated }) {
     setSuccessMessage('');
     setIsSaving(true);
     try {
-      const updatedUser = await saveOfficerAccount({
-        id: officer.id,
-        role: 'admin',
-        officerId: officer.officerId,
-        name: formData.fullNameEn,
-        nameTamil: formData.fullNameTa,
-        identifier: formData.officialEmail,
-        mobileNumber: formData.mobileNumber,
-        section: formData.departmentUnit,
-        designation: formData.designation
-      });
-      recordActivity('Admin profile updated', { reference: updatedUser.name }, currentUser);
+      const updateData = {
+        full_name: formData.fullNameEn.trim(),
+        email: formData.officialEmail.trim(),
+        jurisdiction_taluk: formData.departmentUnit.trim(),
+      };
+      const updatedUser = await apiService.updateUser(officer.id, updateData);
+      recordActivity('Admin profile updated', { reference: formData.fullNameEn }, currentUser);
       const nextOfficer = {
         ...officer,
-        id: updatedUser.id,
-        fullNameEn: updatedUser.name,
-        fullNameTa: updatedUser.nameTamil || '',
-        officialEmail: updatedUser.email || updatedUser.username,
-        mobileNumber: updatedUser.mobileNumber,
-        departmentUnit: updatedUser.section,
-        designation: updatedUser.designation || formData.designation
+        fullNameEn: updatedUser.full_name || formData.fullNameEn,
+        officialEmail: updatedUser.email || formData.officialEmail,
+        departmentUnit: updatedUser.jurisdiction_taluk || formData.departmentUnit,
+        designation: formData.designation
       };
       setOfficer(nextOfficer);
       setFormData(nextOfficer);
@@ -114,7 +91,9 @@ export default function OfficialProfile({ currentUser, onUserUpdated }) {
       if (onUserUpdated) {
         onUserUpdated({
           ...currentUser,
-          ...updatedUser,
+          name: updatedUser.full_name || formData.fullNameEn,
+          full_name: updatedUser.full_name || formData.fullNameEn,
+          email: updatedUser.email || formData.officialEmail,
           role: 'admin'
         });
       }

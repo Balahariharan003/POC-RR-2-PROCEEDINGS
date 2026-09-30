@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { UserRound, Settings, LockKeyhole, Pencil, ShieldCheck, Mail, Phone, Building2, Briefcase, BadgeCheck } from 'lucide-react';
-import { saveOfficerAccount, changeOwnPassword } from '../../services/accountStore.js';
+import { apiService } from '../../services/apiService.js';
 import { recordActivity } from '../../services/activityStore.js';
 import './MyProfile.css';
 
-const profileFields = user => ({ id: user.id, name: user.name || '', nameTamil: user.nameTamil || '', designation: user.designation || '', identifier: user.username || user.email || '', mobileNumber: user.mobileNumber || '', section: user.section || user.taluk || '' });
+const profileFields = user => ({ id: user?.id, name: user?.name || user?.full_name || '', nameTamil: user?.nameTamil || '', designation: user?.designation || '', identifier: user?.username || user?.email || '', mobileNumber: user?.mobileNumber || '', section: user?.section || user?.jurisdiction_taluk || user?.taluk || '' });
 
 export default function MyProfile({ currentUser, currentLanguage, setLanguage, onUserUpdated, onBack }) {
   const isAdmin = currentUser?.role === 'admin';
@@ -18,30 +18,51 @@ export default function MyProfile({ currentUser, currentLanguage, setLanguage, o
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordBusy, setPasswordBusy] = useState(false);
   const original = profileFields(currentUser);
-  const dirty = ['name', 'nameTamil', 'identifier', 'mobileNumber', 'section', 'designation'].some(key => details[key].trim() !== original[key].trim());
+  const dirty = ['name', 'nameTamil', 'identifier', 'mobileNumber', 'section', 'designation'].some(key => (details[key] || '').trim() !== (original[key] || '').trim());
   const update = event => { setDetails({ ...details, [event.target.name]: event.target.value }); setMessage(''); };
+
   async function saveProfile(event) {
     event.preventDefault();
     if (!dirty || busy) return;
     setBusy(true); setError(''); setMessage('');
     try {
-      const user = await saveOfficerAccount(details);
-      recordActivity('Profile updated', { reference: user.name }, currentUser);
-      onUserUpdated(user); setDetails(profileFields(user)); setMessage('Profile details saved.'); setEditing(false);
-    } catch (e) { setError(e.message); }
+      const updateData = {
+        full_name: details.name.trim(),
+        email: details.identifier.includes('@') ? details.identifier.trim() : (currentUser.email || `${details.identifier.trim()}@erode.tn.gov.in`),
+        jurisdiction_taluk: details.section.trim(),
+      };
+      const updatedUser = await apiService.updateUser(currentUser.id, updateData);
+      recordActivity('Profile updated', { reference: updatedUser.full_name || details.name }, currentUser);
+      const nextUser = {
+        ...currentUser,
+        name: updatedUser.full_name || details.name,
+        full_name: updatedUser.full_name || details.name,
+        email: updatedUser.email || details.identifier,
+        section: updatedUser.jurisdiction_taluk || details.section,
+        mobileNumber: details.mobileNumber,
+        designation: details.designation
+      };
+      onUserUpdated?.(nextUser);
+      setDetails(profileFields(nextUser));
+      setMessage('Profile details saved.');
+      setEditing(false);
+    } catch (e) { setError(e.message || 'Failed to update profile.'); }
     finally { setBusy(false); }
   }
+
   async function savePassword(event) {
     event.preventDefault();
     if (passwordBusy) return;
     setPasswordError(''); setPasswordMessage('');
     if (passwords.next !== passwords.confirm) { setPasswordError('Passwords do not match.'); return; }
+    if (passwords.next.length < 8) { setPasswordError('Password must be at least 8 characters.'); return; }
     setPasswordBusy(true);
     try {
-      await changeOwnPassword(currentUser, passwords.current, passwords.next);
+      await apiService.updateUser(currentUser.id, { password: passwords.next });
       recordActivity('Password changed', {}, currentUser);
-      setPasswords({ current: '', next: '', confirm: '' }); setPasswordMessage('Password updated.');
-    } catch (e) { setPasswordError(e.message); }
+      setPasswords({ current: '', next: '', confirm: '' });
+      setPasswordMessage('Password updated successfully.');
+    } catch (e) { setPasswordError(e.message || 'Failed to update password.'); }
     finally { setPasswordBusy(false); }
   }
   const fields = [

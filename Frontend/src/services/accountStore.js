@@ -1,134 +1,81 @@
-import { readUsers, saveUsers, USER_KEY } from './adminStore.js';
-import { TEMPORARY_LOGIN, TEMPORARY_USER_LOGIN } from './temporaryLogin.js';
+/**
+ * Account Store — Backup/Restore utilities only.
+ * All authentication is handled by the backend JWT system via apiService.
+ * No client-side password hashing or credential storage.
+ */
 
-export const INITIAL_ADMIN_LOGIN = 'mtdev8386@gmail.com';
-export const CREDENTIAL_KEY = 'rr_account_credentials';
-const ITERATIONS = 600000;
-const identifierOf = user => (user.username || user.email || '').trim().toLowerCase();
+export const USER_KEY = 'rr_admin_users';
+const KEYS = [USER_KEY, 'rr_audit_logs', 'rr_draft', 'rr_preferences'];
+const validHistory = value => Array.isArray(value) && value.every(item => item && ['string', 'number'].includes(typeof item.id) && typeof item.prompt === 'string' && (item.timestamp === undefined || typeof item.timestamp === 'string'));
+const validRecord = row => {
+  if (!row || typeof row.id !== 'string' || typeof row.caseNumber !== 'string') return false;
+  const strings = ['caseNumber', 'documentContent', 'timestamp', 'status', 'taluk', 'district', 'fileName', 'fileSize', 'defaulter', 'defaulterName', 'officerName', 'officerId', 'officer_id', 'notes', 'dispatchReceipt'];
+  if (strings.some(key => row[key] !== undefined && typeof row[key] !== 'string')) return false;
+  if (row.amount !== undefined && !['string', 'number'].includes(typeof row.amount)) return false;
+  if (['groundingScore', 'hallucinationScore'].some(key => row[key] !== undefined && (typeof row[key] !== 'number' || !Number.isFinite(row[key])))) return false;
+  return row.promptHistory === undefined || validHistory(row.promptHistory);
+};
 
-function readCredentials() {
-  const credentials = JSON.parse(localStorage.getItem(CREDENTIAL_KEY) || '{}');
-  if (!credentials || typeof credentials !== 'object' || Array.isArray(credentials)) throw new Error('Unable to load account credentials.');
-  return credentials;
+function validateUsers(users) {
+  if (!Array.isArray(users)) throw new Error('Invalid user directory.');
+  const emails = new Set();
+  const ids = new Set();
+  for (const user of users) {
+    if (!user || typeof user.id !== 'string' || !user.id || ids.has(user.id) ||
+      typeof user.name !== 'string' || !user.name.trim() ||
+      typeof user.email !== 'string' || (!user.email && !user.username) ||
+      (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) ||
+      (user.username !== undefined && (typeof user.username !== 'string' || !user.username.trim() || /\s/.test(user.username))) ||
+      ['section', 'mobileNumber', 'nameTamil', 'designation', 'officerId', 'office'].some(key => user[key] !== undefined && typeof user[key] !== 'string') ||
+      !['admin', 'user'].includes(user.role) || !['active', 'inactive'].includes(user.status) ||
+      typeof user.taluk !== 'string' || [user.email, user.username].filter(Boolean).some(value => emails.has(value.toLowerCase()))) {
+      throw new Error('Users must have unique IDs and emails, a name, role, status and taluk.');
+    }
+    ids.add(user.id);
+    for (const identifier of [user.email, user.username].filter(Boolean)) emails.add(identifier.toLowerCase());
+  }
 }
 
-const hex = bytes => Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
-async function passwordHash(password, salt) {
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: ITERATIONS, hash: 'SHA-256' }, key, 256);
-  return hex(new Uint8Array(bits));
+export function validateBackup(backup) {
+  if (backup?.app !== 'rr-assistant' || backup.version !== 1 || !backup.data || typeof backup.data !== 'object' || Array.isArray(backup.data)) {
+    throw new Error('Select a valid RR Assistant version 1 backup.');
+  }
+  if (Object.keys(backup.data).some(key => !KEYS.includes(key)) || !KEYS.every(key => Object.hasOwn(backup.data, key))) {
+    throw new Error('Backup contains missing or unsupported data sections.');
+  }
+  for (const [key, value] of Object.entries(backup.data)) {
+    if (value === null) continue;
+    if (key === USER_KEY) validateUsers(value);
+    else if (key === 'rr_audit_logs') {
+      if (typeof value !== 'object' || Array.isArray(value) || Object.values(value).some(rows => !Array.isArray(rows) || rows.some(row => !validRecord(row)))) {
+        throw new Error('Invalid proceedings or audit records.');
+      }
+    } else if (key === 'rr_draft') {
+      if (typeof value !== 'object' || typeof value.content !== 'string' || typeof value.fileName !== 'string' || (value.promptHistory !== undefined && !validHistory(value.promptHistory)) || (value.fileSize !== undefined && typeof value.fileSize !== 'string') || (value.sessionId != null && typeof value.sessionId !== 'string')) throw new Error('Invalid saved draft.');
+    } else if (key === 'rr_preferences') {
+      if (!['en', 'ta'].includes(value.language) || !['light', 'dark'].includes(value.theme)) throw new Error('Invalid preferences.');
+    }
+  }
+  return backup;
 }
 
-export function validatePassword(password) {
-  if (typeof password !== 'string' || password.length < 8 || password.length > 128 || !password.trim()) throw new Error('Use a password with 8 to 128 characters.');
+export function createBackup() {
+  return validateBackup({ app: 'rr-assistant', version: 1, createdAt: new Date().toISOString(), data: Object.fromEntries(KEYS.map(key => [key, JSON.parse(localStorage.getItem(key) || 'null')])) });
 }
 
-async function makeCredential(password) {
-  validatePassword(password);
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  return { algorithm: 'PBKDF2-SHA256', iterations: ITERATIONS, salt: hex(salt), hash: await passwordHash(password, salt) };
-}
-
-function commitAccounts(users, credentials) {
-  const previousUsers = localStorage.getItem(USER_KEY);
-  const previousCredentials = localStorage.getItem(CREDENTIAL_KEY);
+export function restoreBackup(backup) {
+  validateBackup(backup);
+  const previous = Object.fromEntries(KEYS.map(key => [key, localStorage.getItem(key)]));
   try {
-    saveUsers(users);
-    localStorage.setItem(CREDENTIAL_KEY, JSON.stringify(credentials));
+    for (const key of KEYS) {
+      if (backup.data[key] === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(backup.data[key]));
+    }
   } catch (error) {
-    if (previousUsers === null) localStorage.removeItem(USER_KEY); else localStorage.setItem(USER_KEY, previousUsers);
-    if (previousCredentials === null) localStorage.removeItem(CREDENTIAL_KEY); else localStorage.setItem(CREDENTIAL_KEY, previousCredentials);
+    for (const key of KEYS) {
+      if (previous[key] === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, previous[key]);
+    }
     throw error;
   }
-}
-
-export function canInitializeAdministrator() {
-  const credentials = readCredentials();
-  const users = readUsers();
-  const admin = users.find(user => identifierOf(user) === INITIAL_ADMIN_LOGIN);
-  return (!admin || (admin.role === 'admin' && admin.status === 'active')) && !users.some(user => user.role === 'admin' && Object.hasOwn(credentials, user.id));
-}
-
-export async function initializeAdministrator(password) {
-  if (!canInitializeAdministrator()) throw new Error('Administrator access has already been configured.');
-  const credential = await makeCredential(password);
-  if (!canInitializeAdministrator()) throw new Error('Administrator access has already been configured.');
-  const users = readUsers();
-  const existing = users.find(user => identifierOf(user) === INITIAL_ADMIN_LOGIN);
-  const admin = existing || { id: crypto.randomUUID(), name: 'District Collector', username: INITIAL_ADMIN_LOGIN, email: INITIAL_ADMIN_LOGIN, mobileNumber: '', section: 'Administration', taluk: '', role: 'admin', status: 'active' };
-  commitAccounts(existing ? users : [...users, admin], { ...readCredentials(), [admin.id]: credential });
-  return admin;
-}
-
-export async function authenticate(identifier, password, role) {
-  const normalized = identifier.trim().toLowerCase();
-  if (normalized === TEMPORARY_LOGIN.email && role === 'admin' && password === TEMPORARY_LOGIN.password && !readUsers().some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-    const credential = await makeCredential(password);
-    const users = readUsers();
-    if (!users.some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-      const admin = { id: crypto.randomUUID(), officerId: 'OFF-ADMIN-001', name: TEMPORARY_LOGIN.name, email: normalized, username: normalized, mobileNumber: '', section: 'Administration', taluk: '', role: 'admin', status: 'active' };
-      commitAccounts([...users, admin], { ...readCredentials(), [admin.id]: credential });
-    }
-  }
-  if ((normalized === TEMPORARY_USER_LOGIN.email || normalized === TEMPORARY_USER_LOGIN.altEmail) && role === 'user' && password === TEMPORARY_USER_LOGIN.password && !readUsers().some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-    const credential = await makeCredential(password);
-    const users = readUsers();
-    if (!users.some(item => identifierOf(item) === normalized || item.email?.toLowerCase() === normalized)) {
-      const officer = {
-        id: crypto.randomUUID(),
-        officerId: TEMPORARY_USER_LOGIN.officerId,
-        name: TEMPORARY_USER_LOGIN.name,
-        nameTamil: TEMPORARY_USER_LOGIN.nameTamil,
-        designation: TEMPORARY_USER_LOGIN.designation,
-        email: normalized,
-        username: normalized,
-        mobileNumber: TEMPORARY_USER_LOGIN.mobileNumber,
-        section: TEMPORARY_USER_LOGIN.section,
-        taluk: '',
-        role: 'user',
-        status: 'active'
-      };
-      commitAccounts([...users, officer], { ...readCredentials(), [officer.id]: credential });
-    }
-  }
-  const user = readUsers().find(item => identifierOf(item) === normalized || (item.email && item.email.toLowerCase() === normalized));
-  if (!user || user.status !== 'active' || user.role !== role) return null;
-  const credential = readCredentials()[user.id];
-  if (!credential || credential.algorithm !== 'PBKDF2-SHA256' || credential.iterations !== ITERATIONS || !/^[a-f0-9]{32}$/.test(credential.salt) || !/^[a-f0-9]{64}$/.test(credential.hash)) return null;
-  const salt = Uint8Array.from(credential.salt.match(/../g), byte => parseInt(byte, 16));
-  const hash = await passwordHash(password, salt);
-  let difference = 0;
-  for (let index = 0; index < hash.length; index++) difference |= hash.charCodeAt(index) ^ credential.hash.charCodeAt(index);
-  return difference === 0 ? user : null;
-}
-
-export async function saveOfficerAccount(fields, password = '') {
-  const identifier = fields.identifier.trim().toLowerCase();
-  if (!fields.name.trim() || !fields.section.trim()) throw new Error('Enter the officer name and section.');
-  if (!identifier || /\s/.test(identifier) || (identifier.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier))) throw new Error('Enter a valid username or email.');
-  if (!/^\+?[\d ()-]+$/.test(fields.mobileNumber) || !/^\d{7,15}$/.test(fields.mobileNumber.replace(/\D/g, ''))) throw new Error('Enter a valid mobile number.');
-  if (!fields.id && !password) throw new Error('Enter a password for the new officer.');
-  const credential = password ? await makeCredential(password) : null;
-  const users = readUsers();
-  const original = fields.id ? users.find(user => user.id === fields.id || (fields.role === 'admin' && user.role === 'admin')) : null;
-  if (fields.id && !original && fields.role !== 'admin') throw new Error('This officer is no longer in the directory. Reload the page.');
-  const targetId = original?.id || fields.id || crypto.randomUUID();
-  if (users.some(user => user.id !== targetId && (identifierOf(user) === identifier || user.email?.toLowerCase() === identifier))) throw new Error('This username or email is already in use.');
-  const nextRole = original?.role || (fields.role === 'admin' ? 'admin' : 'user');
-  const existingOfficerCount = users.filter(u => u.role !== 'admin').length;
-  const fallbackOfficerId = nextRole === 'admin' ? 'OFF-ADMIN-001' : `OFF-USER-${String(existingOfficerCount + 1).padStart(3, '0')}`;
-  const user = { ...original, id: targetId, officerId: (fields.officerId ?? original?.officerId ?? fallbackOfficerId).trim(), name: fields.name.trim(), nameTamil: (fields.nameTamil ?? original?.nameTamil ?? '').trim(), designation: (fields.designation ?? original?.designation ?? '').trim(), username: identifier, email: identifier.includes('@') ? identifier : '', mobileNumber: fields.mobileNumber.trim(), section: fields.section.trim(), taluk: original?.taluk || '', role: nextRole, status: original?.status || 'active' };
-  const updated = original ? users.map(item => item.id === user.id ? user : item) : [...users, user];
-  if (credential) commitAccounts(updated, { ...readCredentials(), [user.id]: credential });
-  else saveUsers(updated);
-  return user;
-}
-
-export async function changeOwnPassword(user, currentPassword, newPassword) {
-  const account = readUsers().find(item => item.id === user.id);
-  if (!account || !await authenticate(account.username || account.email, currentPassword, account.role)) {
-    throw new Error('Current password is incorrect.');
-  }
-  const credential = await makeCredential(newPassword);
-  localStorage.setItem(CREDENTIAL_KEY, JSON.stringify({ ...readCredentials(), [account.id]: credential }));
 }

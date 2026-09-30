@@ -21,7 +21,6 @@ import RRAssistantView from './components/workspace/RRAssistantView.jsx';
 import AuditLogView from './components/audit/AuditLogView.jsx';
 import AdminWorkspace from './components/admin/AdminWorkspace.jsx';
 import OfficialProfile from './components/profile/OfficialProfile.jsx';
-import { readUsers, saveUsers } from './services/adminStore.js';
 
 import { apiService } from './services/apiService.js';
 import { DEFAULT_ENTITIES, DEFAULT_VALIDATION } from './data/schemas.js';
@@ -29,8 +28,8 @@ import { DEFAULT_ENTITIES, DEFAULT_VALIDATION } from './data/schemas.js';
 
 export default function App() {
   // Top-Level State Machine
-  const [currentUser, setCurrentUser] = useState(null); // null shows LoginPage; { role, email, name } shows app
-  const [activeView, setActiveView] = useState('rrAssistant'); // 'rrAssistant' | 'workspace' | 'audit' | 'droQueue'
+  const [currentUser, setCurrentUser] = useState(() => apiService.getCurrentUser());
+  const [activeView, setActiveView] = useState(() => (apiService.getCurrentUser()?.role === 'admin' ? 'adminDashboard' : 'rrAssistant'));
   const [workspaceMode, setWorkspaceMode] = useState('editor'); // 'editor' (Matching Screenshots) | 'inspection' (Side-by-side OCR & Form)
   const [currentLanguage, setLanguage] = useState('en');
   const [theme, setTheme] = useState('dark');
@@ -350,7 +349,7 @@ if (!currentUser) {
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
         currentUser={currentUser}
-        onLogout={() => { recordActivity('Signed out'); setActivityActor(null); setCurrentUser(null); }}
+        onLogout={() => { recordActivity('Signed out'); setActivityActor(null); apiService.logout(); setCurrentUser(null); }}
       />
 
       {/* Main Body Area: Sidebar + Main Content */}
