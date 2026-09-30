@@ -56,6 +56,25 @@ class AuthService:
             status="active" if user.is_active else "inactive"
         )
 
+        import uuid
+        from datetime import datetime, timezone
+        from app.domain.models import AuditLedgerEntry
+        audit_log = AuditLedgerEntry(
+            id=str(uuid.uuid4()),
+            action="LOGIN",
+            file_id=None,
+            user_id=user.username,
+            details={
+                "username": user.username,
+                "role": user.role,
+                "full_name": user.full_name,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            signature=f"v2:login:{user.username}:{uuid.uuid4().hex[:12]}",
+        )
+        db.add(audit_log)
+        await db.commit()
+
         return TokenResponse(
             access_token=token,
             expires_in=60 * 60 * 8,

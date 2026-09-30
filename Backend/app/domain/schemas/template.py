@@ -17,6 +17,7 @@ class TemplateBase(BaseModel):
     order_para2_template: str
     order_para3_template: str
     enclosure_text: Optional[str] = "கடித நகல்"
+    template_data: Optional[Dict[str, Any]] = Field(default=None, description="Native PostgreSQL JSONB template payload")
     is_active: bool = True
 
 
@@ -32,6 +33,7 @@ class TemplateUpdate(BaseModel):
     order_para2_template: Optional[str] = None
     order_para3_template: Optional[str] = None
     enclosure_text: Optional[str] = None
+    template_data: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
 
 

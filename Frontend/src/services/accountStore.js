@@ -2,6 +2,7 @@ import { readUsers, saveUsers, USER_KEY } from './adminStore.js';
 import { STORAGE_KEYS } from '../config/appConfig.js';
 
 export const CREDENTIAL_KEY = STORAGE_KEYS.credentials;
+export { USER_KEY };
 const ITERATIONS = 600000;
 const identifierOf = user => (user.username || user.email || '').trim().toLowerCase();
 
@@ -44,7 +45,7 @@ function commitAccounts(users, credentials) {
 export async function authenticate(identifier, password, role) {
   const normalized = identifier.trim().toLowerCase();
   const user = readUsers().find(item => identifierOf(item) === normalized || (item.email && item.email.toLowerCase() === normalized));
-  if (!user || user.status !== 'active' || user.role !== role) return null;
+  if (!user || user.status !== 'active' || (role && user.role !== role)) return null;
   const credential = readCredentials()[user.id];
   if (!credential || credential.algorithm !== 'PBKDF2-SHA256' || credential.iterations !== ITERATIONS || !/^[a-f0-9]{32}$/.test(credential.salt) || !/^[a-f0-9]{64}$/.test(credential.hash)) return null;
   const salt = Uint8Array.from(credential.salt.match(/../g), byte => parseInt(byte, 16));

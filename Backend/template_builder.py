@@ -298,7 +298,7 @@ def build_department_templates(templates_dir: Path = None):
     _add_roc_date(doc_c, "ந.க. {{file_no}}/{{file_year}}/{{section_code}}", "நாள்:        .05.{{file_year}}.")
     
     _add_labeled_para(doc_c, "பொருள்: ", "வருவாய் வசூல் சட்டம் 1864 – சுங்கச் சட்டம் 1962 பிரிவு 142(1)(c)(i) – ஈரோடு மாவட்டம் – {{taluk_name}} வட்டம் - {{defaulter_name}}, {% if iec_no %}(IEC No: {{iec_no}}){% endif %} {{door_no}}, {{street_and_locality}}, {{taluk_name}} – அரசுக்குச் செலுத்த வேண்டிய நிலுவைத் தொகை வசூல் செய்யக் கோருதல் - உத்திரவிடுதல்.")
-    _add_labeled_para(doc_c, "பார்வை: ", "1. {{issuing_authority_name}}, கடித F.NO. {{case_file_no}}, நாள் {{order_date}}.\n2. Order in Original No. {{order_in_original_no}}, நாள் {{letter_date}}.")
+    _add_labeled_para(doc_c, "பார்வை: ", "{{ reference_text }}")
     
     _add_divider(doc_c)
     _add_heading(doc_c, "உத்தரவு:")
@@ -340,7 +340,7 @@ def build_department_templates(templates_dir: Path = None):
     _add_header(doc_r, "ஈரோடு மாவட்ட ஆட்சித் தலைவர் மற்றும்\nமாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள்", "முன்னிலை: {{collector_name}}")
     _add_roc_date(doc_r, "ந.க. {{file_no}}/{{file_year}}/{{section_code}}", "நாள்:        .05.{{file_year}}.")
     _add_labeled_para(doc_r, "பொருள்: ", "வருவாய் வசூல் சட்டம் 1864 – தமிழ்நாடு ரியல் எஸ்டேட் (முறைப்படுத்துதல் மற்றும் மேம்படுத்துதல்) சட்டம் 2016 பிரிவு 40(1) – {{district_name}} மாவட்டம் – {{taluk_name}} வட்டம் - {{defaulter_details[0].name}}, {{defaulter_details[0].door_no}}, {{defaulter_details[0].street_and_locality}} – அபராதத் தொகை வசூல் செய்யக் கோருதல் - உத்திரவிடுதல்.")
-    _add_labeled_para(doc_r, "பார்வை: ", "{{reference_details.issuing_authority_name}}, கடித எண். {{reference_details.case_or_file_no}}, நாள் {{reference_details.order_date}}.")
+    _add_labeled_para(doc_r, "பார்வை: ", "{{ reference_text }}")
     _add_divider(doc_r)
     _add_heading(doc_r, "உத்தரவு:")
     _add_body_para(doc_r, "{{district_name}} மாவட்டம், {{taluk_name}} வட்டம், {{defaulter_details[0].street_and_locality}}, {{defaulter_details[0].door_no}}, என்ற முகவரியில் {{living_verb}} {{defaulter_details[0].name}} {{defaulter_suffix}} தமிழ்நாடு ரியல் எஸ்டேட் சட்டம் 2016 பிரிவு 40(1)-ன் படி விதிக்கப்பட்ட அபராதத் தொகை ரூ.{{financials.total_amount}}/- ஐ தமிழ்நாடு வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்யுமாறு பார்வையில் காணும் உத்தரவின் வாயிலாக தெரிவிக்கப்பட்டுள்ளது.")
@@ -358,7 +358,7 @@ def build_department_templates(templates_dir: Path = None):
         doc_r,
         roc="ந.க. {{file_no}}/{{file_year}}/{{section_code}}",
         subject="வருவாய் வசூல் சட்டம் 1864 – தமிழ்நாடு ரியல் எஸ்டேட் சட்டம் 2016 பிரிவு 40(1) – TNRERA நிலுவைத் தொகை வசூலித்தல் – ஆணை பிறப்பித்தல் – சார்பு.",
-        reference="TNRERA ஆணையரக கடிதம் {{reference_details.case_or_file_no}}, நாள் {{reference_details.order_date}}.",
+        reference="{{ reference_text }}",
         submission_paras=[
             "பார்வையில் கண்டுள்ள கடிதத்தில், {{defaulter_details[0].name}} செலுத்த வேண்டிய அபராதத் தொகை ரூ.{{financials.total_amount}}/-யினை வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூலிக்கக் கோரப்பட்டுள்ளது.",
             "இதன்மீது நடவடிக்கை மேற்கொள்ளும் வகையில், {{taluk_name}} வட்டாட்சியருக்கு தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5 மற்றும் TNRERA சட்டம் 2016 பிரிவு 40(1)-ன் கீழ் ஆணை பிறப்பித்து செயல்முறைக் குறிப்பாணை தயார் செய்யப்பட்டு மாவட்ட ஆட்சித் தலைவர் அவர்களின் ஒப்புதலுக்குப் பணிந்தனுப்பப்படுகிறது."
@@ -379,7 +379,7 @@ def build_department_templates(templates_dir: Path = None):
     _add_header(doc_m, "ஈரோடு மாவட்ட ஆட்சித் தலைவர் மற்றும்\nமாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள்", "முன்னிலை: {{collector_name}}")
     _add_roc_date(doc_m, "ந.க. {{file_no}}/{{file_year}}/{{section_code}}", "நாள்:        .05.{{file_year}}.")
     _add_labeled_para(doc_m, "பொருள்: ", "வருவாய் வசூல் சட்டம் 1864 – மோட்டார் வாகனச் சட்டம் 1988 – {{district_name}} மாவட்டம் – {{taluk_name}} வட்டம் - {{defaulter_details[0].name}}, {% if defaulter_details[0].father_or_spouse_name %}{{defaulter_details[0].father_or_spouse_name}}, {% endif %}{{defaulter_details[0].door_no}}, {{defaulter_details[0].street_and_locality}}, {{taluk_name}} - மோட்டார் வாகனச் சட்டம் 1988 பிரிவு 174 - {{reference_details.issuing_authority_name}} - {{reference_details.ia_or_mp_no}} -ன் {{reference_details.case_or_file_no}} -இன் படி தொகை ரூ.{{financials.total_amount}}/- {% if financials.interest_rate %}ஐ {{financials.interest_rate}}% வட்டியுடன் {% endif %}வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோரியது - உத்திரவிடுதல்.")
-    _add_labeled_para(doc_m, "பார்வை: ", "{{reference_details.issuing_authority_name}}, {{reference_details.case_or_file_no}}, உத்தரவு, நாள் {{reference_details.order_date}}.")
+    _add_labeled_para(doc_m, "பார்வை: ", "{{ reference_text }}")
     _add_divider(doc_m)
     _add_heading(doc_m, "உத்தரவு:")
     _add_body_para(doc_m, "{{district_name}} மாவட்டம், {{taluk_name}} வட்டம், {{defaulter_details[0].street_and_locality}}, {{defaulter_details[0].door_no}}, என்ற முகவரியில் {{living_verb}} {{defaulter_details[0].name}}, {% if defaulter_details[0].father_or_spouse_name %}{{defaulter_details[0].father_or_spouse_name}} {% endif %}{{defaulter_suffix}} மோட்டார் வாகனச் சட்டம் 1988 பிரிவு 174, {{reference_details.issuing_authority_name}} {{reference_details.ia_or_mp_no}} -ன் {{reference_details.case_or_file_no}} -இன் படி தொகை ரூ.{{financials.total_amount}}/- {% if financials.interest_rate %}ஐ {{financials.interest_rate}}% வட்டியுடன் {% endif %}வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்யுமாறு பார்வையில் காணும் உத்தரவின் வாயிலாக தெரிவிக்கப்பட்டுள்ளது.")
@@ -398,7 +398,7 @@ def build_department_templates(templates_dir: Path = None):
         doc_m,
         roc="ந.க. {{file_no}}/{{file_year}}/{{section_code}}",
         subject="வருவாய் வசூல் சட்டம் 1864 – மோட்டார் வாகனச் சட்டம் 1988 – {{district_name}} மாவட்டம் – {{taluk_name}} வட்டம் - {{defaulter_details[0].name}}, {% if defaulter_details[0].father_or_spouse_name %}{{defaulter_details[0].father_or_spouse_name}}, {% endif %}{{defaulter_details[0].door_no}}, {{defaulter_details[0].street_and_locality}}, {{taluk_name}} - மோட்டார் வாகனச் சட்டம் 1988 பிரிவு 174 - {{reference_details.issuing_authority_name}} - {{reference_details.ia_or_mp_no}} -ன் {{reference_details.case_or_file_no}} -இன் படி தொகை ரூ.{{financials.total_amount}}/- {% if financials.interest_rate %}ஐ {{financials.interest_rate}}% வட்டியுடன் {% endif %}வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோரியது - உத்திரவிடுதல்.",
-        reference="{{reference_details.issuing_authority_name}}, {{reference_details.case_or_file_no}}, உத்தரவு, நாள் {{reference_details.order_date}}.",
+        reference="{{ reference_text }}",
         submission_paras=[
             "{{district_name}} மாவட்டம், {{taluk_name}} வட்டம், {{defaulter_details[0].street_and_locality}}, {{defaulter_details[0].door_no}}, என்ற முகவரியில் {{living_verb}} {{defaulter_details[0].name}}, {% if defaulter_details[0].father_or_spouse_name %}{{defaulter_details[0].father_or_spouse_name}}, {% endif %}{{defaulter_suffix}} மோட்டார் வாகனச் சட்டம் 1988 பிரிவு 174, {{reference_details.issuing_authority_name}} {{reference_details.ia_or_mp_no}} -ன் {{reference_details.case_or_file_no}} -இன் படி தொகை ரூ.{{financials.total_amount}}/- {% if financials.interest_rate %}ஐ {{financials.interest_rate}}% வட்டியுடன் {% endif %}வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்யுமாறு பார்வை 1இல் காணும் உத்தரவின் வாயிலாக தெரிவிக்கப்பட்டுள்ளது.",
             "மேற்படி முகவரியில் {{living_verb}} {{defaulter_details[0].name}}, {% if defaulter_details[0].father_or_spouse_name %}{{defaulter_details[0].father_or_spouse_name}} {% endif %}என்பவரின் {{asset_clause}} {{split_clause}}மொத்தம் தொகை ரூ.{{financials.total_amount}}/- ({{financials.amount_in_tamil_words}}) {% if financials.interest_start_date %}மற்றும் கடந்த {{financials.interest_start_date}} முதல் தொகை செலுத்தும் நாள் வரையில் {{financials.interest_rate}}% வட்டித்தொகையுடன் சேர்த்து {% endif %}வருவாய் வசூல் சட்டப்படி வசூல் செய்து “{{payment_instructions.dd_favour_of}}“ என்ற பெயரில் வங்கி வரைவோலையாக (Demand Draft) எடுத்து {{payment_instructions.dispatch_address}} என்ற அலுவலகத்திற்கு அசலினை அனுப்பி அதன் விவரத்தினை நகல் வங்கி வரைவோலையுடன் {{reference_details.issuing_authority_name}} என்ற நீதிமன்றத்திற்கும் மற்றும் இவ்வலுவலகத்திற்கும் அனுப்பி வைக்குமாறு {{taluk_name}} வருவாய் வட்டாட்சியருக்கு தெரிவிக்கலாம்.",
@@ -421,7 +421,7 @@ def build_department_templates(templates_dir: Path = None):
     _add_header(doc_w, "ஈரோடு மாவட்ட ஆட்சித் தலைவர் மற்றும்\nமாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள்", "முன்னிலை: {{collector_name}}")
     _add_roc_date(doc_w, "ந.க. {{file_no}}/{{file_year}}/{{section_code}}", "நாள்:        .05.{{file_year}}.")
     _add_labeled_para(doc_w, "பொருள்: ", "வருவாய் வசூல் சட்டம் 1864 – குற்றவியல் நடைமுறைச் சட்டம் – வாரண்ட் வசூலித்தல் – {{district_name}} மாவட்டம் – {{taluk_name}} வட்டம் - {{defaulter_details[0].name}}, {{defaulter_details[0].door_no}}, {{defaulter_details[0].street_and_locality}}, {{taluk_name}} – நிலுவைத் தொகை ரூ.{{financials.total_amount}}/- வசூல் செய்யக் கோருதல் - உத்திரவிடுதல்.")
-    _add_labeled_para(doc_w, "பார்வை: ", "{{reference_details.issuing_authority_name}}, வாரண்ட் ஆணை {{reference_details.case_or_file_no}}, நாள் {{reference_details.order_date}}.")
+    _add_labeled_para(doc_w, "பார்வை: ", "{{ reference_text }}")
     _add_divider(doc_w)
     _add_heading(doc_w, "உத்தரவு:")
     _add_body_para(doc_w, "{{district_name}} மாவட்டம், {{taluk_name}} வட்டம், {{defaulter_details[0].street_and_locality}}, {{defaulter_details[0].door_no}}, என்ற முகவரியில் {{living_verb}} {{defaulter_details[0].name}} {{defaulter_suffix}} நீதிமன்ற வாரண்ட் ஆணைப்படி தொகை ரூ.{{financials.total_amount}}/- ஐ தமிழ்நாடு வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்யுமாறு பார்வையில் காணும் உத்தரவின் வாயிலாக தெரிவிக்கப்பட்டுள்ளது.")
@@ -439,7 +439,7 @@ def build_department_templates(templates_dir: Path = None):
         doc_w,
         roc="ந.க. {{file_no}}/{{file_year}}/{{section_code}}",
         subject="வருவாய் வசூல் சட்டம் 1864 – குற்றவியல் நடைமுறைச் சட்டம் – வாரண்ட் தொகையினை வசூலித்தல் – ஆணை பிறப்பித்தல் – சார்பு.",
-        reference="{{reference_details.issuing_authority_name}}, வாரண்ட் ஆணை {{reference_details.case_or_file_no}}, நாள் {{reference_details.order_date}}.",
+        reference="{{ reference_text }}",
         submission_paras=[
             "பார்வையில் கண்டுள்ள கடிதத்தில், {{defaulter_details[0].name}} செலுத்த வேண்டிய வாரண்ட் தொகை ரூ.{{financials.total_amount}}/-யினை வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூலிக்கக் கோரப்பட்டுள்ளது.",
             "இதன்மீது நடவடிக்கை மேற்கொள்ளும் வகையில், {{taluk_name}} வட்டாட்சியருக்கு தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் ஆணை பிறப்பித்து செயல்முறைக் குறிப்பாணை தயார் செய்யப்பட்டு மாவட்ட ஆட்சித் தலைவர் அவர்களின் ஒப்புதலுக்குப் பணிந்தனுப்பப்படுகிறது."

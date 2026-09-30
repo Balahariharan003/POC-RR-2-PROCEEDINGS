@@ -4,8 +4,8 @@ SQLAlchemy ORM Database Models for PostgreSQL.
 
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, Integer, Float, Text, JSON
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Float, Text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from app.core.database import Base, TimestampMixin
 
@@ -37,6 +37,7 @@ class DocumentTemplate(Base, TimestampMixin):
     order_para2_template = Column(Text, nullable=False)
     order_para3_template = Column(Text, nullable=False)
     enclosure_text = Column(String(200), default="கடித நகல்")
+    template_data = Column(JSONB, nullable=True)  # PostgreSQL native JSONB for structured template specs
     is_active = Column(Boolean, default=True, nullable=False)
 
 
@@ -47,7 +48,7 @@ class AuditLedgerEntry(Base, TimestampMixin):
     action = Column(String(50), index=True, nullable=False)
     file_id = Column(String(100), nullable=True, index=True)
     user_id = Column(String(50), nullable=True, index=True)
-    details = Column(JSON, nullable=True)
+    details = Column(JSONB, nullable=True)  # PostgreSQL native JSONB for fast immutable queries
     signature = Column(String(255), nullable=True)  # Advanced Hybrid v2:hybrid:<salt>:<hmac>
 
 
@@ -66,4 +67,4 @@ class ProceedingsCase(Base, TimestampMixin):
     docx_path = Column(String(255), nullable=True)
     pdf_path = Column(String(255), nullable=True)
     hybrid_signature = Column(String(255), nullable=True)
-    extracted_data = Column(JSON, nullable=True)
+    extracted_data = Column(JSONB, nullable=True)

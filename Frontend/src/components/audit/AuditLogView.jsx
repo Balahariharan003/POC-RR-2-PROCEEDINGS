@@ -3,7 +3,6 @@ import { RefreshCw, AlertTriangle, Inbox } from 'lucide-react';
 import AuditFilters from './AuditFilters.jsx';
 import { emptyAuditFilters, availableOfficerIds, matchesAuditFilters, officerId } from './auditFilters.js';
 import { apiService } from '../../services/apiService.js';
-import { readUsers } from '../../services/adminStore.js';
 
 export default function AuditLogView({ 
   currentUser,
@@ -11,7 +10,7 @@ export default function AuditLogView({
   onRestoreSession, 
   onNavigateToAssistant 
 }) {
-  const isUserAdmin = Boolean(isAdminProp || currentUser?.role === 'admin');
+  const isUserAdmin = Boolean(isAdminProp || currentUser?.role === 'admin' || currentUser?.role === 'SUPER_ADMIN');
   const [auditLogs, setAuditLogs] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -43,8 +42,6 @@ export default function AuditLogView({
     }
     return Array.from(names).sort();
   }, [auditLogs]);
-
-  
 
   // Load audit logs on mount (Phase 1)
   const loadLogs = async () => {
@@ -137,6 +134,7 @@ export default function AuditLogView({
   };
   const officers = useMemo(() => {
     const logIds = availableOfficerIds(Object.values(auditLogs).flat());
+<<<<<<< HEAD
     let directoryIds = [];
     try {
       directoryIds = readUsers()
@@ -148,6 +146,9 @@ export default function AuditLogView({
     }
     const combined = [...new Set([...logIds, ...directoryIds].filter(Boolean))];
     return combined.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+=======
+    return [...new Set(logIds.filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+>>>>>>> feature/backend-and-live-api
   }, [auditLogs]);
   const filterByAuditFilters = entries => entries.filter(entry => matchesAuditFilters(entry, filters));
 

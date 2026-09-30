@@ -56,6 +56,7 @@ class ReferenceDetails(BaseModel):
     order_date: Optional[str] = None
     letter_date: Optional[str] = None
     statutory_act_and_section: Optional[str] = "Section 142(1)(c)(ii) of Customs Act, 1962"
+    references_list: Optional[List[str]] = Field(default_factory=list, description="Dynamic list of references for பார்வை")
 
 
 class PaymentInstructions(BaseModel):
@@ -76,6 +77,7 @@ class ExtractedLegalEntities(BaseModel):
     financials: FinancialDetails
     reference_details: ReferenceDetails
     payment_instructions: PaymentInstructions
+    references: Optional[List[str]] = Field(default_factory=list, description="Dynamic list of references for பார்வை")
     
     # Revenue Administration Routing
     district_name: str = "ஈரோடு"

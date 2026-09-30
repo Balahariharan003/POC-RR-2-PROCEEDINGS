@@ -9,12 +9,13 @@ from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 class UserBase(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     full_name: str
     role: str = Field(default="ARREAR_CLERK", description="SUPER_ADMIN | COLLECTOR | DRO | TAHSILDAR | ARREAR_CLERK")
     jurisdiction_district: Optional[str] = "Erode"
     jurisdiction_taluk: Optional[str] = None
     is_active: bool = True
+
 
 
 class UserCreate(UserBase):

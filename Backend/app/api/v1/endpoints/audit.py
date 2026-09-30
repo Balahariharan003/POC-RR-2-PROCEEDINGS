@@ -34,6 +34,47 @@ async def get_audit_logs(limit: int = 50, db: AsyncSession = Depends(get_db)):
     ]
 
 
+@router.post("/logs", tags=["Audit"])
+async def create_audit_log(
+    entry: Dict[str, Any] = Body(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Creates a new immutable audit ledger entry."""
+    action = entry.get("action") or entry.get("status") or "PROCEEDINGS_RECORDED"
+    file_id = entry.get("file_id") or entry.get("fileName") or entry.get("caseNumber") or entry.get("id")
+    user_id = entry.get("user_id") or entry.get("officerId") or entry.get("officerName")
+    signature = entry.get("signature")
+    if not signature:
+        sig_data = audit_service.generate_hybrid_signature(
+            extracted_data=entry,
+            raw_ocr_text=entry.get("documentContent", "") or str(entry)
+        )
+        signature = sig_data["signature"]
+
+    log_entry = await audit_repo.create_entry(
+        db=db,
+        action=action,
+        file_id=str(file_id) if file_id else None,
+        user_id=str(user_id) if user_id else None,
+        details=entry,
+        signature=signature
+    )
+    return {
+        "status": "SUCCESS",
+        "id": str(log_entry.id),
+        "signature": signature,
+        "entry": {
+            "id": str(log_entry.id),
+            "action": log_entry.action,
+            "file_id": log_entry.file_id,
+            "user_id": log_entry.user_id,
+            "details": log_entry.details,
+            "signature": log_entry.signature,
+            "timestamp": log_entry.created_at.isoformat() if log_entry.created_at else None
+        }
+    }
+
+
 @router.post("/verify", tags=["Audit"])
 async def verify_signature(
     extracted_data: Dict[str, Any] = Body(...),

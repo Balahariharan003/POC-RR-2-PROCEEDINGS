@@ -27,18 +27,18 @@ class Settings(BaseSettings):
     TEMPLATE_DIR: Path = BASE_DIR / "templates"
     SAMPLE_DIR: Path = BASE_DIR / "sample_data"
 
-    # Security & JWT
+    # Security & JWT — MUST be set via .env, no hardcoded defaults
     SECRET_KEY: str = Field(
-        default="09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7",
-        description="JWT generation secret"
+        ...,
+        description="JWT signing secret. MUST be set in .env"
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8  # 8 hours
 
-    # Cryptographic Anti-Brute-Force Pepper (Advanced Hybrid HMAC-SHA256)
+    # Cryptographic Anti-Brute-Force Pepper — MUST be set via .env
     CRYPTO_PEPPER: str = Field(
-        default="TN-GOV-RR-SECURE-PEPPER-2026-v2-HYBRID-ANTI-BRUTE-FORCE",
-        description="Private server pepper for keyed HMAC document stamping"
+        ...,
+        description="Private server pepper for keyed HMAC document stamping. MUST be set in .env"
     )
 
     # Database Configuration (PostgreSQL with asyncpg)
@@ -60,9 +60,10 @@ class Settings(BaseSettings):
 
     # Datalab Chandra OCR API Configuration (RapidOCR completely removed)
     OCR_VERSION: str = "Chandra-v2"
-    CHANDRA_OCR_URL: str = "https://api.datalab.to/v1/ocr"
+    CHANDRA_OCR_URL: str = "https://www.datalab.to/api/v1/marker"
     CHANDRA_PRIMARY_MODE: str = "accurate"
     CHANDRA_FALLBACK_MODE: str = "balance"
+
     DATALAB_API_KEY: str = Field(default="", description="Datalab API Key")
     CHANDRA_TIMEOUT_SECONDS: int = 45
 
@@ -83,6 +84,17 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8000", "*"]
+
+    # Seed Account Credentials — loaded from .env, used only on first startup
+    SEED_ADMIN_USERNAME: str = ""
+    SEED_ADMIN_EMAIL: str = ""
+    SEED_ADMIN_PASSWORD: str = ""
+    SEED_ADMIN_FULLNAME: str = ""
+
+    SEED_USER_USERNAME: str = ""
+    SEED_USER_EMAIL: str = ""
+    SEED_USER_PASSWORD: str = ""
+    SEED_USER_FULLNAME: str = ""
 
     model_config = SettingsConfigDict(env_file=[".env", "../.env"], extra="allow")
 
