@@ -38,3 +38,29 @@ async def download_pdf(filename: str):
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Requested PDF file not found.")
+
+
+@router.get("/original/{filename:path}", tags=["Documents"])
+@router.get("/source/{filename:path}", tags=["Documents"])
+@router.get("/{filename:path}/raw", tags=["Documents"])
+async def stream_original_document(filename: str):
+    """Streams original scanned petition/order or uploaded document for in-app preview."""
+    try:
+        path = storage.find_file(filename)
+        media_type = "application/octet-stream"
+        suffix = path.suffix.lower()
+        if suffix == ".pdf":
+            media_type = "application/pdf"
+        elif suffix in [".png", ".jpg", ".jpeg"]:
+            media_type = f"image/{suffix.replace('.', '')}"
+        elif suffix == ".docx":
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+        return FileResponse(
+            path=str(path),
+            filename=path.name,
+            media_type=media_type
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Original document not found.")
+

@@ -26,3 +26,25 @@ class LocalStorageProvider:
         if not target.exists():
             raise FileNotFoundError(f"Requested output file does not exist: {filename}")
         return target
+
+    def get_upload_file(self, filename: str) -> Path:
+        target = resolve_safe_path(self.upload_dir, filename)
+        if not target.exists():
+            raise FileNotFoundError(f"Requested upload file does not exist: {filename}")
+        return target
+
+    def find_file(self, filename: str) -> Path:
+        # Check direct match in output, upload, sample
+        for directory in [self.output_dir, self.upload_dir, settings.SAMPLE_DIR]:
+            try:
+                target = resolve_safe_path(directory, filename)
+                if target.exists():
+                    return target
+            except Exception:
+                continue
+        # Check prefix/suffix glob in upload and output
+        for directory in [self.upload_dir, self.output_dir, settings.SAMPLE_DIR]:
+            matches = list(directory.glob(f"*{filename}*"))
+            if matches:
+                return matches[0]
+        raise FileNotFoundError(f"Requested file not found: {filename}")

@@ -21,6 +21,23 @@ class EntityType(str, Enum):
     COMPANY = "COMPANY"
     INDIVIDUAL = "INDIVIDUAL"
     PARTNERSHIP = "PARTNERSHIP"
+    MULTIPLE_PROMOTERS = "MULTIPLE_PROMOTERS"
+    GOVERNMENT_SERVANT = "GOVERNMENT_SERVANT"
+
+
+class ReferenceItem(BaseModel):
+    authority: Optional[str] = None
+    reference_number: Optional[str] = None
+    date: Optional[str] = None
+    description: Optional[str] = None
+
+
+class SuretyDetail(BaseModel):
+    name: str = Field(..., description="Name of surety/guarantor")
+    father_or_spouse_name: Optional[str] = None
+    relationship: Optional[str] = None
+    address: Optional[str] = None
+    liability_share: Optional[float] = None
 
 
 class DefaulterDetail(BaseModel):
@@ -74,10 +91,12 @@ class ExtractedLegalEntities(BaseModel):
     
     # Core Entity Records
     defaulter_details: List[DefaulterDetail] = Field(default_factory=list)
+    sureties: Optional[List[SuretyDetail]] = Field(default_factory=list, description="Guarantors or Sureties (e.g., Medical Bond cases)")
     financials: FinancialDetails
     reference_details: ReferenceDetails
     payment_instructions: PaymentInstructions
     references: Optional[List[str]] = Field(default_factory=list, description="Dynamic list of references for பார்வை")
+    references_items: Optional[List[ReferenceItem]] = Field(default_factory=list, description="Structured reference items")
     
     # Revenue Administration Routing
     district_name: str = "ஈரோடு"

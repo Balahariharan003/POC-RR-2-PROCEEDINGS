@@ -162,7 +162,7 @@ export default function App() {
               padding: '1.25rem',
             }}
           >
-            {isAdmin && ['adminDashboard', 'adminUsers', 'adminBackup'].includes(activeView) && (
+            {isAdmin && ['adminDashboard', 'adminUsers', 'adminBackup', 'adminTemplates'].includes(activeView) && (
               <AdminWorkspace
                 key={activeView}
                 view={activeView}

@@ -1,6 +1,79 @@
-.rr-template-scroll { width: 100%; height: 100%; overflow: auto; background: #eee; padding: 16px; }
-.rr-template-page { box-sizing: border-box; background: white; color: black; margin: 0 auto; box-shadow: 0 1px 6px #0002; font-family: 'TAU-Marutham', 'Noto Sans Tamil', serif; }
-.rr-template-page p { outline: none; overflow-wrap: break-word; }
-.rr-template-page p:focus { outline: 1px dashed #dac0a3; outline-offset: 3px; }
-.rr-template-page table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-.rr-template-page td { vertical-align: top; padding: 0 5px; }
+.rr-template-scroll {
+  width: 100%;
+  min-height: 780px;
+  height: auto;
+  overflow: visible;
+  background: #1E293B;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  border-radius: 0 0 10px 10px;
+}
+
+.rr-template-page {
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #0F172A;
+  margin: 0 auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  font-family: 'TAU-Marutham', 'Noto Sans Tamil', 'Plus Jakarta Sans', serif;
+  transform-origin: top center;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  line-height: 1.45;
+  border-radius: 2px;
+}
+
+.rr-template-page p {
+  outline: none;
+  overflow-wrap: break-word;
+  margin-bottom: 0.45rem;
+  color: #000000;
+  letter-spacing: 0.01em;
+  transition: all 0.15s ease;
+}
+
+/* Edit Mode Styles */
+.rr-template-page.edit-mode p {
+  cursor: text;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px dashed transparent;
+}
+
+.rr-template-page.edit-mode p:hover {
+  background-color: rgba(234, 219, 200, 0.35);
+  border-color: #DAC0A3;
+}
+
+.rr-template-page.edit-mode p:focus {
+  outline: none;
+  border: 1px solid #102C57;
+  background-color: #FEFAF6;
+  box-shadow: 0 0 0 3px rgba(16, 44, 87, 0.12);
+}
+
+/* Preview Mode Styles */
+.rr-template-page.preview-mode p {
+  cursor: default;
+  user-select: text;
+}
+
+.rr-template-page.preview-mode p:focus {
+  outline: none;
+  background: transparent;
+}
+
+.rr-template-page table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  margin-bottom: 0.6rem;
+}
+
+.rr-template-page td {
+  vertical-align: top;
+  padding: 2px 4px;
+  border: none;
+}
+

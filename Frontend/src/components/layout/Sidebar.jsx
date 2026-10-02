@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Users,
   DatabaseBackup,
+  FileEdit,
   ChevronLeft, 
   ChevronRight, 
   FileSearch,
@@ -65,6 +66,7 @@ export default function Sidebar({
           {isAdmin && [
             ['adminDashboard', 'Dashboard', LayoutDashboard],
             ['adminUsers', 'User Management', Users],
+            ['adminTemplates', 'Templates', FileEdit],
             ['adminBackup', 'Backup', DatabaseBackup]
           ].map(([view, label, Icon]) => (
             <button key={view} type="button" title={label} aria-label={label} aria-current={activeView === view ? 'page' : undefined} className={`rr-admin-nav ${activeView === view ? 'active' : ''}`} onClick={() => {

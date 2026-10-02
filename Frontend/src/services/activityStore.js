@@ -1,4 +1,5 @@
 import { APP_EVENTS, STORAGE_KEYS } from '../config/appConfig.js';
+import { isRRProceeding } from './auditStore.js';
 
 export const ACTIVITY_KEY = STORAGE_KEYS.activity;
 export const ACTIVITY_EVENT = APP_EVENTS.activityUpdated;
@@ -33,11 +34,17 @@ export function recordActivity(action, { reference = '', recordId = '', status =
 
 export function mergeActivities(activities, records) {
   const tracked = new Set(activities.filter(row => row.recordId).map(row => row.recordId));
-  const legacy = records.filter(row => !tracked.has(row.id)).map(row => ({
-    id: `proceeding-${row.id}`, recordId: row.id, timestamp: row.timestamp,
-    actorName: row.officerName || 'Not recorded', role: '', action: 'Proceedings recorded',
-    reference: row.rrNumber || row.proceedings_roc_number || row.caseNumber || row.fileName || row.id,
-    status: row.status || 'DRAFT',
-  }));
+  const legacy = records
+    .filter(row => !tracked.has(row.id) && (isRRProceeding(row) || row.caseNumber || row.rrNumber || row.proceedings_roc_number))
+    .map(row => ({
+      id: `proceeding-${row.id}`,
+      recordId: row.id,
+      timestamp: row.timestamp,
+      actorName: row.officerName || 'Not recorded',
+      role: '',
+      action: 'Proceedings recorded',
+      reference: row.rrNumber || row.proceedings_roc_number || row.caseNumber || row.fileName || row.id,
+      status: row.status || 'DRAFT',
+    }));
   return [...activities, ...legacy].sort((a, b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0));
 }

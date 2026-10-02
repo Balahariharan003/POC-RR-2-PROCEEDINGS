@@ -16,8 +16,10 @@ audit_repo = AuditRepository()
 audit_service = AuditService()
 
 
+@router.get("", tags=["Audit"])
+@router.get("/", tags=["Audit"])
 @router.get("/logs", tags=["Audit"])
-async def get_audit_logs(limit: int = 50, db: AsyncSession = Depends(get_db)):
+async def get_audit_logs(limit: int = 200, db: AsyncSession = Depends(get_db)):
     """Retrieves immutable audit ledger logs."""
     logs = await audit_repo.get_recent_logs(db, limit=limit)
     return [

@@ -24,6 +24,7 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
+    email: Optional[str] = None
     role: Optional[str] = None
     jurisdiction_district: Optional[str] = None
     jurisdiction_taluk: Optional[str] = None

@@ -29,14 +29,59 @@ export default function RRAssistantView({
   const [documentEdits, setDocumentEdits] = useState({});
   const editsRef = useRef({});
   const [isExporting, setIsExporting] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Quadruple Administrative Documents State: 'proceedings' | 'memorandum' | 'note' | 'warrant'
+  const [activeDocType, setActiveDocType] = useState('proceedings');
+  const [docManifest, setDocManifest] = useState({
+    proceedings: { docx: '', pdf: '', title: '1. செயல்முறைகள் (Proceedings / Order)' },
+    memorandum: { docx: '', pdf: '', title: '2. குறிப்பாணை (Memorandum / Memo)' },
+    note: { docx: '', pdf: '', title: '3. அலுவலகக் குறிப்பு (Office Note File)' },
+    warrant: { docx: '', pdf: '', title: '4. வாரண்ட் (Judicial Warrant)' }
+  });
+  const [cachedLayouts, setCachedLayouts] = useState({});
+  const [cachedEdits, setCachedEdits] = useState({});
 
   const updateDocumentEdits = (layout, edits) => {
     editsRef.current = edits;
     setDocumentEdits(edits);
+    setCachedEdits(prev => ({ ...prev, [activeDocType]: edits }));
     setGeneratedContent(layoutToText(layout, edits));
   };
   const handleParagraphChange = (id, text) => {
     updateDocumentEdits(documentLayout, { ...editsRef.current, [id]: text });
+  };
+
+  const switchDocumentType = async (type) => {
+    if (activeDocType === type) return;
+    const targetDocx = docManifest[type]?.docx;
+    if (!targetDocx) return;
+
+    // Cache current edits
+    setCachedEdits(prev => ({ ...prev, [activeDocType]: editsRef.current }));
+    setActiveDocType(type);
+    setGeneratedDocxFilename(targetDocx);
+
+    if (cachedLayouts[type]) {
+      const nextLayout = cachedLayouts[type];
+      const nextEdits = cachedEdits[type] || {};
+      setDocumentLayout(nextLayout);
+      editsRef.current = nextEdits;
+      setDocumentEdits(nextEdits);
+      setGeneratedContent(layoutToText(nextLayout, nextEdits));
+    } else {
+      try {
+        const layout = await apiService.getDocumentLayout(targetDocx);
+        setCachedLayouts(prev => ({ ...prev, [type]: layout }));
+        const nextEdits = cachedEdits[type] || {};
+        setDocumentLayout(layout);
+        editsRef.current = nextEdits;
+        setDocumentEdits(nextEdits);
+        setGeneratedContent(layoutToText(layout, nextEdits));
+      } catch (err) {
+        console.warn(`Could not load layout for ${type}:`, err);
+      }
+    }
   };
 
   const [correctionInstruction, setCorrectionInstruction] = useState('');
@@ -60,11 +105,19 @@ export default function RRAssistantView({
   const [showOriginalDoc, setShowOriginalDoc] = useState(false);
 
   useEffect(() => {
-    if (!sourceFile) { setDocPreviewUrl(''); return; }
-    const url = URL.createObjectURL(sourceFile);
-    setDocPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [sourceFile]);
+    if (sourceFile) {
+      const url = URL.createObjectURL(sourceFile);
+      setDocPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else if (activeSession?.sourceFileUrl) {
+      setDocPreviewUrl(activeSession.sourceFileUrl);
+    } else if (activeSession?.fileName || activeSession?.rawFileId) {
+      const fn = activeSession.fileName || activeSession.rawFileId;
+      setDocPreviewUrl(`/api/v1/documents/original/${encodeURIComponent(fn)}`);
+    } else {
+      setDocPreviewUrl('');
+    }
+  }, [sourceFile, activeSession]);
 
 
   useEffect(() => {
@@ -117,23 +170,58 @@ export default function RRAssistantView({
 
   // Restore session when activeSession prop changes (ChatGPT & Gemini style restore)
   useEffect(() => {
-    if (activeSession && activeSession.documentContent) {
+    if (activeSession) {
       setSelectedFiles([]);
       setGeneratedDocuments([]);
       setSourceFile(null);
       setShowOriginalDoc(false);
+      const fn = activeSession.fileName || activeSession.caseNumber || activeSession.rawFileId || 'restored_order.pdf';
       setFileInfo({
-        name: activeSession.fileName || activeSession.caseNumber || 'restored_order.pdf',
+        name: fn,
         sizeFormatted: activeSession.fileSize || 'Size not recorded'
       });
-      setGeneratedContent(activeSession.documentContent);
+      setGeneratedContent(activeSession.documentContent || '');
       setDocumentLayout(activeSession.documentLayout || null);
-      setGeneratedDocxFilename(activeSession.documentLayout?.filename || '');
+      const docxName = activeSession.documentLayout?.filename || activeSession.generated_docx_filename || activeSession.details?.generated_docx_filename || '';
+      setGeneratedDocxFilename(docxName);
       setDocumentEdits(activeSession.documentEdits || {});
       editsRef.current = activeSession.documentEdits || {};
       setPromptHistory(activeSession.promptHistory || []);
       setCurrentSessionId(activeSession.id || `AUD-${Date.now()}`);
+
+      const procDocx = activeSession.proceedings_docx || activeSession.details?.proceedings_docx || docxName;
+      const memoDocx = activeSession.memorandum_docx || activeSession.details?.memorandum_docx || '';
+      const noteDocx = activeSession.note_docx || activeSession.details?.note_docx || '';
+      const warrantDocx = activeSession.warrant_docx || activeSession.details?.warrant_docx || '';
+      const manifest = {
+        proceedings: { docx: procDocx, pdf: activeSession.proceedings_pdf || activeSession.details?.proceedings_pdf || '', title: '1. செயல்முறைகள் (Proceedings / Order)' },
+        memorandum: { docx: memoDocx, pdf: activeSession.memorandum_pdf || activeSession.details?.memorandum_pdf || '', title: '2. குறிப்பாணை (Memorandum / Memo)' },
+        note: { docx: noteDocx, pdf: activeSession.note_pdf || activeSession.details?.note_pdf || '', title: '3. அலுவலகக் குறிப்பு (Office Note File)' },
+        warrant: { docx: warrantDocx, pdf: activeSession.warrant_pdf || activeSession.details?.warrant_pdf || '', title: '4. ஜப்தி / கைது வாரண்ட் (Judicial Warrant)' }
+      };
+      setDocManifest(manifest);
+      setActiveDocType('proceedings');
+      setCachedLayouts(activeSession.documentLayout ? { proceedings: activeSession.documentLayout } : {});
+      setCachedEdits({ proceedings: activeSession.documentEdits || {} });
+
       setWorkflowState('generated');
+
+      // If documentLayout is missing, fetch it dynamically from backend using docxName or caseNumber!
+      const targetDocx = docxName || (activeSession.caseNumber ? `Proceedings_TNRERA_${activeSession.caseNumber.replace(/[^0-9]/g, '')}` : '');
+      if (!activeSession.documentLayout && (docxName || activeSession.caseNumber)) {
+        apiService.getDocumentLayout(targetDocx || docxName).then(layout => {
+          if (layout) {
+            setDocumentLayout(layout);
+            setGeneratedDocxFilename(layout.filename || docxName);
+            setCachedLayouts(prev => ({ ...prev, proceedings: layout }));
+            if (!activeSession.documentContent || activeSession.documentContent.startsWith('Draft proceedings recorded for')) {
+              setGeneratedContent(layoutToText(layout, activeSession.documentEdits || {}));
+            }
+          }
+        }).catch(err => {
+          console.warn('Could not load layout for restored session:', err);
+        });
+      }
     }
   }, [activeSession]);
 
@@ -201,19 +289,49 @@ export default function RRAssistantView({
       if (/\.docx?$/i.test(selectedFile.name) || (header[0] === 0x50 && header[1] === 0x4b) ||
         (header[0] === 0xd0 && header[1] === 0xcf && header[2] === 0x11 && header[3] === 0xe0)) {
         layout = await apiService.importWordDocument(selectedFile);
-        result = { generated_docx_filename: layout.filename, entities: {}, validation_insights: {} };
+        result = {
+          generated_docx_filename: layout.filename,
+          proceedings_docx: layout.filename,
+          proceedings_pdf: '',
+          memorandum_docx: '',
+          memorandum_pdf: '',
+          note_docx: '',
+          note_pdf: '',
+          warrant_docx: '',
+          warrant_pdf: '',
+          documents: [],
+          entities: {},
+          validation_insights: {}
+        };
       } else {
         result = await apiService.uploadDocument(selectedFile, selectedTemplateCode);
-        layout = await apiService.getDocumentLayout(result.generated_docx_filename);
+        const procDocxName = result.proceedings_docx || result.generated_docx_filename;
+        layout = await apiService.getDocumentLayout(procDocxName);
       }
       let edits = {};
       if (correctionInstruction.trim()) {
         edits = await apiService.reviseDocument(layout, edits, correctionInstruction.trim());
       }
       const formattedDoc = layoutToText(layout, edits);
+      const procDocx = result.proceedings_docx || result.generated_docx_filename || '';
+      const memoDocx = result.memorandum_docx || '';
+      const noteDocx = result.note_docx || '';
+      const warrantDocx = result.warrant_docx || '';
+
+      const manifest = {
+        proceedings: { docx: procDocx, pdf: result.proceedings_pdf || '', title: '1. செயல்முறைகள் (Proceedings / Order)' },
+        memorandum: { docx: memoDocx, pdf: result.memorandum_pdf || '', title: '2. குறிப்பாணை (Memorandum / Memo)' },
+        note: { docx: noteDocx, pdf: result.note_pdf || '', title: '3. அலுவலகக் குறிப்பு (Office Note File)' },
+        warrant: { docx: warrantDocx, pdf: result.warrant_pdf || '', title: '4. ஜப்தி / கைது வாரண்ட் (Judicial Warrant)' }
+      };
+
       setGeneratedContent(formattedDoc);
-      setGeneratedDocxFilename(result.generated_docx_filename);
+      setGeneratedDocxFilename(procDocx);
       setExtractedEntities(result.entities);
+      setDocManifest(manifest);
+      setActiveDocType('proceedings');
+      setCachedLayouts({ proceedings: layout });
+      setCachedEdits({ proceedings: edits });
       
       const newSessionId = `AUD-${crypto.randomUUID()}`;
       const initialPrompt = {
@@ -225,7 +343,21 @@ export default function RRAssistantView({
       setPromptHistory([initialPrompt]);
       setCurrentSessionId(newSessionId);
 
-      completed.push({ fileInfo, sourceFile: selectedFile, content: formattedDoc, filename: result.generated_docx_filename || '', layout, edits, entities: result.entities, promptHistory: [initialPrompt], sessionId: newSessionId });
+      completed.push({
+        fileInfo,
+        sourceFile: selectedFile,
+        content: formattedDoc,
+        filename: procDocx,
+        layout,
+        edits,
+        entities: result.entities,
+        promptHistory: [initialPrompt],
+        sessionId: newSessionId,
+        docManifest: manifest,
+        cachedLayouts: { proceedings: layout },
+        cachedEdits: { proceedings: edits },
+        activeDocType: 'proceedings'
+      });
 
       // Auto-save to Audit Log Trail
       try {
@@ -247,6 +379,15 @@ export default function RRAssistantView({
           documentContent: formattedDoc,
           documentLayout: layout,
           documentEdits: edits,
+          proceedings_docx: procDocx,
+          proceedings_pdf: result.proceedings_pdf || '',
+          memorandum_docx: memoDocx,
+          memorandum_pdf: result.memorandum_pdf || '',
+          note_docx: noteDocx,
+          note_pdf: result.note_pdf || '',
+          warrant_docx: warrantDocx,
+          warrant_pdf: result.warrant_pdf || '',
+          documents: result.documents || [],
           notes: "Automated OCR extraction and draft generation completed in RR Assistant."
         });
         if (onSaveAuditLog) await onSaveAuditLog();
@@ -282,6 +423,19 @@ export default function RRAssistantView({
     setExtractedEntities(document.entities);
     setPromptHistory(document.promptHistory);
     setCurrentSessionId(document.sessionId);
+    setActiveDocType(document.activeDocType || 'proceedings');
+    if (document.docManifest) {
+      setDocManifest(document.docManifest);
+    } else {
+      setDocManifest({
+        proceedings: { docx: document.filename || '', pdf: '', title: '1. செயல்முறைகள் (Proceedings / Order)' },
+        memorandum: { docx: document.memorandum_docx || '', pdf: '', title: '2. குறிப்பாணை (Memorandum / Memo)' },
+        note: { docx: document.note_docx || '', pdf: '', title: '3. அலுவலகக் குறிப்பு (Office Note File)' },
+        warrant: { docx: document.warrant_docx || '', pdf: '', title: '4. ஜப்தி / கைது வாரண்ட் (Judicial Warrant)' }
+      });
+    }
+    setCachedLayouts(document.cachedLayouts || (document.layout ? { proceedings: document.layout } : {}));
+    setCachedEdits(document.cachedEdits || { proceedings: document.edits || {} });
     setLastUpdatedMessage('');
     setWorkflowState('generated');
   };
@@ -290,9 +444,9 @@ export default function RRAssistantView({
   useEffect(() => {
     if (workflowState !== 'generated') return;
     setGeneratedDocuments(previous => previous.map(document => document.sessionId === currentSessionId
-      ? { ...document, content: generatedContent, filename: generatedDocxFilename, layout: documentLayout, edits: documentEdits, promptHistory }
+      ? { ...document, content: generatedContent, filename: generatedDocxFilename, layout: documentLayout, edits: documentEdits, promptHistory, docManifest, cachedLayouts, cachedEdits, activeDocType }
       : document));
-  }, [workflowState, currentSessionId, generatedContent, generatedDocxFilename, documentLayout, documentEdits, promptHistory]);
+  }, [workflowState, currentSessionId, generatedContent, generatedDocxFilename, documentLayout, documentEdits, promptHistory, docManifest, cachedLayouts, cachedEdits, activeDocType]);
 
   // Apply AI Correction / Modification (Section 7 & 8)
   const handleApplyChanges = async () => {
@@ -329,6 +483,10 @@ export default function RRAssistantView({
           documentContent: updatedText,
           documentLayout,
           documentEdits: edits,
+          proceedings_docx: docManifest.proceedings.docx,
+          memorandum_docx: docManifest.memorandum.docx,
+          note_docx: docManifest.note.docx,
+          warrant_docx: docManifest.warrant?.docx || '',
           status: "VERIFIED"
         });
         if (onSaveAuditLog) await onSaveAuditLog();
@@ -374,11 +532,50 @@ export default function RRAssistantView({
   const handleDownloadDocx = () => handleDownload('docx');
   const handleDownloadPdf = () => handleDownload('pdf');
 
+  const handleDownloadAll = async (format = 'docx') => {
+    if (isExporting || isApplyingChanges) return;
+    setIsExporting(true);
+    try {
+      const types = ['proceedings', 'memorandum', 'note', 'warrant'];
+      for (const t of types) {
+        const docx = docManifest[t]?.docx;
+        if (docx) {
+          let layout = cachedLayouts[t];
+          if (!layout) {
+            try {
+              layout = await apiService.getDocumentLayout(docx);
+              setCachedLayouts(prev => ({ ...prev, [t]: layout }));
+            } catch (loadErr) {
+              console.warn(`Could not fetch layout for ${t}:`, loadErr);
+              continue;
+            }
+          }
+          const edits = cachedEdits[t] || (t === activeDocType ? editsRef.current : {});
+          await apiService.downloadEditedDocument(layout, edits, format);
+        }
+      }
+      recordActivity('All 4 administrative documents downloaded', { reference: fileInfo.name, format });
+    } catch (error) {
+      setComposerNotice(`Download failed: ${error.message}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Reset to initial upload (Section 9 & 11)
   const handleResetWorkflow = () => {
     setDocumentLayout(null);
     setDocumentEdits({});
     editsRef.current = {};
+    setCachedLayouts({});
+    setCachedEdits({});
+    setActiveDocType('proceedings');
+    setDocManifest({
+      proceedings: { docx: '', pdf: '', title: '1. செயல்முறைகள் (Proceedings / Order)' },
+      memorandum: { docx: '', pdf: '', title: '2. குறிப்பாணை (Memorandum / Memo)' },
+      note: { docx: '', pdf: '', title: '3. அலுவலகக் குறிப்பு (Office Note File)' },
+      warrant: { docx: '', pdf: '', title: '4. ஜப்தி / கைது வாரண்ட் (Judicial Warrant)' }
+    });
     setSourceFile(null);
     setShowOriginalDoc(false);
     if (generatedContent) recordActivity('Draft cleared', { reference: fileInfo.name });
@@ -445,95 +642,229 @@ export default function RRAssistantView({
         )}
 
       {workflowState === 'generated' && (
-        <div className="rr-restored-workspace" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, minHeight: 0, height: '100%' }}>
+        <div className="rr-restored-workspace" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
           {composerNotice && <p role="status">{composerNotice}</p>}
-          {/* Top Title & Action Bar */}
+
+          {/* Unified Ultra-Slim Toolbar: Forms + Export Actions */}
           <div style={{
             background: '#ffffff',
             border: '1px solid #EADBC8',
-            borderRadius: '10px',
-            padding: '1rem 1.5rem',
+            borderRadius: '8px',
+            padding: '0.45rem 0.85rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '0.75rem',
             flexWrap: 'wrap',
-            gap: '1rem',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.03)',
             flexShrink: 0
           }}>
-            <label className="rr-assistant-chat__status rr-document-switch">
-              Document
-              <select aria-label="Select generated document" value={currentSessionId || ''}
-                disabled={busy || generatedDocuments.length < 2}
-                onChange={event => {
-                  const document = generatedDocuments.find(item => item.sessionId === event.target.value);
-                  if (document) openGeneratedDocument(document);
-                }}>
-                {generatedDocuments.length ? generatedDocuments.map(document => (
-                  <option key={document.sessionId} value={document.sessionId}>{document.fileInfo.name}</option>
-                )) : <option value={currentSessionId || ''}>{fileInfo.name || 'Current document'}</option>}
-              </select>
-            </label>
+            {/* Left: Compact Form Switcher Segmented Tabs */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#102C57', marginRight: '0.2rem' }}>
+                படிவங்கள்:
+              </span>
+              <div style={{ display: 'flex', background: '#FEFAF6', padding: '2px', borderRadius: '6px', border: '1px solid #EADBC8', gap: '2px' }}>
+                {[
+                  { id: 'proceedings', label: '1. செயல்முறைகள் (Order)', icon: '📄', available: Boolean(docManifest.proceedings.docx || generatedDocxFilename) },
+                  { id: 'memorandum', label: '2. குறிப்பாணை (Memo)', icon: '📜', available: Boolean(docManifest.memorandum.docx) },
+                  { id: 'note', label: '3. குறிப்பு (Note)', icon: '📝', available: Boolean(docManifest.note.docx) },
+                  { id: 'warrant', label: '4. வாரண்ட் (Warrant)', icon: '⚖️', available: Boolean(docManifest.warrant?.docx) }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    disabled={busy || !tab.available}
+                    onClick={() => switchDocumentType(tab.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      padding: '0.3rem 0.65rem',
+                      fontSize: '0.75rem',
+                      fontWeight: activeDocType === tab.id ? 700 : 500,
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: activeDocType === tab.id ? '#102C57' : 'transparent',
+                      color: activeDocType === tab.id ? '#ffffff' : '#102C57',
+                      cursor: tab.available ? 'pointer' : 'not-allowed',
+                      opacity: tab.available ? 1 : 0.45,
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={tab.label}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            {/* Download Options */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {/* Right: Actions & File Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+              {/* Compact Source File */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#102C57', fontWeight: 600 }}>
+                <span>கோப்பு:</span>
+                <select
+                  aria-label="Select generated document"
+                  value={currentSessionId || ''}
+                  disabled={busy || generatedDocuments.length < 2}
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    borderColor: '#DAC0A3',
+                    borderRadius: '4px',
+                    padding: '0.2rem 0.45rem',
+                    maxWidth: '180px',
+                    background: '#FEFAF6',
+                    color: '#102C57'
+                  }}
+                  onChange={event => {
+                    const document = generatedDocuments.find(item => item.sessionId === event.target.value);
+                    if (document) openGeneratedDocument(document);
+                  }}
+                >
+                  {generatedDocuments.length ? generatedDocuments.map(document => (
+                    <option key={document.sessionId} value={document.sessionId}>{document.fileInfo.name}</option>
+                  )) : <option value={currentSessionId || ''}>{fileInfo.name || 'Current document'}</option>}
+                </select>
+              </div>
+
+              {/* Export Active: DOCX | PDF */}
+              <div style={{ display: 'inline-flex', borderRadius: '5px', overflow: 'hidden', border: '1px solid #102C57' }}>
+                <button
+                  onClick={handleDownloadDocx}
+                  disabled={busy}
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '0.25rem 0.55rem',
+                    background: '#102C57',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    cursor: busy ? 'not-allowed' : 'pointer'
+                  }}
+                  title="Download active form as editable DOCX"
+                >
+                  <Download size={12} />
+                  <span>DOCX</span>
+                </button>
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={busy}
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '0.25rem 0.55rem',
+                    background: '#1E3A8A',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    borderLeft: '1px solid rgba(255,255,255,0.2)',
+                    borderRight: 'none',
+                    borderTop: 'none',
+                    borderBottom: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    cursor: busy ? 'not-allowed' : 'pointer'
+                  }}
+                  title="Download active form as PDF"
+                >
+                  <Printer size={12} />
+                  <span>PDF</span>
+                </button>
+              </div>
+
+              {/* Export All 4: DOCX | PDF */}
+              <div style={{ display: 'inline-flex', borderRadius: '5px', overflow: 'hidden', border: '1px solid #CBD5E1' }}>
+                <button
+                  onClick={() => handleDownloadAll('docx')}
+                  disabled={busy}
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '0.25rem 0.55rem',
+                    background: '#F8FAFC',
+                    color: '#1E293B',
+                    fontWeight: 600,
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    cursor: busy ? 'not-allowed' : 'pointer'
+                  }}
+                  title="Download all 4 official administrative document forms (DOCX)"
+                >
+                  <Download size={12} />
+                  <span>All 4</span>
+                </button>
+                <button
+                  onClick={() => handleDownloadAll('pdf')}
+                  disabled={busy}
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '0.25rem 0.55rem',
+                    background: '#F8FAFC',
+                    color: '#1E293B',
+                    fontWeight: 600,
+                    borderLeft: '1px solid #E2E8F0',
+                    borderRight: 'none',
+                    borderTop: 'none',
+                    borderBottom: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    cursor: busy ? 'not-allowed' : 'pointer'
+                  }}
+                  title="Download all 4 official administrative document forms (PDF)"
+                >
+                  <Printer size={12} />
+                  <span>PDF</span>
+                </button>
+              </div>
+
+              {/* Copy Text */}
               <button
                 onClick={handleCopy}
-                className="btn btn-outline"
                 style={{
-                  fontSize: '0.8rem',
-                  padding: '0.5rem 0.85rem',
-                  borderColor: '#DAC0A3',
-                  color: '#102C57'
+                  fontSize: '0.74rem',
+                  padding: '0.25rem 0.55rem',
+                  border: '1px solid #DAC0A3',
+                  borderRadius: '5px',
+                  color: '#102C57',
+                  background: '#FEFAF6',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  cursor: 'pointer'
                 }}
+                title="Copy current document text"
               >
-                {copied ? <Check size={14} color="#102C57" /> : <Copy size={14} />}
+                {copied ? <Check size={12} color="#047857" /> : <Copy size={12} />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
               </button>
 
-              <button
-                onClick={handleDownloadPdf}
-                disabled={busy}
-                className="btn btn-outline"
-                style={{
-                  fontSize: '0.8rem',
-                  padding: '0.5rem 1rem',
-                  borderColor: '#DAC0A3',
-                  color: '#102C57',
-                  background: '#FEFAF6'
-                }}
-              >
-                <Printer size={15} />
-                <span>Download PDF</span>
-              </button>
-
-              <button
-                onClick={handleDownloadDocx}
-                disabled={busy}
-                className="btn"
-                style={{
-                  fontSize: '0.8rem',
-                  padding: '0.5rem 1.15rem',
-                  background: '#102C57',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  borderRadius: '6px',
-                  border: 'none',
-                  boxShadow: '0 2px 6px rgba(16, 44, 87, 0.25)'
-                }}
-              >
-                <Download size={15} />
-                <span>Download DOCX</span>
-              </button>
-
+              {/* New Upload */}
               <button
                 onClick={handleResetWorkflow}
                 disabled={busy}
-                className="btn btn-outline"
-                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', borderColor: '#DAC0A3', color: '#102C57', background: '#FEFAF6' }}
+                style={{
+                  fontSize: '0.74rem',
+                  padding: '0.25rem 0.55rem',
+                  border: '1px solid #DAC0A3',
+                  borderRadius: '5px',
+                  color: '#102C57',
+                  background: '#FEFAF6',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  cursor: busy ? 'not-allowed' : 'pointer'
+                }}
+                title="Start new upload"
               >
-                <PlusCircle size={15} />
-                <span>New Upload</span>
+                <PlusCircle size={12} />
+                <span>New</span>
               </button>
             </div>
           </div>
@@ -541,13 +872,11 @@ export default function RRAssistantView({
           <div className="rr-generated-layout" style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
-            gap: '1.25rem',
-            alignItems: 'stretch',
-            flex: 1,
-            minHeight: 0,
-            height: '100%'
+            gap: '1rem',
+            alignItems: 'flex-start',
+            width: '100%'
           }}>
-            {/* Editable proceedings: 60% of the workspace */}
+            {/* Proceedings document: 60% of the workspace */}
             <div className="rr-document-panel" style={{
               background: '#ffffff',
               border: '1px solid #EADBC8',
@@ -556,37 +885,124 @@ export default function RRAssistantView({
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              height: '100%',
-              minHeight: 0
+              minHeight: '800px'
             }}>
               <div style={{
-                padding: '0.75rem 1.25rem',
+                padding: '0.5rem 1rem',
                 background: '#FEFAF6',
                 borderBottom: '1px solid #EADBC8',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
                 flexShrink: 0
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#102C57' }}>
-                  <Edit3 size={15} color="#102C57" />
-                  <span>Generated Content (Editable)</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, color: '#102C57' }}>
+                    <FileText size={14} color="#102C57" />
+                    <span>{docManifest[activeDocType]?.title || 'Generated Document'}</span>
+                  </div>
+                  {isEditMode ? (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.2rem',
+                      padding: '0.1rem 0.45rem',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      background: '#FEF3C7',
+                      color: '#92400E',
+                      fontWeight: 600,
+                      border: '1px solid #FDE68A'
+                    }}>
+                      ✏️ Edit Mode (திருத்தும் முறை)
+                    </span>
+                  ) : (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.2rem',
+                      padding: '0.1rem 0.45rem',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      background: '#F1F5F9',
+                      color: '#475569',
+                      fontWeight: 600,
+                      border: '1px solid #E2E8F0'
+                    }}>
+                      👁️ Official Preview Mode (முன்னோட்டம்)
+                    </span>
+                  )}
                 </div>
-                <span style={{ fontSize: '0.72rem', color: '#102C57' }}>
-                  Click directly in the area below to edit text, dates, names, or paragraphs
-                </span>
+
+                <div>
+                  {isEditMode ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditMode(false)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.25rem 0.65rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        color: '#ffffff',
+                        background: '#047857',
+                        border: '1px solid #059669',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(4,120,87,0.2)'
+                      }}
+                      title="Lock document and view clean official preview"
+                    >
+                      <Check size={13} />
+                      <span>Done Editing (முடிக்க)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditMode(true)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.25rem 0.65rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        color: '#102C57',
+                        background: '#FEFAF6',
+                        border: '1px solid #DAC0A3',
+                        borderRadius: '5px',
+                        cursor: 'pointer'
+                      }}
+                      title="Click to edit document text and paragraphs directly"
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit Document (திருத்து)</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="rr-document-editor" style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+              <div className="rr-document-editor" style={{ flex: 1, display: 'flex' }}>
                 {documentLayout ? <TemplateDocumentEditor key={documentLayout.filename}
-                  layout={documentLayout} edits={documentEdits} onChange={handleParagraphChange} disabled={busy} />
-                  : <textarea aria-label="Saved proceedings" value={generatedContent} readOnly style={{ width: '100%', padding: '1rem' }} />}
+                  layout={documentLayout} edits={documentEdits} onChange={handleParagraphChange} disabled={busy || !isEditMode} />
+                  : <textarea aria-label="Saved proceedings" value={generatedContent} readOnly style={{ width: '100%', minHeight: '600px', padding: '1rem' }} />}
               </div>
             </div>
 
-            {/* Right Panel: Chat or Original Scanned Document Viewer (40% of workspace) */}
-            <div style={{ position: 'relative', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            {/* Right Panel: Sticky Chat or Original Scanned Document Viewer (40% of workspace) */}
+            <div style={{
+              position: 'sticky',
+              top: '0.75rem',
+              alignSelf: 'flex-start',
+              height: 'calc(100vh - 140px)',
+              minHeight: '480px',
+              maxHeight: '880px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
               {!showOriginalDoc ? (
                 /* State 1: RR Assistant Chat Panel */
                 <div className="rr-chat-panel" style={{
@@ -630,7 +1046,7 @@ export default function RRAssistantView({
                       title="View Original Scanned Document"
                     >
                       <FileText size={13} />
-                      <span>Original Petition ◀</span>
+                      <span>Original Order ◀</span>
                     </button>
                   </div>
                   <div className="rr-chat-history" role="log" aria-label="Proceedings conversation" aria-live="polite" style={{
@@ -748,7 +1164,7 @@ export default function RRAssistantView({
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
                       <FileText size={16} color="#DAC0A3" />
-                      <span style={{ color: '#EADBC8' }}>Original Scanned Petition</span>
+                      <span style={{ color: '#EADBC8' }}>Original Order</span>
                     </div>
 
                     {/* Close button */}
@@ -787,9 +1203,9 @@ export default function RRAssistantView({
                     background: '#040d1a'
                   }}>
                     {docPreviewUrl ? (
-                      sourceFile?.type === 'application/pdf' || sourceFile?.name.toLowerCase().endsWith('.pdf')
-                        ? <iframe src={docPreviewUrl} title="Original scanned petition" style={{ width: '100%', height: '100%', border: 0 }} />
-                        : <img src={docPreviewUrl} alt="Original scanned petition" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      sourceFile?.type === 'application/pdf' || (sourceFile?.name || fileInfo?.name || activeSession?.fileName || docPreviewUrl || '').toLowerCase().includes('.pdf')
+                        ? <iframe src={docPreviewUrl} title="Original scanned order" style={{ width: '100%', height: '100%', border: 0 }} />
+                        : <img src={docPreviewUrl} alt="Original scanned order" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                     ) : <p style={{ color: '#EADBC8' }}>The original file is not available in this saved session. Attach it again to view it.</p>}
                   </div>
 

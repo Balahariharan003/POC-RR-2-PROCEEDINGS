@@ -4,22 +4,25 @@ import { ACTIVITY_EVENT, readActivities, mergeActivities } from '../../services/
 const statusLabel = value => ({ DISPATCHED_TO_DRO: 'Dispatched', FLAGGED_FOR_REVIEW: 'Flagged' }[value] || value.toLowerCase().replace(/_/g, ' ').replace(/^./, char => char.toUpperCase()));
 
 function activityLabel(action) {
-  if (action === 'Signed in') return ['LOGIN', 'login'];
-  if (action === 'Signed out') return ['LOGOUT', 'logout'];
+  if (!action) return ['UPDATE', 'neutral'];
+  if (/login|signed in/i.test(action)) return ['LOGIN', 'login'];
+  if (/logout|signed out/i.test(action)) return ['LOGOUT', 'logout'];
   if (/created|generated/i.test(action) && /proceeding/i.test(action)) return ['GENERATE', 'document'];
   if (/proceeding|draft/i.test(action)) return ['PROCEEDINGS', 'document'];
   if (/backup/i.test(action)) return ['BACKUP', 'neutral'];
   if (/password/i.test(action)) return ['SECURITY', 'neutral'];
-  if (/Officer added/.test(action)) return ['CREATE', 'login'];
+  if (/deleted|removed/i.test(action)) return ['DELETE', 'logout'];
+  if (/Officer added|user added|created/i.test(action)) return ['CREATE', 'login'];
   return ['UPDATE', 'neutral'];
 }
+
 function activityDescription(row) {
-  const name = row.actorName || 'Unknown user';
-  if (row.action === 'Signed in') return `${name} logged in.`;
-  if (row.action === 'Signed out') return `${name} logged out.`;
+  const name = row.actorName || row.user_id || 'System';
+  if (/signed in|login/i.test(row.action)) return `${name} logged in.`;
+  if (/signed out|logout/i.test(row.action)) return `${name} logged out.`;
   const reference = row.reference && Number.isFinite(Date.parse(row.reference)) && /^\d{4}-\d{2}-\d{2}T/.test(row.reference)
     ? new Date(row.reference).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : row.reference;
-  return `${name}: ${row.action}${reference ? ` (${reference})` : ''}${row.status ? ` ? ${statusLabel(row.status)}` : ''}.`;
+  return `${name}: ${row.action}${reference ? ` (${reference})` : ''}${row.status ? ` — ${statusLabel(row.status)}` : ''}.`;
 }
 
 export default function AdminDashboardContent({ records }) {

@@ -68,14 +68,13 @@ class Settings(BaseSettings):
     CHANDRA_TIMEOUT_SECONDS: int = 45
 
     # Local Ollama LLM Configuration
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "qwen2.5:3b-instruct"
-    OLLAMA_FALLBACK_MODEL: str = "qwen2.5:3b"
-    OLLAMA_TIMEOUT_SECONDS: int = 30
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    OLLAMA_MODEL: str = "qwen2.5:7b-instruct-q4_K_M"
+    OLLAMA_TIMEOUT_SECONDS: int = 75
 
     # Typography & Government Style Guide Enforcement
     PRIMARY_FONT_TAMIL: str = "TAU-Marutham"
-    FALLBACK_FONT_TAMIL: str = "TAU-Marutham"
+
     LATIN_FONT: str = "TAU-Marutham"
 
     # Default Template Paths

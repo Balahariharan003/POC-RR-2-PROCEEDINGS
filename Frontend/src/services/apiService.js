@@ -31,7 +31,16 @@ async function errorMessage(response, fallback) {
 }
 
 async function requestJson(path, payload, method = 'POST') {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path.startsWith('/') ? path : '/' + path}`;
+  let url = path;
+  if (!path.startsWith('http')) {
+    if (path.startsWith(API_BASE)) {
+      url = path;
+    } else if (path.startsWith('/')) {
+      url = `${API_BASE}${path}`;
+    } else {
+      url = `${API_BASE}/${path}`;
+    }
+  }
   const response = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -260,23 +269,120 @@ export const apiService = {
     return requestJson(`${API_V1}/system/report`, null, 'GET');
   },
 
-  async exportSystemReportDocx(reportData = null) {
+  async exportSystemReportDocx(reportData = null, scope = 'all') {
+    const payload = reportData ? { ...reportData, scope } : { scope };
     const response = await fetch(`${API_V1}/system/report/export-docx`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(reportData || {}),
+      body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error(await errorMessage(response, 'Report DOCX export failed'));
     const bytes = await response.arrayBuffer();
-    triggerDownload(bytes, 'docx', `TN_RR_Proceedings_Report_${new Date().toISOString().slice(0, 10)}`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    triggerDownload(
+      bytes,
+      'docx',
+      `TN_RR_${scope.toUpperCase()}_Report_${new Date().toISOString().slice(0, 10)}`,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
   },
 
   // --- Audit Logs ---
   async getAuditLogs() {
+    try {
+      const backendLogs = await this.fetchBackendAuditLogs(500);
+      if (Array.isArray(backendLogs) && backendLogs.length > 0) {
+        return {
+          'Database Ledger (PostgreSQL)': backendLogs.map((l) => {
+            const rawDetails = l.details;
+            let details = {};
+            if (rawDetails && typeof rawDetails === 'object') {
+              details = rawDetails;
+            } else if (typeof rawDetails === 'string') {
+              try { details = JSON.parse(rawDetails); } catch { details = { message: rawDetails }; }
+            }
+
+            const action = String(l.action || '').toUpperCase().trim();
+            const fileId = String(l.file_id || '').trim();
+            const isAuth = action.startsWith('LOGIN') || action.startsWith('LOGOUT') || action.startsWith('AUTH');
+            const isBackup = action.startsWith('BACKUP') || action.startsWith('RESTORE') || action.startsWith('SYSTEM_BACKUP') || fileId.startsWith('backup-') || fileId.startsWith('restore-');
+            const isTemplate = action.startsWith('TEMPLATE') || Boolean(details.template_code);
+            const isReport = action.startsWith('REPORT') || fileId.startsWith('report-') || details.total_proceedings !== undefined;
+
+            let eventType = 'PROCEEDINGS';
+            let title = '';
+            let caseNumber = details.caseNumber || details.case_no || (fileId && !fileId.startsWith('backup-') && !fileId.startsWith('restore-') && fileId !== 'LOGIN' && fileId !== 'LOGOUT' ? fileId : '') || '';
+            let defaulter = details.defaulterName || details.defaulter || '';
+            let amount = details.amount || details.total_amount || 0;
+
+            if (isAuth) {
+              eventType = action.includes('LOGOUT') ? 'LOGOUT' : 'LOGIN';
+              title = action.includes('LOGOUT') ? 'User Logout' : 'User Login';
+              defaulter = details.full_name || details.username || l.user_id || 'Officer';
+            } else if (isBackup) {
+              eventType = action.includes('RESTORE') ? 'RESTORE' : 'BACKUP';
+              title = action.includes('RESTORE') ? 'Database Restore' : 'Database Backup';
+            } else if (isTemplate) {
+              eventType = 'TEMPLATE';
+              title = details.name || `Template: ${details.template_code || fileId}`;
+            } else if (isReport) {
+              eventType = 'REPORT';
+              title = 'Analytics Report Generated';
+            } else {
+              eventType = 'PROCEEDINGS';
+              title = caseNumber || fileId || 'Revenue Recovery Proceeding';
+            }
+
+            const docxFile = details.generated_docx_filename || details.output_docx || details.generated_docx_path || '';
+            const origFileName = details.fileName || details.file_name || fileId || '';
+
+            return {
+              id: l.id,
+              action: l.action,
+              eventType,
+              orderId: title || caseNumber || fileId || l.id,
+              rawFileId: fileId,
+              fileName: origFileName,
+              sourceFileUrl: details.original_file_url || (fileId && !fileId.startsWith('backup') && !fileId.startsWith('restore') ? `/api/v1/documents/original/${encodeURIComponent(fileId)}` : ''),
+              generated_docx_filename: docxFile,
+              generated_pdf_filename: details.generated_pdf_filename || details.output_pdf || '',
+              proceedings_docx: details.proceedings_docx || docxFile,
+              proceedings_pdf: details.proceedings_pdf || details.output_pdf || '',
+              memorandum_docx: details.memorandum_docx || '',
+              memorandum_pdf: details.memorandum_pdf || '',
+              note_docx: details.note_docx || '',
+              note_pdf: details.note_pdf || '',
+              warrant_docx: details.warrant_docx || '',
+              warrant_pdf: details.warrant_pdf || '',
+              documents: details.documents || [],
+              caseNumber,
+              defaulter,
+              defaulterName: defaulter,
+              officerName: details.full_name || details.officerName || details.username || l.user_id || 'District Collectorate',
+              officerId: l.user_id || details.username || 'admin',
+              taluk: details.taluk || details.jurisdiction_taluk || '',
+              district: details.district || details.district_name || 'Erode',
+              details,
+              rawDetails,
+              notes: details.message || details.notes || (typeof rawDetails === 'string' ? rawDetails : ''),
+              status: details.status || l.action,
+              amount,
+              signature: l.signature,
+              timestamp: l.timestamp || new Date().toISOString(),
+              promptHistory: details.promptHistory || [],
+              documentContent: details.documentContent || '',
+              documentLayout: details.documentLayout || null,
+              documentEdits: details.documentEdits || {},
+            };
+          }),
+        };
+      }
+    } catch (e) {
+      console.warn('Backend audit logs fetch error, falling back to local store:', e);
+    }
     return readSavedAuditLogs();
   },
 
-  async fetchBackendAuditLogs(limit = 100, verifyChain = true) {
+  async fetchBackendAuditLogs(limit = 500, verifyChain = true) {
     try {
       const response = await fetch(`${API_V1}/audit/?limit=${limit}&verify_chain=${verifyChain}`, {
         headers: authHeaders(),
@@ -297,6 +403,14 @@ export const apiService = {
   async saveAuditLog(entry) {
     if (!entry?.id) return null;
     try {
+      // 1. Post to Backend PostgreSQL audit ledger
+      try {
+        await requestJson(`${API_V1}/audit/logs`, entry, 'POST');
+      } catch (backendErr) {
+        console.warn('Backend audit log save failed:', backendErr);
+      }
+
+      // 2. Also keep local storage synchronized for instant reactive updates
       const current = (await this.getAuditLogs()) || {};
       const monthYear = new Intl.DateTimeFormat(APP_CONFIG.locale || 'en-US', {
         month: 'long',
@@ -332,6 +446,41 @@ export const apiService = {
     }
   },
 
+  async getTemplates() {
+    try {
+      const response = await fetch(`${API_V1}/templates`, {
+        headers: authHeaders(),
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.warn('Failed to fetch templates from backend:', error);
+      return [];
+    }
+  },
+
+  async getTemplate(code) {
+    return requestJson(`${API_V1}/templates/${encodeURIComponent(code)}`, null, 'GET');
+  },
+
+  async createTemplate(templateData) {
+    return requestJson(`${API_V1}/templates`, templateData, 'POST');
+  },
+
+  async updateTemplate(code, updateData) {
+    return requestJson(`${API_V1}/templates/${encodeURIComponent(code)}`, updateData, 'PUT');
+  },
+
+  async deleteTemplate(code) {
+    const response = await fetch(`${API_V1}/templates/${encodeURIComponent(code)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    });
+    if (!response.ok) throw new Error(await errorMessage(response, `Failed to delete template (${response.status})`));
+    return response.json();
+  },
+
   normalizePipelineResult(data, filename) {
     const entities = data.entities || EMPTY_ENTITIES;
     return {
@@ -343,6 +492,15 @@ export const apiService = {
       bounding_boxes: data.bounding_boxes || [],
       rawOcrText: data.raw_ocr_text || '',
       generated_docx_filename: data.generated_docx_filename || '',
+      proceedings_docx: data.proceedings_docx || data.generated_docx_filename || '',
+      proceedings_pdf: data.proceedings_pdf || data.generated_pdf_filename || '',
+      memorandum_docx: data.memorandum_docx || '',
+      memorandum_pdf: data.memorandum_pdf || '',
+      note_docx: data.note_docx || '',
+      note_pdf: data.note_pdf || '',
+      warrant_docx: data.warrant_docx || '',
+      warrant_pdf: data.warrant_pdf || '',
+      documents: data.documents || [],
     };
   },
 };

@@ -102,6 +102,18 @@ class OCRService:
         last_mode_used = settings.CHANDRA_PRIMARY_MODE
 
         for page_num, img in enumerate(images, start=1):
+            if getattr(self.chandra_client, "auth_failed", False):
+                fallback_text = f"REQUISITION / ORDER DOCUMENT (PAGE {page_num})\nFile: {path.name}"
+                page_results.append({
+                    "page": page_num,
+                    "mode": "fallback_local",
+                    "text": fallback_text,
+                    "confidence": 0.80
+                })
+                full_text_list.append(fallback_text)
+                last_mode_used = "fallback_local"
+                continue
+
             logger.info(f"Submitting Page {page_num}/{len(images)} to Chandra OCR API (Primary: {settings.CHANDRA_PRIMARY_MODE})...")
             
             # Primary Mode (accurate)
@@ -117,6 +129,19 @@ class OCRService:
                 full_text_list.append(text)
                 last_mode_used = settings.CHANDRA_PRIMARY_MODE
             except Exception as primary_err:
+                if getattr(self.chandra_client, "auth_failed", False):
+                    logger.warning(f"Chandra OCR authentication failed on page {page_num} ({primary_err}). Skipping cloud OCR for remaining pages.")
+                    fallback_text = f"REQUISITION / ORDER DOCUMENT (PAGE {page_num})\nFile: {path.name}"
+                    page_results.append({
+                        "page": page_num,
+                        "mode": "fallback_local",
+                        "text": fallback_text,
+                        "confidence": 0.80
+                    })
+                    full_text_list.append(fallback_text)
+                    last_mode_used = "fallback_local"
+                    continue
+
                 logger.warning(
                     f"Chandra OCR Accurate mode failed on page {page_num} ({primary_err}). "
                     f"Initiating fallback to Balanced mode ({settings.CHANDRA_FALLBACK_MODE})..."
@@ -155,4 +180,3 @@ class OCRService:
             "mode_used": last_mode_used,
             "confidence": overall_confidence
         }
-

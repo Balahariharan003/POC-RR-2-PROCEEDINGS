@@ -89,10 +89,19 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    response.headers["X-Process-Time"] = f"{process_time:.4f}s"
-    return response
+    path = request.url.path
+    method = request.method
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        response.headers["X-Process-Time"] = f"{process_time:.4f}s"
+        if not path.endswith("/health") and not path.endswith("/favicon.ico"):
+            logger.info(f"HTTP {method} {path} -> {response.status_code} ({process_time:.3f}s)")
+        return response
+    except Exception as e:
+        process_time = time.time() - start_time
+        logger.error(f"HTTP {method} {path} -> FAILED ({process_time:.3f}s): {e}")
+        raise
 
 
 @app.exception_handler(AppException)
@@ -118,6 +127,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # ------------------------------------------------------------------------------
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+from app.api.v1.endpoints.editor import router as editor_router
+app.include_router(editor_router, prefix="/api/editor")
+app.include_router(editor_router, prefix="/editor")
+
 
 # ------------------------------------------------------------------------------
 # Legacy Frontend Compatibility Endpoints (/api/...)
@@ -140,9 +153,20 @@ async def legacy_process_document(file: UploadFile = File(...), db: AsyncSession
     legacy_response = {
         "status": "SUCCESS",
         "raw_ocr_text": entities.get("extraction_raw_text", ""),
+        "original_file_name": clean_name,
+        "original_file_url": f"/api/v1/documents/original/{clean_name}",
         "generated_docx_filename": result["output_docx"],
         "generated_docx_path": str(settings.OUTPUT_DIR / result["output_docx"]),
         "generated_pdf_filename": result["output_pdf"],
+        "proceedings_docx": result.get("proceedings_docx", result["output_docx"]),
+        "proceedings_pdf": result.get("proceedings_pdf", result["output_pdf"]),
+        "memorandum_docx": result.get("memorandum_docx", result["output_docx"]),
+        "memorandum_pdf": result.get("memorandum_pdf", result["output_pdf"]),
+        "note_docx": result.get("note_docx", result["output_docx"]),
+        "note_pdf": result.get("note_pdf", result["output_pdf"]),
+        "warrant_docx": result.get("warrant_docx", ""),
+        "warrant_pdf": result.get("warrant_pdf", ""),
+        "documents": result.get("documents", []),
         "validation_insights": {
             "math_valid": result["validation"]["is_valid"],
             "tamil_amount_words": fin.get("amount_in_words_tamil", ""),
@@ -228,6 +252,15 @@ async def legacy_process_document_from_result(result: Dict[str, Any]):
         "generated_docx_filename": result["output_docx"],
         "generated_docx_path": str(settings.OUTPUT_DIR / result["output_docx"]),
         "generated_pdf_filename": result.get("output_pdf", ""),
+        "proceedings_docx": result.get("proceedings_docx", result["output_docx"]),
+        "proceedings_pdf": result.get("proceedings_pdf", result.get("output_pdf", "")),
+        "memorandum_docx": result.get("memorandum_docx", result["output_docx"]),
+        "memorandum_pdf": result.get("memorandum_pdf", result.get("output_pdf", "")),
+        "note_docx": result.get("note_docx", result["output_docx"]),
+        "note_pdf": result.get("note_pdf", result.get("output_pdf", "")),
+        "warrant_docx": result.get("warrant_docx", ""),
+        "warrant_pdf": result.get("warrant_pdf", ""),
+        "documents": result.get("documents", []),
         "validation_insights": {
             "math_valid": True,
             "tamil_amount_words": fin.get("amount_in_words_tamil", ""),

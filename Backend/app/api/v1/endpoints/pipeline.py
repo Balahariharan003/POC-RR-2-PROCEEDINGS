@@ -1,9 +1,10 @@
 """
-Pipeline Endpoints: Document Ingestion, OCR Extraction, Legal Entity Synthesis, and Recalculation.
+Pipeline Endpoints: Document Ingestion, OCR Extraction, Legal Entity Synthesis, Download, and Recalculation.
 """
 
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, Depends, Form, HTTPException, status, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import shutil
 import uuid
@@ -16,10 +17,12 @@ from app.domain.rules.math_validator import validate_financial_math
 from app.domain.rules.tamil_numerals import number_to_tamil_currency_words
 from app.api.dependencies import get_current_user
 from app.services.pipeline_service import PipelineService
+from app.services.pdf_service import PDFService
 from app.infrastructure.storage.local_storage import LocalStorageProvider
 
 router = APIRouter()
 pipeline_service = PipelineService()
+pdf_service = PDFService()
 storage_provider = LocalStorageProvider()
 
 
@@ -49,6 +52,32 @@ async def process_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Pipeline processing error: {str(e)}"
         )
+
+
+@router.get("/download/{filename:path}", tags=["Pipeline"])
+async def download_pipeline_document(filename: str, format: str = Query("docx")):
+    """Streams generated proceedings/memorandum docx or pdf file."""
+    safe_name = Path(filename).name
+    try:
+        if format.lower() == "pdf":
+            pdf_name = safe_name if safe_name.endswith(".pdf") else f"{Path(safe_name).stem}.pdf"
+            try:
+                path = storage_provider.get_output_file(pdf_name)
+            except FileNotFoundError:
+                docx_name = safe_name if safe_name.endswith(".docx") else f"{Path(safe_name).stem}.docx"
+                docx_path = storage_provider.get_output_file(docx_name)
+                path = pdf_service.convert_docx_to_pdf(docx_path)
+            return FileResponse(path=str(path), filename=path.name, media_type="application/pdf")
+        else:
+            docx_name = safe_name if safe_name.endswith(".docx") else f"{Path(safe_name).stem}.docx"
+            path = storage_provider.get_output_file(docx_name)
+            return FileResponse(
+                path=str(path),
+                filename=path.name,
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
 
 
 @router.post("/recalculate", tags=["Pipeline"])

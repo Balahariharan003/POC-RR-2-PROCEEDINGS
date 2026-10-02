@@ -64,7 +64,9 @@ async def seed_default_accounts(session: AsyncSession) -> None:
                 session.add(new_user)
                 logger.info(f"Seeded default {acc['role']} account: {acc['username']} ({acc['email']})")
             else:
-                logger.info(f"Seed account already exists: {acc['username']} ({acc['email']}) — skipped.")
+                existing.hashed_password = hash_password(acc["password"])
+                existing.is_active = True
+                logger.info(f"Synchronized seed account credentials: {acc['username']} ({acc['email']})")
 
         await session.commit()
     except Exception as e:

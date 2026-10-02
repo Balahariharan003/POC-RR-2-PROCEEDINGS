@@ -1,49 +1,415 @@
-.rr-user-management { max-width: 1440px; margin: 0 auto; }
-.rr-user-management .rr-officers-heading { padding: .5rem 0 1rem; }
-.rr-user-management .rr-officers-heading p { margin-bottom: 0; }
-.rr-user-management .rr-officer-directory { padding: 0; overflow: hidden; box-shadow: 0 3px 14px rgba(16, 44, 87, .035); }
-.rr-directory-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1.5rem; }
-.rr-directory-title { display: flex; align-items: center; gap: .85rem; }
-.rr-directory-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 10px; background: var(--cream); border: 1px solid var(--border-subtle); flex-shrink: 0; }
-.rr-user-management .rr-directory-title h2 { display: flex; align-items: center; gap: .6rem; margin: 0; font-size: 1rem; }
-.rr-user-management .rr-directory-title p { margin: .35rem 0 0; font-size: .78rem; }
-.rr-add-officer { padding: .75rem 1rem; gap: .5rem; }
-.rr-directory-table { overflow-x: auto; }
-.rr-user-management table { min-width: 460px; table-layout: fixed; }
-.rr-user-management td, .rr-user-management th { padding: .85rem 1.25rem; overflow-wrap: anywhere; vertical-align: middle; }
-.rr-user-management th { background: var(--cream); font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; font-weight: 600; border-top: 1px solid var(--border-subtle); }
-.rr-user-management th:first-child { width: 40%; }
-.rr-user-management .rr-officer-directory th:first-child,
-.rr-user-management .rr-officer-directory td:first-child { padding-left: 1.5rem; }
-.rr-user-management th:nth-child(2) { width: 40%; }
-.rr-user-management th:last-child { width: 20%; }
-.rr-user-management tbody tr { cursor: pointer; }
-.rr-user-management tbody tr:last-child td { border-bottom: 0; }
-.rr-officer-name { display: inline-flex; align-items: center; gap: .85rem; padding: 0; border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; text-align: left; max-width: 100%; }
-.rr-officer-name strong { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
-.rr-officer-section { line-height: 1.5; }
-.rr-user-management .rr-admin-status { display: inline-flex; align-items: center; gap: .4rem; border-radius: 20px; padding: .3rem .65rem; white-space: nowrap; font-size: .72rem; }
-.rr-user-management .rr-admin-status::before { content: ''; width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
-.rr-user-management .rr-admin-status.active { background: #DCFCE7; color: #166534; }
-.rr-user-management .rr-admin-status.inactive { background: #FEE2E2; color: #991B1B; }
-.rr-user-management .rr-officer-notice { display: flex; align-items: center; gap: .65rem; padding: .8rem 1rem; border: 1px solid var(--border-card); background: var(--cream); }
-.rr-officer-notice > span { flex: 1; }
-.rr-officer-notice > button { display: grid; place-items: center; background: transparent; color: var(--deep-navy); padding: .4rem; border: 0; border-radius: 4px; cursor: pointer; }
-.rr-officer-name:focus-visible, .rr-officer-notice > button:focus-visible { outline: 2px solid var(--deep-navy); outline-offset: 4px; }
-@media (max-width: 600px) { .rr-directory-heading { padding: 1rem; } .rr-directory-heading .rr-add-officer { width: 100%; justify-content: center; } .rr-user-management td, .rr-user-management th { padding: 1rem; } }
-.rr-officer-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.rr-officer-full-name { grid-column: 1 / -1; }
-.rr-officer-dialog .rr-change-password { display: flex; flex-direction: row; align-items: center; gap: .6rem; grid-column: 1 / -1; padding: .75rem 0; border-top: 1px solid var(--border-subtle); }
-.rr-officer-dialog .rr-change-password input { width: 16px; height: 16px; accent-color: var(--deep-navy); }
-.rr-officers-empty { padding: 1.5rem; text-align: center; }
-@media (max-width: 600px) { .rr-officer-fields { grid-template-columns: 1fr; } }
+/* =========================================================================
+   User Management & Officer Directory — Enterprise Executive UI
+   ========================================================================= */
 
-.rr-officer-dialog { width: min(680px, calc(100vw - 2rem)); padding: 0; }
-.rr-officer-dialog .rr-modal-heading { padding: 1.1rem 1.5rem; margin: 0; border-bottom: 1px solid var(--border-subtle); }
-.rr-officer-dialog .rr-modal-heading > button { border: 1px solid var(--deep-navy); padding: .65rem; }
-.rr-officer-dialog form { padding: 1.5rem; }
-.rr-officer-dialog h3 { margin: 0; font-size: .95rem; }
-.rr-officer-dialog .rr-modal-actions { border-top: 1px solid var(--border-subtle); padding-top: 1rem; }
-.rr-officer-security { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; background: var(--cream); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 1rem; }
-.rr-officer-security p { margin: .35rem 0 0; font-size: .78rem; }
-@media (max-width: 600px) { .rr-officer-dialog form, .rr-officer-dialog .rr-modal-heading { padding: 1rem; } }
+.rr-user-management {
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.rr-user-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.rr-user-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #102C57;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+}
+
+.rr-user-header p {
+  font-size: 0.875rem;
+  color: #64748B;
+  margin: 0;
+}
+
+/* --- KPI Summary Metric Cards --- */
+.rr-user-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .rr-user-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .rr-user-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rr-user-kpi-card {
+  background: #ffffff;
+  border: 1px solid #EADBC8;
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.rr-user-kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rr-user-kpi-info dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 2px 0;
+}
+
+.rr-user-kpi-info dd {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #102C57;
+  margin: 0;
+}
+
+/* --- Main Directory Card --- */
+.rr-directory-card {
+  background: #ffffff;
+  border: 1px solid #EADBC8;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.rr-directory-toolbar {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border-bottom: 1px solid #EADBC8;
+}
+
+.rr-directory-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #FEFAF6;
+  border: 1px solid #DAC0A3;
+  border-radius: 8px;
+  padding: 6px 12px;
+  width: 320px;
+  max-width: 100%;
+}
+
+.rr-directory-search-box input {
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  color: #102C57;
+  width: 100%;
+  outline: none;
+}
+
+.rr-directory-search-box input::placeholder {
+  color: #94A3B8;
+}
+
+.rr-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rr-filter-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid #DAC0A3;
+  background: #FEFAF6;
+  color: #102C57;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.rr-filter-chip:hover {
+  background: #ffffff;
+  border-color: #102C57;
+}
+
+.rr-filter-chip.active {
+  background: #102C57;
+  color: #ffffff;
+  border-color: #102C57;
+}
+
+/* --- Directory Table --- */
+.rr-directory-table-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.rr-user-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.rr-user-table th {
+  background: #FEFAF6;
+  color: #102C57;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid #EADBC8;
+  white-space: nowrap;
+}
+
+.rr-user-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.rr-user-table tbody tr {
+  transition: background-color 0.15s ease-in-out;
+}
+
+.rr-user-table tbody tr:hover {
+  background-color: #FEFAF6;
+}
+
+.rr-user-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Officer Cell Styling */
+.rr-officer-profile-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rr-officer-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #102C57;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(16, 44, 87, 0.15);
+}
+
+.rr-officer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rr-officer-title {
+  font-weight: 700;
+  color: #102C57;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rr-officer-role-tag {
+  font-size: 0.72rem;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.rr-taluk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #FEFAF6;
+  border: 1px solid #EADBC8;
+  color: #102C57;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.rr-session-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rr-session-pill.online {
+  background: #DCFCE7;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.rr-session-pill.offline {
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+.rr-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.rr-gray-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #94a3b8;
+}
+
+.rr-status-toggle-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.rr-status-toggle-btn.active {
+  background: #ECFDF5;
+  color: #047857;
+  border-color: #A7F3D0;
+}
+
+.rr-status-toggle-btn.active:hover {
+  background: #D1FAE5;
+}
+
+.rr-status-toggle-btn.inactive {
+  background: #FEF2F2;
+  color: #B91C1C;
+  border-color: #FECACA;
+}
+
+.rr-status-toggle-btn.inactive:hover {
+  background: #FEE2E2;
+}
+
+.rr-action-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #ffffff;
+  border: 1px solid #DAC0A3;
+  color: #102C57;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rr-action-edit-btn:hover {
+  background: #FEFAF6;
+  border-color: #102C57;
+}
+
+/* --- Dialog & Form Styling --- */
+.rr-officer-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.rr-officer-full-name {
+  grid-column: 1 / -1;
+}
+
+.rr-officer-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #102C57;
+}
+
+.rr-officer-fields input,
+.rr-officer-fields select {
+  padding: 8px 12px;
+  border: 1px solid #DAC0A3;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 0.875rem;
+  color: #102C57;
+  outline: none;
+}
+
+.rr-officer-fields input:focus,
+.rr-officer-fields select:focus {
+  border-color: #102C57;
+  box-shadow: 0 0 0 2px rgba(16, 44, 87, 0.1);
+}
+
+.rr-officer-security {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: #FEFAF6;
+  border: 1px solid #EADBC8;
+  border-radius: 8px;
+}
+
+.rr-officer-security h4 {
+  margin: 0 0 2px 0;
+  font-size: 0.9rem;
+  color: #102C57;
+}
+
+.rr-officer-security p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #64748B;
+}

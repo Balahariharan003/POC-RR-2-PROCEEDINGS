@@ -7,7 +7,7 @@ Supports:
 """
 
 import io
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from PIL import Image
 import httpx
 
@@ -21,9 +21,13 @@ class ChandraOCRClient:
         self.api_url = api_url
         self.api_key = api_key
         self.timeout = settings.CHANDRA_TIMEOUT_SECONDS
+        self.auth_failed = False
 
     async def recognize_image(self, image: Image.Image, mode: str = "accurate") -> Dict[str, Any]:
         """Submits an image to Datalab Chandra / Marker API in specified mode with async polling."""
+        if self.auth_failed:
+            raise OCRProcessingError("Datalab cloud OCR disabled due to previous HTTP 401 Authentication Failure.")
+
         buf = io.BytesIO()
         image.save(buf, format="PNG")
         buf.seek(0)
@@ -34,6 +38,7 @@ class ChandraOCRClient:
         }
         if self.api_key:
             headers["X-Api-Key"] = self.api_key
+            headers["Authorization"] = f"Bearer {self.api_key}"
 
         files = {
             "file": ("page.png", image_bytes, "image/png")
@@ -41,8 +46,10 @@ class ChandraOCRClient:
         data = {
             "mode": mode,
             "languages": "ta,en",
-            "langs": "ta,en"
+            "langs": "ta,en",
         }
+        if self.api_key:
+            data["api_key"] = self.api_key
 
         # Candidate endpoints to try if primary fails or gives 404/405
         candidate_urls = [
@@ -93,6 +100,10 @@ class ChandraOCRClient:
                                 "confidence": res_data.get("confidence", 0.95),
                                 "raw_response": res_data
                             }
+                    elif res.status_code == 401:
+                        self.auth_failed = True
+                        last_err = f"HTTP 401: {res.text}"
+                        break
                     elif res.status_code in {404, 405}:
                         last_err = f"HTTP {res.status_code} on {endpoint}"
                         continue
@@ -104,4 +115,3 @@ class ChandraOCRClient:
 
         logger.warning(f"All Datalab cloud OCR endpoints failed: {last_err}")
         raise OCRProcessingError(f"Chandra OCR request failed: {last_err}")
-

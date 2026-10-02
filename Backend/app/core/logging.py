@@ -1,42 +1,43 @@
 """
-Structured Logging Configuration with JSON formatters for Production Audits.
+Clean, Production-Ready Formatted Logging Configuration.
+Provides high-readability console output with precise timestamps and levels.
 """
 
 import sys
 import logging
-import json
-from datetime import datetime, timezone
+from datetime import datetime
 
 
-class JSONFormatter(logging.Formatter):
-    """Formats log records as structured JSON for SIEM and cloud monitoring."""
+class CleanConsoleFormatter(logging.Formatter):
+    """
+    Formats log records into clean, readable terminal format:
+    YYYY-MM-DD HH:MM:SS,mmm [LEVEL] module: Message
+    """
     def format(self, record: logging.LogRecord) -> str:
-        log_obj = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-            "module": record.module,
-            "line": record.lineno,
-        }
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:23]
+        module_name = record.name
+        if module_name == "tn_rr_backend" or module_name == "root":
+            module_name = record.module
+        msg = record.getMessage()
         if record.exc_info:
-            log_obj["exception"] = self.formatException(record.exc_info)
-        if hasattr(record, "extra_data"):
-            log_obj["data"] = record.extra_data
-        return json.dumps(log_obj, ensure_ascii=False)
+            msg += "\n" + self.formatException(record.exc_info)
+        return f"{timestamp} [{record.levelname}] {module_name}: {msg}"
 
 
 def setup_logging():
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(JSONFormatter())
+    handler.setFormatter(CleanConsoleFormatter())
     
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     root_logger.handlers = [handler]
     
-    # Silence overly verbose external loggers
+    # Silence noisy external loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.error").setLevel(logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
 
 logger = logging.getLogger("tn_rr_backend")

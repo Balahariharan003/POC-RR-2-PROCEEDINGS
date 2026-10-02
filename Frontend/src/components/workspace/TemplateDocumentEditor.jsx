@@ -35,7 +35,7 @@ export default function TemplateDocumentEditor({ layout, edits, onChange, disabl
         {row.map((cell, cellIndex) => <td key={cellIndex} colSpan={cell.colSpan} style={{ width: cell.width }}>{render(cell.blocks)}</td>)}
       </tr>)}</tbody></table>);
   return <div className="rr-template-scroll" ref={container}>
-    <article className="rr-template-page" aria-label="Editable RR proceedings" style={{
+    <article className={`rr-template-page ${disabled ? 'preview-mode' : 'edit-mode'}`} aria-label="RR proceedings document" style={{
       zoom, width: `${layout.page.page_width}pt`, minHeight: `${layout.page.page_height}pt`,
       padding: `${layout.page.top_margin}pt ${layout.page.right_margin}pt ${layout.page.bottom_margin}pt ${layout.page.left_margin}pt`
     }}>{render(layout.blocks)}</article>

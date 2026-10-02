@@ -16,14 +16,22 @@ from app.core.security import create_access_token
 
 
 
-from app.core.database import engine
+from app.core.database import engine, Base, AsyncSessionLocal
+from app.core.seed import seed_default_accounts, seed_default_templates
 
 
 @pytest.fixture(autouse=True)
-async def cleanup_db_connections():
-    """Disposes engine connections after each test to prevent asyncpg cross-loop socket errors."""
+async def init_test_db():
+    """Ensures database schema and default seed accounts exist."""
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with AsyncSessionLocal() as session:
+            await seed_default_accounts(session)
+            await seed_default_templates(session)
+    except Exception:
+        pass
     yield
-    await engine.dispose()
 
 
 @pytest.fixture

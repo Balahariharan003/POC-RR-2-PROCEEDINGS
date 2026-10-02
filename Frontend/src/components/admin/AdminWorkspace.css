@@ -44,22 +44,117 @@
 .rr-admin input:focus-visible, .rr-admin select:focus-visible { outline: 2px solid #102c57; outline-offset: 2px; }
 .rr-admin-alert, .rr-admin-notice { padding: 1rem; border-radius: 6px; background: #FEFAF6; color: #102C57; }
 .rr-admin-notice { background: #EADBC8; color: #102C57; }
-.rr-admin ul { padding-left: 1.3rem; margin: 1rem 0; line-height: 1.9; }
 .rr-admin-nav { display: flex; align-items: center; gap: 12px; padding: .8rem 1rem; border: 0; border-left: 3px solid transparent; border-radius: 6px; background: transparent; color: #eadbc8; text-align: left; cursor: pointer; font: inherit; font-size: .85rem; }
 .rr-admin-nav.active { background: rgba(255,255,255,.12); border-left-color: #dac0a3; color: #fff; }
 .app-sidebar.collapsed .rr-admin-nav { justify-content: center; padding: .8rem 0; }
 @media (max-width: 1100px) { .rr-admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .rr-admin-columns, .rr-admin-form { grid-template-columns: minmax(0, 1fr); } .rr-admin { padding: 0; } .rr-admin-card { padding: 1rem; } .rr-admin-filters { width: 100%; } .rr-admin-filters input { width: 100%; } }
 
-.rr-admin-activity .rr-admin-toolbar { margin-bottom: .25rem; }
-.rr-admin .rr-activity-list { list-style: none; padding: 0; margin: .5rem 0 0; }
-.rr-activity-list li { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 1rem; align-items: center; padding: 1rem 0; border-top: 1px solid var(--border-subtle); font-size: .85rem; line-height: 1.5; }
-.rr-activity-badge { display: inline-flex; justify-content: center; border-radius: 30px; border: 1px solid var(--border-card); padding: .3rem .5rem; font-size: .67rem; font-weight: 700; background: var(--cream); }
-.rr-activity-badge.login { color: #166534; background: #ECFDF5; border-color: #A7D9BF; }
-.rr-activity-badge.logout { color: #991B1B; background: #FEF2F2; border-color: #F3CCCC; }
-.rr-activity-badge.document { color: #102C57; background: #EAF4FB; border-color: #C3DFEF; }
-.rr-activity-description { overflow-wrap: anywhere; }
-.rr-activity-list time { font-size: .75rem; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
-@media (max-width: 900px) { .rr-activity-list li { grid-template-columns: 100px minmax(0, 1fr); gap: .5rem .75rem; } .rr-activity-list time { grid-column: 2; text-align: left; } }
+.rr-clickable-metric-card {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
 
-.rr-admin-activity .rr-activity-view-all:hover { background: #102C57; color: #FFFFFF; }
+.rr-clickable-metric-card:hover {
+  transform: translateY(-2px);
+  border-color: #102c57;
+  box-shadow: 0 4px 12px rgba(16, 44, 87, 0.08);
+}
+
+/* --- Recent Activity Section Styles --- */
+.rr-admin-activity .rr-admin-toolbar {
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rr-admin .rr-activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+}
+
+.rr-activity-list li {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--border-subtle, #EADBC8);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.rr-activity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 30px;
+  border: 1px solid var(--border-card, #DAC0A3);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--cream, #FEFAF6);
+  text-align: center;
+}
+
+.rr-activity-badge.login {
+  color: #166534;
+  background: #DCFCE7;
+  border-color: #BBF7D0;
+}
+
+.rr-activity-badge.logout {
+  color: #991B1B;
+  background: #FEE2E2;
+  border-color: #FECACA;
+}
+
+.rr-activity-badge.document {
+  color: #102C57;
+  background: #EAF4FB;
+  border-color: #C3DFEF;
+}
+
+.rr-activity-badge.neutral {
+  color: #475569;
+  background: #F1F5F9;
+  border-color: #E2E8F0;
+}
+
+.rr-activity-description {
+  overflow-wrap: anywhere;
+  color: #334155;
+  font-size: 0.85rem;
+}
+
+.rr-activity-list time {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+  color: #64748B;
+}
+
+@media (max-width: 900px) {
+  .rr-activity-list li {
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 0.5rem 0.75rem;
+  }
+  .rr-activity-list time {
+    grid-column: 2;
+    text-align: left;
+  }
+}
+
+.rr-admin-activity .rr-activity-view-all {
+  font-size: 0.8rem;
+  color: #102C57;
+  font-weight: 600;
+}
+
+.rr-admin-activity .rr-activity-view-all:hover {
+  background: #102C57;
+  color: #FFFFFF;
+}
