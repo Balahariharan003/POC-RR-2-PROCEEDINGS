@@ -12,6 +12,7 @@ Coordinates:
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
+import json
 import uuid
 import docx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,8 +84,29 @@ class PipelineService:
             "extracted_at": datetime.now(timezone.utc).isoformat(),
         }
 
+        # ----------------------------------------------------------------------
+        # SERVER LOG: STAGE 1 - OCR EXTRACTION OUTPUT
+        # ----------------------------------------------------------------------
+        print("\n" + "=" * 80)
+        print(f" [STAGE 1/3] OCR EXTRACTION OUTPUT (File: {file_path.name})")
+        print(f" Engine: {ocr_payload['engine']} | Mode: {ocr_payload['mode_used']} | Pages: {ocr_payload['page_count']} | Length: {len(raw_text)} chars")
+        print("-" * 80)
+        print(raw_text if raw_text else "[NO TEXT EXTRACTED]")
+        print("=" * 80 + "\n")
+
         # Step 3: LLM Case Analysis via MASTER PROMPT (Zero hardcoded department heuristics)
         case: Dict[str, Any] = await self.llm_service.analyse_case(raw_text)
+
+        # ----------------------------------------------------------------------
+        # SERVER LOG: STAGE 2 - LLM EXTRACTS & SYNTHESIZED CASE DATA
+        # ----------------------------------------------------------------------
+        print("\n" + "=" * 80)
+        print(f" [STAGE 2/3] LLM EXTRACTS & SYNTHESIZED CASE DATA (Job ID: {job_id})")
+        print(f" Department: {case.get('department_type')} | Defaulter: {case.get('defaulter_name')} | Total: {case.get('total_recoverable_amount')}")
+        print("-" * 80)
+        print(json.dumps(case, ensure_ascii=False, indent=2))
+        print("=" * 80 + "\n")
+
         entities: ExtractedLegalEntities = case_to_extracted_entities(case, raw_text)
 
         # Step 4: Verification Rules (Math + Jurisdiction)

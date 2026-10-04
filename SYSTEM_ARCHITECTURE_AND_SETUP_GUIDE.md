@@ -48,7 +48,7 @@ graph TD
 
 ### 1. Ingestion & OCR Layer ([`ocr_service.py`](file:///e:/Projects/Active/POC-RR-2-PROCEEDINGS/Backend/app/services/ocr_service.py))
 - **Engine**: Datalab Chandra Marker OCR API (`https://www.datalab.to/api/v1/marker`) with dual-mode fallback (`accurate` $\rightarrow$ `balance`).
-- **Local Fallback**: `pypdfium2` extracts native embedded digital text when available, ensuring zero dependency on heavy local ONNX models.
+- **Page Rasterization**: `pypdfium2` and `Pillow` render all pages of input PDFs/scans to high-resolution images, routing every page directly through visual OCR for consistent extraction across complex scanned documents.
 
 ### 2. LLM Case Analysis Engine ([`llm_service.py`](file:///e:/Projects/Active/POC-RR-2-PROCEEDINGS/Backend/app/services/llm_service.py))
 - **Zero-Hardcoding Master Prompt**: Extracts 25+ legal fields including Defaulter Name, Address, Revenue Taluk, District, Claiming Department, Statutory Provisions, Reference Numbers, Dates, Principal Dues, Penalties, Interest, and Demand Draft payee details.

@@ -21,6 +21,10 @@ def validate_financial_math(financials: FinancialDetails) -> Tuple[bool, List[Ru
     penalty = round(float(financials.penalty_amount or 0.0), 2)
     interest = round(float(financials.interest_amount or 0.0), 2)
     provided_total = round(float(financials.total_recoverable_amount or 0.0), 2)
+
+    # In single lump-sum cases without sub-breakdown, principal equals provided_total
+    if principal == 0.0 and penalty == 0.0 and interest == 0.0 and provided_total > 0.0:
+        principal = provided_total
     
     calculated_sum = round(principal + penalty + interest, 2)
     discrepancy = round(abs(calculated_sum - provided_total), 2)

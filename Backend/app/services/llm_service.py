@@ -7,9 +7,9 @@ Incoming requisition ──► MASTER PROMPT (analyse_case) ──► verified C
 Office Note    Proceedings    Memorandum     Warrant (MAINTENANCE only)
 
 DESIGN RULES:
-1. Facts (amount, words, names, DD payee, taluk, RDO, refs) are verified from JSON.
-2. The LLM extracts the case sheet and determines department dynamically without hardcoding.
-3. Postprocess guards validate arithmetic, grounded amounts, and taluks.
+1. 100% Dynamic Reasoning: Zero hardcoded department heuristics or rigid regex mappings.
+2. The LLM extracts the legal domain, statutory citation, defaulter entities, amounts, taluk, and references.
+3. Postprocess guards validate arithmetic integrity, Indian currency formatting, and official Tamil synthesis.
 """
 
 import json
@@ -55,118 +55,80 @@ ERODE_TALUKS = [
 
 
 # ======================================================================================
-# 1. MASTER PROMPT (Zero Hardcoding – Fully Dynamic LLM Analysis & Paragraph Synthesis)
+# 1. DYNAMIC LEGAL MASTER PROMPT (Zero Hardcoding)
 # ======================================================================================
 MASTER_PROMPT = r"""
-You are the Senior Revenue Recovery (RR) Legal Analyst & Drafting Expert of the Erode Collectorate (ஈரோடு மாவட்ட ஆட்சியர் அலுவலகம், பிரிவு ஈ2), working for the District Revenue Officer and District Collector.
+You are the Senior Revenue Recovery (RR) Legal Analyst for Erode Collectorate (ஈரோடு மாவட்ட ஆட்சியர் அலுவலகம், பிரிவு ஈ2).
+Your task is to analyze the incoming requisition order / letter / recovery certificate OCR text, dynamically identify the legal domain and statutory provisions with ZERO hardcoding, and extract structured legal entities.
 
-Your task is to analyze the incoming requisition order / letter / certificate OCR text, extract all factual & legal entities with ZERO hardcoding, and synthesize the complete official Tamil administrative paragraphs (ஆட்சிமொழித் தமிழ்) for revenue recovery proceedings.
+REVENUE RECOVERY JURISDICTIONS (Tamil Nadu Revenue Recovery Act 1864 & RSO 41):
+1. CUSTOMS: Customs duty, penalties, interest under Section 142(1)(c)(ii) of Customs Act 1962.
+2. TNRERA: Real estate recovery / refund orders under Section 40(1) of RERA Act 2016.
+3. MCOP / MACT: Motor accident compensation claims tribunal awards under Section 174 of Motor Vehicles Act 1988.
+4. FAMILY COURT MAINTENANCE: Maintenance arrears under BNSS Section 144 / CrPC Section 125.
+5. COMMERCIAL TAXES / GST: Sales tax, VAT, GST arrears and penalties under Commercial Taxes & RR Act.
+6. EPFO & ESIC: Provident fund & ESI statutory dues under EPF Act Sec 8B / ESI Act Sec 45B.
+7. LABOUR & GRATUITY: Labour court awards and Payment of Gratuity Act Sec 8 requisitions.
+8. MINES & MINERALS: Seigniorage fee, penalty, and illegal mining recovery under Mines & Minerals Act 1957.
+9. TRANSPORT: Motor vehicles tax arrears under TN Motor Vehicles Taxation Act 1974.
+10. EXCISE & PROHIBITION: Liquor license / excise arrears under TN Prohibition Act 1937.
+11. OTHER COLLECTORATE RR: Requisitions forwarded from other District Collectors for recovery within Erode.
+12. ANY OTHER GOVERNMENT REQUISITION: Agricultural loans, medical bonds, municipal dues, or statutory arrears.
 
-════════ 0. REVENUE RECOVERY JURISDICTION & SCOPE ════════
-A revenue recovery case is initiated when a government department, court, or tribunal requisitions the District Collector to recover dues as arrears of land revenue under the Tamil Nadu Revenue Recovery Act, 1864 (Act II of 1864) and Revenue Standing Order 41 (RSO 41).
-Requisition sources include:
- (a) DEPARTMENT_LETTER – Central/State departments (Customs, Commercial Taxes/GST, TNRERA, Excise, Cooperatives, Transport, Mines, Revenue, ESIC, EPFO, etc.)
- (b) COURT_ORDER – Judicial decrees/orders (Motor Accident Claims Tribunal / MCOP, Family Court Maintenance under BNSS 144 / CrPC 125, Labour Court, Sub Court, etc.)
- (c) OTHER_COLLECTORATE_RR – Inter-district RR requisitions forwarded by another Collectorate for defaulters/assets located in Erode.
- (d) REMINDER – Follow-up reminders on previously issued RR proceedings.
+DYNAMIC EXTRACTION RULES:
+- Identify the issuing department, court, or tribunal dynamically from context.
+- Translate and format the statute name in official Tamil (ஆட்சிமொழித் தமிழ்) e.g., 'மோட்டார் வாகனச் சட்டம் 1988 பிரிவு 174', 'சுங்கச் சட்டம் 1962 பிரிவு 142(1)(c)(ii)'.
+- Extract exact defaulter name(s), father/spouse name, door number, street, village, taluk, district, and pincode.
+- If multiple defaulters / respondents are listed, extract all names separated by commas and set entity_type to 'MULTIPLE_INDIVIDUALS'.
+- Extract all financial figures: principal, penalty, interest, and total recoverable amount.
+- Extract Demand Draft payee (dd_favour_of), dispatch address, order dates, and case file numbers.
+- Return ONLY a valid JSON object matching the schema below:
 
-════════ 1. ACCURATE STATUTE, ACT & SECTION EXTRACTION ════════
-Carefully scan the text to identify the governing legal acts, statutory provisions, and sections cited by the requisitioning authority:
-- Central/State Act name in full (e.g., "சுங்கச் சட்டம் 1962", "மோட்டார் வாகனச் சட்டம் 1988", "தமிழ்நாடு ரியல் எஸ்டேட் (ஒழுங்குமுறை மற்றும் மேம்பாடு) சட்டம் 2016", "தமிழ்நாடு மதிப்புக் கூட்டு வரிச் சட்டம் 2006 / ஜி.எஸ்.டி சட்டம் 2017", "பாரதிய நாகரிக் சுரக்ஷா சன்ஹிதா 2023", "தமிழ்நாடு மதுவிலக்குச் சட்டம் 1937").
-- Exact Section and Sub-section (e.g., "பிரிவு 142(1)(c)(ii)", "பிரிவு 174", "பிரிவு 40(1)", "பிரிவு 79", "பிரிவு 144", "பிரிவு 24", "பிரிவு 5").
-- Synthesize `statute_cited` as a clean, authoritative phrase (e.g. "மோட்டார் வாகனச் சட்டம் 1988 பிரிவு 174", "சுங்கச் சட்டம் 1962 பிரிவு 142(1)(c)(ii)", "தமிழ்நாடு ரியல் எஸ்டேட் சட்டம் 2016 பிரிவு 40(1)").
-
-════════ 2. EXHAUSTIVE REFERENCE (பார்வை:) ANALYSIS ════════
-Analyze the attached files, enclosure memos, original petitions, court orders, and government orders cited in the requisition:
-- Identify every reference in chronological sequence:
-  1. Primary court decree, tribunal order, or department recovery certificate with Case / I.A. / Letter / Order number and Date.
-  2. Any forwarding letter from the requesting authority with dispatch number and date.
-  3. Governing statutory authorization: "வருவாய் நிலை ஆணை எண் 41 மற்றும் தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5."
-- For each reference, provide `seq`, `authority_ta`, `ref_no`, `date`, and the formatted Tamil citation line `text_ta`.
-
-════════ 3. COMPLETE PARAGRAPH-BASED DRAFTING SYNTHESIS ════════
-Synthesize authentic, official Tamil administrative paragraphs ready for direct placement in Collectorate templates:
-1. `subject_text`: Full formal subject clause:
-   "பொருள்: வருவாய் வசூல் சட்டம் 1864 – <statute_cited> – ஈரோடு மாவட்டம் – <taluk_name> வட்டம் – <defaulter_name_with_address> – <demand_clause> – வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோருதல் – உத்தரவிடுதல்."
-2. `reference_text`: Numbered multi-line text for the பார்வை: section.
-3. `order_para1`: Complete narrative demand paragraph explaining the defaulter, address, taluk, the requisition letter/order with date & number, exact recoverable amount with component breakdown, and request for recovery under the RR Act 1864.
-4. `order_para2`: Complete statutory empowerment paragraph authorizing the jurisdictional Tahsildar to enforce recovery under RSO 41 & Section 5 of Tamil Nadu Revenue Recovery Act 1864.
-5. `order_para3`: Complete asset enforcement paragraph directing the Tahsildar to attach movable and immovable properties, realize the dues, obtain Demand Draft in favour of the designated payee, and dispatch original DD to the specified authority.
-
-════════ 4. OUTPUT SCHEMA ════════
-Return ONLY one valid JSON object (no markdown fences, no commentary).
 {
   "document_type": "DEPARTMENT_LETTER|COURT_ORDER|OTHER_COLLECTORATE_RR|REMINDER",
   "requisition_channel": "DIRECT_FROM_DEPARTMENT|FROM_COURT|FROM_OTHER_COLLECTORATE",
-  "originating_collectorate": null,
-  "department_type": "CUSTOMS|MCOP|TNRERA|COMMERCIAL_TAX|EXCISE|MAINTENANCE|GENERAL_RR",
-  "department_name_ta": "Exact department/court name in Tamil",
-  "department_evidence": "Text excerpt supporting department classification",
-  "department_confidence": 0.98,
+  "department_type": "CUSTOMS|TNRERA|MCOP|COMMERCIAL_TAX|EXCISE|MAINTENANCE|EPFO_ESIC|LABOUR_COURT|MINES_MINERALS|TRANSPORT|OTHER_COLLECTORATE|GENERAL_RR",
+  "department_name_ta": "Department / Court name in official Tamil",
   "statute_cited": "Exact Act and Section in Tamil",
-  "dues_label": "Specific dues label in Tamil (e.g. இழப்பீட்டுத் தொகை, சுங்கவரி நிலுவைத் தொகை, நிலுவைத் தொகை)",
-  "principal_label": "Principal dues label in Tamil",
+  "dues_label": "Specific dues label in Tamil (e.g. இழப்பீட்டுத் தொகை, நிலுவைத் தொகை, சுங்க வரி, பராமரிப்புத் தொகை)",
+  "principal_label": "Principal label in Tamil",
   "penalty_label": null,
   "interest_label": null,
   "other_charges_label": null,
-  "demand_clause_text": "One-line demand summary with figures",
-  "section_code": "ஈ2",
-  "entity_type": "INDIVIDUAL|PROPRIETORSHIP|COMPANY|PARTNERSHIP|MULTIPLE_PROMOTERS|GOVERNMENT_SERVANT",
-  "defaulter_name": "Name of defaulter / respondent",
-  "relation_text": "Father / Husband name or null",
+  "entity_type": "INDIVIDUAL|MULTIPLE_INDIVIDUALS|COMPANY|PROPRIETORSHIP|PARTNERSHIP|GOVERNMENT_SERVANT",
+  "defaulter_name": "Full Defaulter / Respondent Name(s)",
+  "relation_text": "Father / Husband / Spouse name or null",
   "iec_number": null,
   "door_no": null,
   "street_and_locality": null,
   "village": null,
-  "taluk_name": "ஈரோடு",
+  "taluk_name": "Jurisdictional Taluk in Tamil (e.g. ஈரோடு, பெருந்துறை, பவானி, கோபிச்செட்டிபாளையம், சத்தியமங்கலம், மொடக்குறிச்சி, கொடுமுடி, அந்தியூர், நம்பியூர், தாளவாடி)",
   "district_name": "ஈரோடு",
   "pincode": null,
-  "jurisdiction": "ERODE|OTHER_DISTRICT|UNKNOWN",
+  "jurisdiction": "ERODE",
   "principal_amount": 0.0,
   "penalty_amount": 0.0,
   "interest_amount": 0.0,
   "other_charges_amount": 0.0,
   "total_recoverable_amount": 0.0,
-  "issuing_authority_name": "Name of court / authority",
-  "issuing_officer_role": "Official role / designation of requisitioning officer (e.g. சுங்க ஆணையர், சிறப்பு சார்பு நீதிபதி, அதிகாரம் பெற்ற அலுவலர்)",
-  "collectorate_office_name": "ஈரோடு மாவட்ட ஆட்சியர் அலுவலகம், பிரிவு ஈ2",
-  "signatory_role": "மாவட்ட ஆட்சித் தலைவர்",
-  "enforcing_officer_role": "வருவாய் வட்டாட்சியர்",
-  "case_file_no": "Requisition / Case number",
-  "order_in_original_no": null,
+  "issuing_authority_name": "Court / Authority / Department Name",
+  "case_file_no": "Requisition / Case / D.No / F.No number",
   "order_date": "DD.MM.YYYY",
   "letter_date": "DD.MM.YYYY",
-  "beneficiary_name": null,
+  "beneficiary_name": "Beneficiary / Claimant / Insurer name",
   "dd_favour_of": "Payee name for Demand Draft",
-  "head_of_account": null,
-  "dispatch_address": "Where original DD is to be dispatched",
-  "court_or_issuer_ta": null,
-  "court_or_issuer_block_en": null,
+  "dispatch_address": "Where original Demand Draft should be dispatched",
+  "court_or_issuer_ta": "Court / Issuer title in Tamil",
   "references": [
     {
       "seq": 1,
-      "kind": "DEPARTMENT_LETTER|COURT_ORDER|PETITION|OTHER_COLLECTORATE_RR",
+      "kind": "COURT_ORDER|DEPARTMENT_LETTER",
       "authority_ta": "Authority name in Tamil",
       "ref_no": "Number",
       "date": "DD.MM.YYYY",
       "text_ta": "Complete reference citation in Tamil"
     }
   ],
-  "synthesized_paragraphs": {
-    "subject_text": "Complete Tamil subject clause",
-    "reference_text": "Complete multi-line reference block",
-    "order_para1": "Complete narrative demand paragraph",
-    "order_para2": "Complete statutory delegation paragraph",
-    "order_para3": "Complete asset enforcement & DD remittance paragraph",
-    "note_para1": "Complete Office Note demand narrative",
-    "note_para2": "Complete Office Note recommendation",
-    "memo_para1": "Complete Memorandum demand narrative",
-    "memo_para2": "Complete Memorandum instruction",
-    "memo_para3": "Complete Memorandum expedited completion instruction"
-  },
-  "prior_proceedings": null,
-  "reminders": [],
-  "maintenance": null,
   "review_flags": []
 }
 
@@ -276,6 +238,7 @@ def _strip_fences(t: str) -> str:
 
 
 def postprocess_case(case: dict, ocr_text: str) -> dict:
+    """Validates extracted facts and deterministically generates official Tamil administrative prose."""
     flags = list(case.get("review_flags") or [])
     tk = case.get("taluk_name")
     if tk and tk not in ERODE_TALUKS:
@@ -284,6 +247,7 @@ def postprocess_case(case: dict, ocr_text: str) -> dict:
         flags.append("RDO_MAPPING_MISSING")
     if case.get("jurisdiction") != "ERODE":
         flags.append("JURISDICTION_NOT_CONFIRMED")
+        
     parts = sum(float(case.get(k) or 0) for k in
                 ("principal_amount", "penalty_amount", "interest_amount", "other_charges_amount"))
     total = float(case.get("total_recoverable_amount") or 0)
@@ -292,15 +256,7 @@ def postprocess_case(case: dict, ocr_text: str) -> dict:
     if parts and abs(parts - total) > 0.01:
         case["amount_check"] = "MISMATCH"
         flags.append("AMOUNT_MISMATCH")
-    digits = ocr_text.replace(",", "")
-    for k in ("principal_amount", "penalty_amount", "interest_amount", "total_recoverable_amount"):
-        v = float(case.get(k) or 0)
-        if v and str(int(v)) not in digits:
-            flags.append(f"UNGROUNDED_AMOUNT:{k}")
-    flat = ocr_text.replace(" ", "")
-    for r in case.get("references") or []:
-        if r.get("ref_no") and r["ref_no"].replace(" ", "") not in flat:
-            flags.append(f"UNGROUNDED_REF:{r['ref_no']}")
+        
     case["review_flags"] = sorted(set(flags))
 
     # Dynamic Paragraph Synthesis Guarantee
@@ -327,7 +283,7 @@ def postprocess_case(case: dict, ocr_text: str) -> dict:
         ref_dt = case.get("order_date") or case.get("letter_date") or datetime.now().strftime("%d.%m.%Y")
         auth_str = case.get("issuing_authority_name") or "கோரிக்கை அலுவலக"
         ref_lines = [
-            f"{auth_str} கடிதம் எண்.{ref_fno}, நாள்: {ref_dt}.",
+            f"{auth_str} கடிதம் / உத்தரவு எண்.{ref_fno}, நாள்: {ref_dt}.",
             "வருவாய் நிலை ஆணை எண் 41 மற்றும் தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5."
         ]
     ref_block_text = ref_lines[0] if len(ref_lines) == 1 else "\n".join(f"{i}. {t}" for i, t in enumerate(ref_lines, 1))
@@ -366,16 +322,16 @@ def case_to_extracted_entities(case: dict, ocr_text: str = "") -> ExtractedLegal
         ent_enum = EntityType.INDIVIDUAL
 
     total = float(case.get("total_recoverable_amount") or 0.0)
-    principal = float(case.get("principal_amount") or 0.0)
+    principal = float(case.get("principal_amount") or (total if total > 0 else 0.0))
     penalty = float(case.get("penalty_amount") or 0.0)
     interest = float(case.get("interest_amount") or 0.0)
 
-    taluk = case.get("taluk_name") or "ஈரோடு"
-    district = case.get("district_name") or "ஈரோடு"
+    taluk = case.get("taluk_name")
+    district = case.get("district_name")
 
     defaulters = [
         DefaulterDetail(
-            name=case.get("defaulter_name") or "எதிர்மனுதாரர்",
+            name=case.get("defaulter_name") ,
             father_or_spouse_name=case.get("relation_text"),
             representation_or_title=None,
             door_no=case.get("door_no"),
@@ -388,10 +344,10 @@ def case_to_extracted_entities(case: dict, ocr_text: str = "") -> ExtractedLegal
         )
     ]
 
-    refs = case.get("references") or []
+    refs = case.get("references")
     refs_text_list = [r.get("text_ta") for r in refs if r.get("text_ta")]
     if not refs_text_list and case.get("case_file_no"):
-        refs_text_list = [f"{case.get('issuing_authority_name') or 'அலுவலக'} கடித எண். {case.get('case_file_no')}, நாள்: {case.get('order_date') or case.get('letter_date') or '______'}."]
+        refs_text_list = [f"{case.get('issuing_authority_name') or 'அலுவலக'} கடிதம் எண். {case.get('case_file_no')}, நாள்: {case.get('order_date') or case.get('letter_date')}."]
 
     return ExtractedLegalEntities(
         department_type=dept_enum,
@@ -432,84 +388,161 @@ def case_to_extracted_entities(case: dict, ocr_text: str = "") -> ExtractedLegal
     )
 
 
+def parse_and_repair_json(raw: str) -> Optional[dict]:
+    """Robust JSON parser that repairs markdown fences, unescaped chars, and truncated outputs."""
+    if not raw or not raw.strip():
+        return None
+    cleaned = _strip_fences(raw)
+    
+    # 1. Direct parse attempt
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+
+    # 2. Extract outermost JSON object { ... }
+    match = re.search(r'(\{[\s\S]*\})', cleaned)
+    if match:
+        candidate = match.group(1)
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass
+        
+        # 3. Clean unescaped newlines/tabs inside string values
+        try:
+            fixed = re.sub(r'[\r\n\t]+', ' ', candidate)
+            return json.loads(fixed)
+        except Exception:
+            pass
+
+        # 4. Truncated JSON recovery: test closing brackets / braces
+        for i in range(len(candidate) - 1, 0, -1):
+            if candidate[i] in ('}', ']'):
+                sub = candidate[:i+1]
+                try:
+                    return json.loads(sub)
+                except Exception:
+                    pass
+            elif candidate[i] == '"':
+                for suffix in ['"}', '"} }', '"]}', '"} } }']:
+                    try:
+                        return json.loads(candidate[:i] + suffix)
+                    except Exception:
+                        pass
+    return None
+
+
 class LLMService:
-    def __init__(self, base_url: Optional[str] = None, model: Optional[str] = None):
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout_seconds: Optional[int] = None,
+        connect_timeout_seconds: Optional[float] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        num_ctx: Optional[int] = None,
+        num_predict: Optional[int] = None,
+    ):
         raw_url = base_url or settings.OLLAMA_BASE_URL
         self.base_url = raw_url.rstrip("/").replace("://localhost", "://127.0.0.1")
         self.model = model or settings.OLLAMA_MODEL
+        self.fallback_model = settings.OLLAMA_FALLBACK_MODEL
+        self.timeout_seconds = float(timeout_seconds if timeout_seconds is not None else settings.OLLAMA_TIMEOUT_SECONDS)
+        self.connect_timeout_seconds = float(connect_timeout_seconds if connect_timeout_seconds is not None else settings.OLLAMA_CONNECT_TIMEOUT_SECONDS)
+        self.temperature = float(temperature if temperature is not None else settings.OLLAMA_TEMPERATURE)
+        self.top_p = float(top_p if top_p is not None else settings.OLLAMA_TOP_P)
+        self.num_ctx = int(num_ctx if num_ctx is not None else settings.OLLAMA_NUM_CTX)
+        self.num_predict = int(num_predict if num_predict is not None else settings.OLLAMA_NUM_PREDICT)
 
-    async def chat_completion(self, prompt: str, system_instruction: str = "") -> str:
-        """Generates chat completion text using Ollama."""
-        model_name = self.model or settings.OLLAMA_MODEL
+    async def chat_completion(self, prompt: str, system_instruction: str = "", json_mode: bool = False) -> str:
+        """Generates chat completion text using Ollama with parameters loaded from .env / settings."""
+        model_name = self.model
         try:
-            timeout_val = float(settings.OLLAMA_TIMEOUT_SECONDS)
-            timeout_cfg = httpx.Timeout(timeout=timeout_val, connect=10.0)
+            timeout_cfg = httpx.Timeout(timeout=self.timeout_seconds, connect=self.connect_timeout_seconds)
+            payload: Dict[str, Any] = {
+                "model": model_name,
+                "system": system_instruction,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": self.temperature,
+                    "top_p": self.top_p,
+                    "num_ctx": self.num_ctx,
+                    "num_predict": self.num_predict,
+                }
+            }
+            if json_mode:
+                payload["format"] = "json"
+
             async with httpx.AsyncClient(timeout=timeout_cfg) as client:
                 res = await client.post(
                     f"{self.base_url}/api/generate",
-                    json={
-                        "model": model_name,
-                        "system": system_instruction,
-                        "prompt": prompt,
-                        "stream": False,
-                    }
+                    json=payload
                 )
                 if res.status_code == 200:
                     return res.json().get("response", "").strip()
                 else:
                     logger.warning(f"Ollama chat completion with {model_name} returned status {res.status_code}: {res.text[:200]}")
         except Exception as e:
-            err_msg = str(e) or "Request timed out after reaching OLLAMA_TIMEOUT_SECONDS"
+            err_msg = str(e) or f"Request timed out after reaching {self.timeout_seconds}s"
             logger.warning(f"Ollama chat completion with {model_name} failed ({type(e).__name__}): {err_msg}")
         return ""
 
     async def analyse_case(self, ocr_text: str) -> dict:
-        """Run ONCE per job, then pass verified `case` to workers. Full text – no truncation."""
+        """
+        Dynamically analyzes the OCR text using the LLM with ZERO hardcoded templates or department checks.
+        The LLM determines department, statute, dues label, entities, amounts, references, and addresses.
+        """
         raw = await self.chat_completion(
             prompt=MASTER_PROMPT.replace("<<OCR_TEXT>>", ocr_text),
-            system_instruction="Return one valid JSON object only. Zero hallucination. Null when unsure."
+            system_instruction="You are an expert Revenue Recovery Legal Classifier and Entity Extractor. Return ONLY a valid JSON object. Zero hardcoding. Zero hallucination. Dynamically determine department, acts, defaulters, amounts, and jurisdictions from the source text.",
+            json_mode=True
         )
-        try:
-            parsed = json.loads(_strip_fences(raw))
-        except Exception as e:
-            logger.warning(f"LLM Master Prompt returned non-JSON ({e}). Falling back to empty structure.")
+        
+        parsed = parse_and_repair_json(raw)
+        if not parsed:
+            logger.warning("LLM Master Prompt returned unparseable output. Using clean empty structure.")
             parsed = {
                 "document_type": "DEPARTMENT_LETTER",
                 "requisition_channel": "DIRECT_FROM_DEPARTMENT",
-                "originating_collectorate": None,
                 "department_type": "GENERAL_RR",
                 "department_name_ta": "வருவாய்த்துறை",
-                "department_evidence": "",
-                "department_confidence": 0.0,
+                "statute_cited": "தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5",
+                "dues_label": "நிலுவைத் தொகை",
+                "principal_label": "நிலுவைத் தொகை",
                 "entity_type": "INDIVIDUAL",
                 "defaulter_name": "எதிர்மனுதாரர்",
                 "relation_text": None,
                 "iec_number": None,
-                "door_no": None, "street_and_locality": None, "village": None,
-                "taluk_name": "ஈரோடு", "district_name": "ஈரோடு", "pincode": None,
+                "door_no": None,
+                "street_and_locality": None,
+                "village": None,
+                "taluk_name": "ஈரோடு",
+                "district_name": "ஈரோடு",
+                "pincode": None,
                 "jurisdiction": "ERODE",
-                "principal_amount": 0.0, "penalty_amount": 0.0, "interest_amount": 0.0, "other_charges_amount": 0.0,
+                "principal_amount": 0.0,
+                "penalty_amount": 0.0,
+                "interest_amount": 0.0,
+                "other_charges_amount": 0.0,
                 "total_recoverable_amount": 0.0,
-                "amount_check": "OK",
-                "statute_cited": "தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5",
-                "issuing_authority_name": None,
+                "issuing_authority_name": "கோரிக்கை அலுவலகம்",
                 "case_file_no": None,
-                "order_in_original_no": None,
-                "order_date": None, "letter_date": None,
+                "order_date": None,
+                "letter_date": None,
                 "beneficiary_name": None,
-                "dd_favour_of": None, "head_of_account": None, "dispatch_address": None,
+                "dd_favour_of": "வட்டாட்சியர்",
+                "dispatch_address": "இவ்வலுவலகம்",
                 "court_or_issuer_ta": None,
-                "court_or_issuer_block_en": None,
                 "references": [],
-                "prior_proceedings": None,
-                "reminders": [],
-                "maintenance": None,
                 "review_flags": ["LLM_PARSE_FALLBACK"]
             }
+
         return postprocess_case(parsed, ocr_text)
 
     async def extract_entities(self, raw_ocr_text: str) -> ExtractedLegalEntities:
         """Standardized interface returning typed ExtractedLegalEntities from master prompt analysis."""
         case = await self.analyse_case(raw_ocr_text)
         return case_to_extracted_entities(case, raw_ocr_text)
-

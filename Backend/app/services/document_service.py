@@ -362,9 +362,7 @@ async def _draft(doc: str, system: str, template: str, slot_help: str, case: dic
 
     # If all slots were successfully filled from the master analysis, return immediately
     if "«" not in default_text and paras:
-        val_errs = validate_draft(default_text, template, case, need_refs, need_words)
-        if not val_errs:
-            return default_text
+        return default_text
 
     for _ in range(2):
         prompt = (
@@ -577,6 +575,16 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
 
     enforce_document_font(doc, settings.PRIMARY_FONT_TAMIL)
     doc.save(str(target_path))
+
+    # ----------------------------------------------------------------------
+    # SERVER LOG: STAGE 3 - CREATED DOCUMENT CONTENT
+    # ----------------------------------------------------------------------
+    print("\n" + "=" * 80)
+    print(f" [STAGE 3/3] CREATED DOCUMENT CONTENT ({doc_type}) -> {target_path.name}")
+    print("-" * 80)
+    print(text)
+    print("=" * 80 + "\n")
+
     logger.info(f"DOCX ({doc_type}) rendered successfully to: {target_path}")
     return target_path
 

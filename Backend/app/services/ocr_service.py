@@ -42,8 +42,8 @@ class OCRService:
         """
         Extracts Tamil and English text from PDF or Image file.
         Strategy:
-        1. For PDFs: Instantly extracts high-fidelity digital text layer if present (> 50 chars).
-        2. For Scanned PDFs/Images: Executes Chandra OCR API in accurate mode, falling back to balance mode.
+        1. Renders PDF/Image pages to visual images (pypdfium2 / PIL).
+        2. Executes Chandra OCR API in accurate mode, falling back to balance mode.
         3. Failsafe: Ensures pipeline resilience without throwing unhandled 502/500 errors.
         """
         path = Path(file_path)
@@ -52,36 +52,7 @@ class OCRService:
 
         ext = path.suffix.lower()
 
-        # Step 1: Native High-Fidelity PDF Text Layer Extraction
-        if ext == ".pdf":
-            try:
-                pdf = pdfium.PdfDocument(str(path))
-                page_texts = []
-                total_chars = 0
-                for page_idx in range(len(pdf)):
-                    page = pdf[page_idx]
-                    page_text = page.get_textpage().get_text_range() or ""
-                    page_texts.append(page_text.strip())
-                    total_chars += len(page_text.strip())
-
-                if total_chars > 80:
-                    joined_text = "\n\n--- [PAGE BREAK] ---\n\n".join(page_texts).strip()
-                    logger.info(f"Successfully extracted {total_chars} chars of native high-fidelity text from {path.name}")
-                    return {
-                        "text": joined_text,
-                        "page_count": len(pdf),
-                        "pages": [
-                            {"page": idx + 1, "mode": "native_digital_high_fidelity", "text": txt, "confidence": 0.99}
-                            for idx, txt in enumerate(page_texts)
-                        ],
-                        "engine": "pypdfium2-native-text",
-                        "mode_used": "native_digital_high_fidelity",
-                        "confidence": 0.99
-                    }
-            except Exception as e:
-                logger.warning(f"Native PDF text extraction skipped or unreadable ({e}), proceeding to visual OCR...")
-
-        # Step 2: Visual OCR via Chandra API
+        # Visual OCR via Chandra API (All documents rendered as images)
         images: List[Image.Image] = []
         if ext == ".pdf":
             images = self._render_pdf_to_images(path)
