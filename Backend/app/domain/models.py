@@ -41,15 +41,19 @@ class DocumentTemplate(Base, TimestampMixin):
     category = Column(String(50), default="REVENUE_RECOVERY")
     description = Column(Text, nullable=True)
     heading_prefix = Column(String(150), nullable=True)
-    subject_template = Column(Text, nullable=False)
-    reference_template = Column(Text, nullable=False)
-    order_para1_template = Column(Text, nullable=False)
-    order_para2_template = Column(Text, nullable=False)
-    order_para3_template = Column(Text, nullable=False)
+    subject_template = Column(Text, nullable=True)
+    reference_template = Column(Text, nullable=True)
+    order_para1_template = Column(Text, nullable=True)
+    order_para2_template = Column(Text, nullable=True)
+    order_para3_template = Column(Text, nullable=True)
     enclosure_text = Column(String(200), default="கடித நகல்")
     signatory_text = Column(Text, nullable=True)
     recipients = Column(JSONB, nullable=True)
     template_data = Column(JSONB, nullable=True)  # Native JSONB
+    locked_template = Column(Text, nullable=True)  # Official locked template format with «SLOTS»
+    slot_instructions = Column(Text, nullable=True)  # LLM instructions for variable red slots
+    file_name = Column(String(255), nullable=True)  # File name of uploaded docx
+    file_base64 = Column(Text, nullable=True)  # Base64 encoded DOCX file binary stored in DB
     created_by_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
@@ -79,12 +83,27 @@ class ProceedingsCase(Base, TimestampMixin):
     hybrid_signature = Column(String(255), nullable=True)
     document_content = Column(Text, nullable=True)
     document_layout = Column(JSONB, nullable=True)
-    extracted_data = Column(JSONB, nullable=True)
+    ocr_data = Column(JSONB, nullable=True)  # Complete OCR payload stored natively as JSONB
+    extracted_data = Column(JSONB, nullable=True)  # Master Prompt verified CASE JSON
+    generated_documents = Column(JSONB, nullable=True)  # Generated documents manifest
 
     # Relationships
     template = relationship("DocumentTemplate", back_populates="cases")
     officer = relationship("User", back_populates="assigned_cases")
     audit_entries = relationship("AuditLedgerEntry", back_populates="case")
+
+
+class OfficeConfiguration(Base, TimestampMixin):
+    __tablename__ = "office_configurations"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    config_key = Column(String(50), unique=True, index=True, nullable=False)  # e.g. "ERODE_COLLECTORATE"
+    collector_line = Column(String(150), default="திரு.ச.கந்தசாமி, இ.ஆ.ப.,", nullable=False)
+    office_section = Column(String(20), default="ஈ2", nullable=False)
+    taluks = Column(JSONB, nullable=True)  # ERODE_TALUKS JSON list
+    taluk_to_rdo = Column(JSONB, nullable=True)  # TALUK_TO_RDO JSON mapping
+    dept_configs = Column(JSONB, nullable=True)  # DEPT dictionary configuration
+    is_active = Column(Boolean, default=True, nullable=False)
 
 
 class AuditLedgerEntry(Base, TimestampMixin):

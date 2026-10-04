@@ -5,7 +5,8 @@ Ensures all columns and foreign keys match modern models in PostgreSQL.
 
 import asyncio
 from sqlalchemy import text
-from app.core.database import engine, Base
+from app.core.database import engine, Base, AsyncSessionLocal
+from app.core.seed import seed_default_accounts, seed_default_templates
 
 
 async def sync_schema():
@@ -24,6 +25,8 @@ async def sync_schema():
             "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS signatory_text TEXT;",
             "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS recipients JSONB;",
             "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS template_data JSONB;",
+            "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS file_name VARCHAR(255);",
+            "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS file_base64 TEXT;",
             "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS created_by_id VARCHAR;",
             "ALTER TABLE proceedings_cases ADD COLUMN IF NOT EXISTS roc_number VARCHAR(100);",
             "ALTER TABLE proceedings_cases ADD COLUMN IF NOT EXISTS template_id VARCHAR;",
@@ -41,6 +44,11 @@ async def sync_schema():
                 print(f"Statement warning: {stmt} -> {e}")
 
         print("PostgreSQL database schema synchronized successfully.")
+
+    async with AsyncSessionLocal() as session:
+        await seed_default_accounts(session)
+        await seed_default_templates(session)
+        print("Database accounts and templates seeded successfully.")
 
 
 if __name__ == "__main__":

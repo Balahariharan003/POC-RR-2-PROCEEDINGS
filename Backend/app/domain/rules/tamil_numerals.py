@@ -1,110 +1,80 @@
 """
 Tamil Currency Numeral to Words Converter.
 Strictly formats INR amounts into formal Tamil administrative phrasing:
-e.g. 182308 -> "ரூபாய் ஒரு இலட்சத்து எண்பத்தி இரண்டாயிரத்து முந்நூற்றி எட்டு மட்டும்"
+e.g. 182308 -> "ரூபாய் ஒரு இலட்சத்து எண்பத்து இரண்டாயிரத்து முந்நூற்று எட்டு மட்டும்"
 """
 
 from typing import Union
 
-UNITS = {
-    0: "", 1: "ஒன்று", 2: "இரண்டு", 3: "மூன்று", 4: "நான்கு",
-    5: "ஐந்து", 6: "ஆறு", 7: "ஏழு", 8: "எட்டு", 9: "ஒன்பது",
-    10: "பத்து", 11: "பதினொன்று", 12: "பன்னிரண்டு", 13: "பதின்மூன்று",
-    14: "பதினான்கு", 15: "பதினைந்து", 16: "பதினாறு", 17: "பதினேழு",
-    18: "பதினெட்டு", 19: "பத்தொன்பது"
-}
-
-TENS_PREFIX = {
-    2: "இருபத்தி ", 3: "முப்பத்தி ", 4: "நாற்பத்தி ",
-    5: "ஐம்பத்தி ", 6: "அறுபத்தி ", 7: "எழுபத்தி ",
-    8: "எண்பத்தி ", 9: "தொண்ணூற்றி "
-}
-
-TENS_EXACT = {
-    2: "இருபது", 3: "முப்பது", 4: "நாற்பது",
-    5: "ஐம்பது", 6: "அறுபது", 7: "எழுபது",
-    8: "எண்பது", 9: "தொண்ணூறு"
-}
-
-HUNDREDS_PREFIX = {
-    1: "நூற்றி ", 2: "இருநூற்றி ", 3: "முந்நூற்றி ", 4: "நாநூற்றி ",
-    5: "ஐந்நூற்றி ", 6: "அறுநூற்றி ", 7: "எழுநூற்றி ", 8: "எண்ணூற்றி ", 9: "தொள்ளாயிரத்து "
-}
-
-HUNDREDS_EXACT = {
-    1: "நூறு", 2: "இருநூறு", 3: "முந்நூறு", 4: "நாநூறு",
-    5: "ஐந்நூறு", 6: "அறுநூறு", 7: "எழுநூறு", 8: "எண்ணூறு", 9: "தொள்ளாயிரம்"
-}
+_ONES = ["", "ஒன்று", "இரண்டு", "மூன்று", "நான்கு", "ஐந்து", "ஆறு", "ஏழு", "எட்டு", "ஒன்பது", "பத்து",
+         "பதினொன்று", "பன்னிரண்டு", "பதிமூன்று", "பதினான்கு", "பதினைந்து", "பதினாறு", "பதினேழு",
+         "பதினெட்டு", "பத்தொன்பது"]
+_TENS = {2: "இருபது", 3: "முப்பது", 4: "நாற்பது", 5: "ஐம்பது", 6: "அறுபது", 7: "எழுபது", 8: "எண்பது", 9: "தொண்ணூறு"}
+_TENS_C = {2: "இருபத்து", 3: "முப்பத்து", 4: "நாற்பத்து", 5: "ஐம்பத்து", 6: "அறுபத்து", 7: "எழுபத்து",
+           8: "எண்பத்து", 9: "தொண்ணூற்று"}
+_HUND = {1: ("நூறு", "நூற்று"), 2: ("இருநூறு", "இருநூற்று"), 3: ("முந்நூறு", "முந்நூற்று"),
+         4: ("நானூறு", "நானூற்று"), 5: ("ஐந்நூறு", "ஐந்நூற்று"), 6: ("அறுநூறு", "அறுநூற்று"),
+         7: ("எழுநூறு", "எழுநூற்று"), 8: ("எண்ணூறு", "எண்ணூற்று"), 9: ("தொள்ளாயிரம்", "தொள்ளாயிரத்து")}
+_K = {1: "ஆ", 2: "இரண்டா", 3: "மூவா", 4: "நாலா", 5: "ஐயா", 6: "ஆறா", 7: "ஏழா", 8: "எண்ணா", 9: "ஒன்பதா",
+      10: "பத்தா", 11: "பதினோரா", 12: "பன்னீரா", 13: "பதிமூவா", 14: "பதினாலா", 15: "பதினையா",
+      16: "பதினாறா", 17: "பதினேழா", 18: "பதினெண்ணா", 19: "பத்தொன்பதா"}
 
 
-def _two_digits_to_tamil(n: int) -> str:
-    if n == 0:
-        return ""
+def _below100(n: int) -> str:
     if n < 20:
-        return UNITS[n]
-    tens = n // 10
-    rem = n % 10
-    if rem == 0:
-        return TENS_EXACT[tens]
-    return TENS_PREFIX[tens] + UNITS[rem]
+        return _ONES[n]
+    t, u = divmod(n, 10)
+    return _TENS[t] if u == 0 else f"{_TENS_C[t]} {_ONES[u]}"
 
 
-def _three_digits_to_tamil(n: int) -> str:
+def _below1000(n: int) -> str:
+    h, r = divmod(n, 100)
+    parts = []
+    if h:
+        parts.append(_HUND[h][1] if r else _HUND[h][0])
+    if r:
+        parts.append(_below100(r))
+    return " ".join(parts)
+
+
+def _k_prefix(m: int) -> str:
+    if m in _K:
+        return _K[m]
+    t, u = divmod(m, 10)
+    return _TENS[t][:-1] + "ா" if u == 0 else f"{_TENS_C[t]} {_K[u]}"
+
+
+def tamil_words(n: int) -> str:
+    """Indian-system words: 182308 -> ஒரு இலட்சத்து எண்பத்து இரண்டாயிரத்து முந்நூற்று எட்டு"""
     if n == 0:
-        return ""
-    if n < 100:
-        return _two_digits_to_tamil(n)
-    hundreds = n // 100
-    rem = n % 100
-    if rem == 0:
-        return HUNDREDS_EXACT[hundreds]
-    return HUNDREDS_PREFIX[hundreds] + _two_digits_to_tamil(rem)
+        return "பூஜ்ஜியம்"
+    crore, n = divmod(n, 10 ** 7)
+    lakh, n = divmod(n, 10 ** 5)
+    thou, rest = divmod(n, 1000)
+    out = []
+    if crore:
+        w = "ஒரு" if crore == 1 else (_below100(crore) if crore < 100 else tamil_words(crore))
+        out.append(w + (" கோடியே" if (lakh or thou or rest) else " கோடி"))
+    if lakh:
+        out.append(("ஒரு" if lakh == 1 else _below100(lakh)) + (" இலட்சத்து" if (thou or rest) else " இலட்சம்"))
+    if thou:
+        out.append(_k_prefix(thou) + ("யிரத்து" if rest else "யிரம்"))
+    if rest:
+        out.append(_below1000(rest))
+    return " ".join(out)
 
 
 def number_to_tamil_currency_words(amount: Union[int, float, str]) -> str:
     """
     Converts Indian Rupee integer amounts into official Tamil currency words.
-    E.g. 182308 -> "ரூபாய் ஒரு இலட்சத்து எண்பத்தி இரண்டாயிரத்து முந்நூற்றி எட்டு மட்டும்"
+    E.g. 182308 -> "ரூபாய் ஒரு இலட்சத்து எண்பத்து இரண்டாயிரத்து முந்நூற்று எட்டு மட்டும்"
     """
     try:
-        val = int(round(float(amount or 0)))
+        val = float(amount or 0.0)
     except (ValueError, TypeError):
-        return ""
-
+        return "ரூபாய் பூஜ்ஜியம் மட்டும்"
     if val == 0:
         return "ரூபாய் பூஜ்ஜியம் மட்டும்"
-
-    crores = val // 10000000
-    val %= 10000000
-
-    lakhs = val // 100000
-    val %= 100000
-
-    thousands = val // 1000
-    val %= 1000
-
-    remainder = val
-
-    parts = []
-
-    if crores > 0:
-        c_words = _three_digits_to_tamil(crores)
-        parts.append(f"{c_words} கோடியே" if (lakhs > 0 or thousands > 0 or remainder > 0) else f"{c_words} கோடி")
-
-    if lakhs > 0:
-        l_prefix = "ஒரு" if lakhs == 1 else _two_digits_to_tamil(lakhs)
-        parts.append(f"{l_prefix} இலட்சத்து" if (thousands > 0 or remainder > 0) else f"{l_prefix} இலட்சம்")
-
-    if thousands > 0:
-        if thousands == 1:
-            t_word = "ஆயிரத்து" if remainder > 0 else "ஆயிரம்"
-        else:
-            t_name = _two_digits_to_tamil(thousands)
-            t_word = f"{t_name} ஆயிரத்து" if remainder > 0 else f"{t_name} ஆயிரம்"
-        parts.append(t_word)
-
-    if remainder > 0:
-        parts.append(_three_digits_to_tamil(remainder))
-
-    res = " ".join([p for p in parts if p]).strip()
-    return f"ரூபாய் {res} மட்டும்"
+    paise = round((val - int(val)) * 100)
+    return (f"ரூபாய் {tamil_words(int(val))}"
+            + (f" மற்றும் {tamil_words(paise)} பைசா" if paise else "") + " மட்டும்")

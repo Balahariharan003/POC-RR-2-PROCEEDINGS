@@ -51,6 +51,36 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
+async def ensure_db_schema_migrated() -> None:
+    """Safely adds newly created columns and relaxes legacy constraints on existing PostgreSQL tables."""
+    from sqlalchemy import text
+    statements = [
+        "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS locked_template TEXT;",
+        "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS slot_instructions TEXT;",
+        "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS template_data JSONB;",
+        "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS file_name VARCHAR(255);",
+        "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS file_base64 TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN subject_template DROP NOT NULL;",
+        "ALTER TABLE document_templates ALTER COLUMN reference_template DROP NOT NULL;",
+        "ALTER TABLE document_templates ALTER COLUMN order_para1_template DROP NOT NULL;",
+        "ALTER TABLE document_templates ALTER COLUMN order_para2_template DROP NOT NULL;",
+        "ALTER TABLE document_templates ALTER COLUMN order_para3_template DROP NOT NULL;",
+        "ALTER TABLE document_templates ALTER COLUMN heading_prefix DROP NOT NULL;",
+        "ALTER TABLE document_templates ALTER COLUMN signatory_text DROP NOT NULL;",
+        "ALTER TABLE proceedings_cases ADD COLUMN IF NOT EXISTS ocr_data JSONB;",
+        "ALTER TABLE proceedings_cases ADD COLUMN IF NOT EXISTS generated_documents JSONB;",
+    ]
+    try:
+        async with engine.begin() as conn:
+            for stmt in statements:
+                try:
+                    await conn.execute(text(stmt))
+                except Exception as ex:
+                    logger.debug(f"Migration statement ignored: {ex}")
+    except Exception as e:
+        logger.warning(f"Schema column check skipped or unsupported on this backend: {e}")
+
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency that yields an async database session per request."""
     async with AsyncSessionLocal() as session:
@@ -63,3 +93,4 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+

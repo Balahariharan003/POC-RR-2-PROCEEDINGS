@@ -174,6 +174,27 @@ export const apiService = {
     return requestJson(`${API_V1}/templates/${encodeURIComponent(code)}`, null, 'DELETE');
   },
 
+  async downloadTemplateDocx(code, filename = `${code}.docx`) {
+    const response = await fetch(`${API_V1}/templates/${encodeURIComponent(code)}/download`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) throw new Error(await errorMessage(response, 'Template download failed.'));
+    const bytes = await response.arrayBuffer();
+    triggerDownload(bytes, 'docx', filename, response.headers.get('content-type') || undefined);
+  },
+
+  async uploadTemplateDocx(code, file) {
+    const body = new FormData();
+    body.append('file', file);
+    const response = await fetch(`${API_V1}/templates/${encodeURIComponent(code)}/upload`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body,
+    });
+    if (!response.ok) throw new Error(await errorMessage(response, 'Failed to upload template DOCX file.'));
+    return await response.json();
+  },
+
   // --- Document Upload & Processing Pipeline ---
   async uploadDocument(file, templateCode = '') {
     const body = new FormData();
@@ -462,6 +483,10 @@ export const apiService = {
 
   async getTemplate(code) {
     return requestJson(`${API_V1}/templates/${encodeURIComponent(code)}`, null, 'GET');
+  },
+
+  async getTemplateLayout(code) {
+    return requestJson(`${API_V1}/templates/${encodeURIComponent(code)}/layout`, null, 'GET');
   },
 
   async createTemplate(templateData) {

@@ -14,7 +14,9 @@ class DepartmentType(str, Enum):
     MCOP = "MCOP"
     COMMERCIAL_TAX = "COMMERCIAL_TAX"
     EXCISE = "EXCISE"
+    MAINTENANCE = "MAINTENANCE"
     GENERAL_RR = "GENERAL_RR"
+
 
 
 class EntityType(str, Enum):

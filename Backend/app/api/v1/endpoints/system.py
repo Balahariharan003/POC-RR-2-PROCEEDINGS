@@ -27,7 +27,7 @@ from app.core.database import get_db
 from app.core.logging import logger
 from app.core.config import settings
 from app.api.dependencies import get_current_user
-from app.domain.models import User, DocumentTemplate, AuditLedgerEntry, ProceedingsCase
+from app.domain.models import User, DocumentTemplate, AuditLedgerEntry, ProceedingsCase, OfficeConfiguration
 import re
 
 
@@ -779,3 +779,75 @@ async def export_system_report_docx(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to export report DOCX: {str(e)}",
         )
+
+
+@router.get("/office-config", tags=["System Administration"])
+async def get_office_configuration(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Retrieves dynamic office configuration (Collector line, section, taluks, RDO mapping, department dictionaries)."""
+    stmt = select(OfficeConfiguration).where(OfficeConfiguration.config_key == "ERODE_COLLECTORATE")
+    res = await db.execute(stmt)
+    cfg = res.scalars().first()
+    if not cfg:
+        from app.services.llm_service import COLLECTOR_LINE, OFFICE_SECTION, TALUK_TO_RDO, ERODE_TALUKS
+        return {
+            "config_key": "ERODE_COLLECTORATE",
+            "collector_line": COLLECTOR_LINE,
+            "office_section": OFFICE_SECTION,
+            "taluks": ERODE_TALUKS,
+            "taluk_to_rdo": TALUK_TO_RDO,
+            "dept_configs": {},
+            "is_active": True,
+        }
+    return {
+        "id": cfg.id,
+        "config_key": cfg.config_key,
+        "collector_line": cfg.collector_line,
+        "office_section": cfg.office_section,
+        "taluks": cfg.taluks,
+        "taluk_to_rdo": cfg.taluk_to_rdo,
+        "dept_configs": cfg.dept_configs,
+        "is_active": cfg.is_active,
+    }
+
+
+@router.put("/office-config", tags=["System Administration"])
+async def update_office_configuration(
+    payload: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Updates dynamic office configuration in the database without altering source code."""
+    stmt = select(OfficeConfiguration).where(OfficeConfiguration.config_key == "ERODE_COLLECTORATE")
+    res = await db.execute(stmt)
+    cfg = res.scalars().first()
+    if not cfg:
+        cfg = OfficeConfiguration(
+            config_key="ERODE_COLLECTORATE",
+            collector_line=payload.get("collector_line", "திரு.ச.கந்தசாமி, இ.ஆ.ப.,"),
+            office_section=payload.get("office_section", "ஈ2"),
+            taluks=payload.get("taluks"),
+            taluk_to_rdo=payload.get("taluk_to_rdo"),
+            dept_configs=payload.get("dept_configs"),
+            is_active=payload.get("is_active", True),
+        )
+        db.add(cfg)
+    else:
+        if "collector_line" in payload:
+            cfg.collector_line = payload["collector_line"]
+        if "office_section" in payload:
+            cfg.office_section = payload["office_section"]
+        if "taluks" in payload:
+            cfg.taluks = payload["taluks"]
+        if "taluk_to_rdo" in payload:
+            cfg.taluk_to_rdo = payload["taluk_to_rdo"]
+        if "dept_configs" in payload:
+            cfg.dept_configs = payload["dept_configs"]
+        if "is_active" in payload:
+            cfg.is_active = payload["is_active"]
+
+    await db.commit()
+    return {"status": "SUCCESS", "message": "Office configuration updated successfully."}
+

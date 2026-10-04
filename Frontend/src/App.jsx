@@ -188,6 +188,11 @@ export default function App() {
                 currentLanguage={currentLanguage}
                 activeSession={activeSession}
                 onSaveAuditLog={refreshAuditLogs}
+                onBackToAudit={() => {
+                  setActiveSession(null);
+                  setActiveView('audit');
+                }}
+                onClearSession={() => setActiveSession(null)}
               />
             )}
 

@@ -46,6 +46,8 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        from app.core.database import ensure_db_schema_migrated
+        await ensure_db_schema_migrated()
         logger.info("Database schema synchronized successfully.")
 
         # Seed default accounts & templates

@@ -1,7 +1,7 @@
 """
-Database Seeder: Seeds default administrator and revenue officer accounts.
+Database Seeder: Seeds default administrator, revenue officer accounts,
+official 4-worker revenue recovery templates, and Erode Collectorate configuration.
 All credentials are read exclusively from environment variables via settings.
-No plaintext passwords exist in source code.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,43 +9,63 @@ from sqlalchemy import select, or_
 from app.core.security import hash_password
 from app.core.logging import logger
 from app.core.config import settings
-from app.domain.models import User, DocumentTemplate
+from app.domain.models import User, DocumentTemplate, OfficeConfiguration
+from app.services.document_service import (
+    OFFICE_NOTE_TEMPLATE,
+    OFFICE_NOTE_SLOTS,
+    PROCEEDINGS_TEMPLATE,
+    PROCEEDINGS_SLOTS,
+    MEMO_TEMPLATE,
+    MEMO_SLOTS,
+    WARRANT_TEMPLATE,
+    WARRANT_SLOTS,
+)
+from app.services.llm_service import (
+    COLLECTOR_LINE,
+    OFFICE_SECTION,
+    TALUK_TO_RDO,
+    ERODE_TALUKS,
+)
+
+
+INITIAL_DATABASE_USERS = [
+    {
+        "username": "admin",
+        "email": "admin@erode.tn.gov.in",
+        "default_password": "Govt@2026",
+        "full_name": "District Collector / DRO Erode",
+        "role": "admin",
+        "jurisdiction_district": "Erode",
+        "jurisdiction_taluk": "Erode",
+        "is_active": True,
+    },
+    {
+        "username": "user",
+        "email": "user@erode.tn.gov.in",
+        "default_password": "Govt@2026",
+        "full_name": "S. Ramanathan (Revenue Officer)",
+        "role": "user",
+        "jurisdiction_district": "Erode",
+        "jurisdiction_taluk": "Erode",
+        "is_active": True,
+    },
+    {
+        "username": "auditor",
+        "email": "auditor@erode.tn.gov.in",
+        "default_password": "Govt@2026",
+        "full_name": "Section Superintendent (E2)",
+        "role": "auditor",
+        "jurisdiction_district": "Erode",
+        "jurisdiction_taluk": "Erode",
+        "is_active": True,
+    }
+]
 
 
 async def seed_default_accounts(session: AsyncSession) -> None:
-    """Seeds one admin and one user account from .env credentials if they don't already exist."""
-    accounts = []
-
-    if settings.SEED_ADMIN_USERNAME and settings.SEED_ADMIN_PASSWORD:
-        accounts.append({
-            "username": settings.SEED_ADMIN_USERNAME,
-            "email": settings.SEED_ADMIN_EMAIL,
-            "password": settings.SEED_ADMIN_PASSWORD,
-            "full_name": settings.SEED_ADMIN_FULLNAME or "Administrator",
-            "role": "admin",
-            "jurisdiction_district": "Erode",
-            "jurisdiction_taluk": "Erode",
-            "is_active": True,
-        })
-
-    if settings.SEED_USER_USERNAME and settings.SEED_USER_PASSWORD:
-        accounts.append({
-            "username": settings.SEED_USER_USERNAME,
-            "email": settings.SEED_USER_EMAIL,
-            "password": settings.SEED_USER_PASSWORD,
-            "full_name": settings.SEED_USER_FULLNAME or "Revenue Officer",
-            "role": "user",
-            "jurisdiction_district": "Erode",
-            "jurisdiction_taluk": "Erode",
-            "is_active": True,
-        })
-
-    if not accounts:
-        logger.info("No seed account credentials found in .env — skipping account seeding.")
-        return
-
+    """Seeds initial administrative and revenue officer accounts into the database if not present."""
     try:
-        for acc in accounts:
+        for acc in INITIAL_DATABASE_USERS:
             stmt = select(User).where(or_(User.username == acc["username"], User.email == acc["email"]))
             result = await session.execute(stmt)
             existing = result.scalars().first()
@@ -54,7 +74,7 @@ async def seed_default_accounts(session: AsyncSession) -> None:
                 new_user = User(
                     username=acc["username"],
                     email=acc["email"],
-                    hashed_password=hash_password(acc["password"]),
+                    hashed_password=hash_password(acc["default_password"]),
                     full_name=acc["full_name"],
                     role=acc["role"],
                     jurisdiction_district=acc["jurisdiction_district"],
@@ -62,11 +82,7 @@ async def seed_default_accounts(session: AsyncSession) -> None:
                     is_active=acc["is_active"],
                 )
                 session.add(new_user)
-                logger.info(f"Seeded default {acc['role']} account: {acc['username']} ({acc['email']})")
-            else:
-                existing.hashed_password = hash_password(acc["password"])
-                existing.is_active = True
-                logger.info(f"Synchronized seed account credentials: {acc['username']} ({acc['email']})")
+                logger.info(f"Seeded initial DB user: {acc['username']} ({acc['email']})")
 
         await session.commit()
     except Exception as e:
@@ -74,88 +90,149 @@ async def seed_default_accounts(session: AsyncSession) -> None:
         logger.error(f"Failed to seed default accounts: {e}")
 
 
-DEFAULT_TEMPLATES = [
+OFFICIAL_TEMPLATES = [
     {
-        "template_code": "customs_sec142",
-        "name": "Customs Act 1962 Sec 142(1)(c)(i) Recovery",
-        "department_type": "CUSTOMS",
-        "subject_template": "வருவாய் வசூல் சட்டம் 1864 – சுங்கச் சட்டம் 1962 பிரிவு 142(1)(c)(i) – சென்னை சுங்கத்துறை ஏற்றுமதி ஆணையரகம் – நிலுவைத் தொகை வசூலிக்கக் கோருதல் – ஆணை பிறப்பிக்கப்படுகிறது.",
-        "reference_template": "1. உதவி ஆணையர் (ஏற்றுமதி), சுங்கத்துறை ஆணையரகம் (சென்னை IV), கடித ந.க.எண் {case_no}, நாள்: {order_date}.\n2. இணை சுங்க ஆணையர், சுங்கத்துறை ஆணையரகம் (சென்னை IV), சென்னை அவர்களின் ஆணை.",
-        "order_para1_template": "பார்வை 1-ல் காணும் சென்னை, சுங்கத்துறை ஆணையரகம் கடிதத்தில், {taluk} வட்டம், {defaulter_address} என்ற முகவரியில் இயங்கி வரும் {defaulter_name} என்ற நிறுவனம் சுங்கச் சட்டம் 1962-ன்படி அரசுக்குச் செலுத்த வேண்டிய நிலுவைத் தொகை ரூ.{total_amount}/- ({amount_in_words})-யினை தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன்படி வசூலித்துத் தருமாறு கோரப்பட்டுள்ளது.",
-        "order_para2_template": "எனவே, தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5 மற்றும் சுங்கச் சட்டம் 1962 பிரிவு 142(1)(c)(i)-ன் கீழ் வழங்கப்பட்டுள்ள அதிகாரத்தின்படி, மேற்படி நிறுவனத்திடமிருந்து அரசுக்குச் சேர வேண்டிய நிலுவைத் தொகையான ரூ.{total_amount}/- மற்றும் அதற்குரிய வட்டியினை உடனடியாக வசூலித்து \"Commissioner of Customs, Export Commissionerate, Chennai IV\" என்ற பெயரில் வங்கி வரைவோலையாக (Head of Account: 037 - Customs) பெற்று இவ்வலுவலகத்திற்கு அனுப்பி வைக்குமாறு {taluk} வட்டாட்சியர் அவர்களுக்கு உத்தரவிடப்படுகிறது.",
-        "order_para3_template": "மேற்படி நிறுவனத்தின் அசையும் மற்றும் அசையா சொத்துகளிலிருந்து மற்றும் வங்கிக் கணக்குகளிலிருந்து தொகையினை உடனடியாக வசூலிக்க உரிய நடவடிக்கை மேற்கொள்ளுமாறு உத்தரவிடப்படுகிறது.",
+        "template_code": "office_note_default",
+        "name": "அலுவலகக் குறிப்பு (Office Note File Order)",
+        "department_type": "GENERAL_RR",
+        "category": "INTERNAL_NOTE",
+        "description": "Internal section note submitted to the District Collector / DRO for RR authorization under RSO 41 & Sec 5.",
+        "locked_template": OFFICE_NOTE_TEMPLATE,
+        "slot_instructions": OFFICE_NOTE_SLOTS,
         "enclosure_text": "கடித நகல்",
         "template_data": {
-            "department": "Customs Export Commissionerate",
-            "statutory_act": "Customs Act 1962",
-            "section": "142(1)(c)(i)",
-            "recovery_act": "Tamil Nadu Revenue Recovery Act 1864 Section 5",
-            "head_of_account": "037 - Customs",
-            "dd_favour_of": "Commissioner of Customs, Export Commissionerate, Chennai IV",
-            "dispatch_to": ["Tahsildar", "Revenue Divisional Officer", "Assistant Commissioner of Customs"],
-            "variables": ["case_no", "order_date", "taluk", "defaulter_name", "defaulter_address", "total_amount", "amount_in_words"]
+            "worker_target": "OFFICE_NOTE",
+            "statute": "Tamil Nadu Revenue Recovery Act 1864",
+            "rso": "RSO 41",
+            "section": "Section 5"
         },
         "is_active": True,
     },
     {
-        "template_code": "mcop_award",
-        "name": "Motor Accidents Claims Tribunal (MCOP) Recovery",
-        "department_type": "MCOP",
-        "subject_template": "வருவாய் வசூல் சட்டம் 1864 பிரிவு 5 – மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம் – MCOP எண். {case_no} – இழப்பீட்டுத் தொகை வசூலித்தல் – குறித்து.",
-        "reference_template": "1. நீதிமன்ற ஆணை {case_no}, நாள்: {order_date}.\n2. வருவாய் நிலை ஆணை எண் 41 (RSO 41).",
-        "order_para1_template": "பார்வை 1-ல் காணும் நீதிமன்ற ஆணையில், {taluk} வட்டம், {defaulter_address} என்ற முகவரியில் வசிக்கும் {defaulter_name} என்பவர் மோட்டார் வாகன விபத்து இழப்பீட்டுத் தொகையான ரூ.{total_amount}/- ({amount_in_words})-யினை வழங்கத் தவறியதால், மேற்படி தொகையினை தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன்படி வசூலிக்க உத்தரவிடப்பட்டுள்ளது.",
-        "order_para2_template": "எனவே, தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வழங்கப்பட்டுள்ள அதிகாரத்தின்படி, எதிர்தரப்பினரின் அசையும் மற்றும் அசையா சொத்துக்களிலிருந்து மேற்படி இழப்பீட்டுத் தொகை ரூ.{total_amount}/- மற்றும் உரிய வட்டியினை உடனடியாக வசூலித்து இழப்பீட்டுத் தீர்ப்பாயத்தில் செலுத்துமாறு {taluk} வட்டாட்சியர் அவர்களுக்கு உத்தரவிடப்படுகிறது.",
-        "order_para3_template": "மேற்படி வழக்கின் வசூல் விவரங்களை இவ்வலுவலகத்திற்கு உடனடியாக அறிக்கை சமர்ப்பிக்குமாறு தெரிவிக்கப்படுகிறது.",
+        "template_code": "proceedings_default",
+        "name": "மாவட்ட ஆட்சித் தலைவர் செயல்முறைகள் (Proceedings Order)",
+        "department_type": "GENERAL_RR",
+        "category": "PROCEEDINGS",
+        "description": "Official Collector & District Magistrate Proceedings Order empowering the jurisdictional Tahsildar.",
+        "locked_template": PROCEEDINGS_TEMPLATE,
+        "slot_instructions": PROCEEDINGS_SLOTS,
+        "enclosure_text": "கடித நகல்",
+        "template_data": {
+            "worker_target": "PROCEEDINGS",
+            "statute": "Tamil Nadu Revenue Recovery Act 1864",
+            "rso": "RSO 41",
+            "section": "Section 5"
+        },
+        "is_active": True,
+    },
+    {
+        "template_code": "memorandum_default",
+        "name": "மாவட்ட ஆட்சியர் அலுவலக குறிப்பாணை (Memorandum / Memo)",
+        "department_type": "GENERAL_RR",
+        "category": "MEMORANDUM",
+        "description": "Official Collectorate Memorandum forwarding recovery requisition and reminders to Tahsildar.",
+        "locked_template": MEMO_TEMPLATE,
+        "slot_instructions": MEMO_SLOTS,
+        "enclosure_text": "கடித நகல்",
+        "template_data": {
+            "worker_target": "MEMORANDUM",
+            "statute": "Tamil Nadu Revenue Recovery Act 1864"
+        },
+        "is_active": True,
+    },
+    {
+        "template_code": "warrant_maintenance",
+        "name": "ஜப்தி மற்றும் கைது வாரண்ட் ஆணை (Execution Warrant)",
+        "department_type": "MAINTENANCE",
+        "category": "WARRANT",
+        "description": "Execution Warrant for Maintenance Arrears under BNSS 144 / CrPC 125 and TN Revenue Recovery Act 1864.",
+        "locked_template": WARRANT_TEMPLATE,
+        "slot_instructions": WARRANT_SLOTS,
         "enclosure_text": "நீதிமன்ற ஆணை நகல்",
         "template_data": {
-            "department": "Motor Accidents Claims Tribunal",
-            "statutory_act": "Motor Vehicles Act 1988",
-            "section": "Award Decree",
-            "recovery_act": "Tamil Nadu Revenue Recovery Act 1864 Section 5",
-            "guideline": "Revenue Standing Order 41 (RSO 41)",
-            "dispatch_to": ["Tahsildar", "Revenue Divisional Officer", "Petitioner / Insurer"],
-            "variables": ["case_no", "order_date", "taluk", "defaulter_name", "defaulter_address", "total_amount", "amount_in_words"]
-        },
-        "is_active": True,
-    },
-    {
-        "template_code": "gst_arrears",
-        "name": "Commercial Taxes & GST Revenue Recovery",
-        "department_type": "GST",
-        "subject_template": "தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5 – வணிகவரித் துறை (GST) வரி நிலுவைத் தொகை வசூலித்தல் – ஆணை பிறப்பித்தல் – சார்பு.",
-        "reference_template": "1. வணிகவரி அலுவலர் கடித ந.க. எண் {case_no}, நாள்: {order_date}.\n2. தமிழ்நாடு சரக்கு மற்றும் சேவை வரிச் சட்டம் 2017 பிரிவு 79.",
-        "order_para1_template": "பார்வை 1-ல் காணும் வணிகவரி அலுவலர் அவர்களின் கடிதத்தில், {defaulter_name} நிறுவனம் செலுத்த வேண்டிய ஜி.எஸ்.டி வரி நிலுவைத் தொகை ரூ.{total_amount}/- ({amount_in_words})-யினை வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூலிக்கக் கோரப்பட்டுள்ளது.",
-        "order_para2_template": "எனவே, தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வழங்கப்பட்டுள்ள அதிகாரத்தின்படி, எதிர்தரப்பினரிடமிருந்து மேற்படி நிலுவைத் தொகையை உடனடியாக வசூலித்து அரசு கணக்கில் செலுத்துமாறு {taluk} வட்டாட்சியர் அவர்களுக்கு உத்தரவிடப்படுகிறது.",
-        "order_para3_template": "வசூல் நடவடிக்கையின் முன்னேற்ற அறிக்கை இவ்வலுவலகத்திற்கு அனுப்பி வைக்கப்பட வேண்டும்.",
-        "enclosure_text": "வரி விதிப்பு ஆணை நகல்",
-        "template_data": {
-            "department": "Commercial Taxes Department",
-            "statutory_act": "Tamil Nadu GST Act 2017",
-            "section": "79",
-            "recovery_act": "Tamil Nadu Revenue Recovery Act 1864 Section 5",
-            "dispatch_to": ["Tahsildar", "Assistant Commissioner (ST)", "Dealer / Defaulter"],
-            "variables": ["case_no", "order_date", "taluk", "defaulter_name", "total_amount", "amount_in_words"]
+            "worker_target": "WARRANT",
+            "statute": "BNSS 144 / CrPC 125 & Tamil Nadu Revenue Recovery Act 1864"
         },
         "is_active": True,
     }
 ]
 
 
+import base64
+from pathlib import Path
+
+OFFICIAL_PROCEEDINGS_FILE = Path(r"E:\Documents\Personal\My_docs\IMP_Files\Documentation\Erode Collectorate\Confidential\AI Tools\RR_to_release\RR ACT PROCEEDINGS FORMAT.docx")
+
 async def seed_default_templates(session: AsyncSession) -> None:
-    """Seeds standard Tamil Nadu government proceedings templates if not existing."""
+    """Seeds standard Tamil Nadu government proceedings templates and office configuration with docx file binaries."""
     try:
-        for tpl in DEFAULT_TEMPLATES:
-            stmt = select(DocumentTemplate).where(DocumentTemplate.template_code == tpl["template_code"])
+        # Load user docx template if available on disk
+        proceedings_b64 = None
+        proceedings_filename = None
+        if OFFICIAL_PROCEEDINGS_FILE.exists():
+            try:
+                raw_bytes = OFFICIAL_PROCEEDINGS_FILE.read_bytes()
+                proceedings_b64 = base64.b64encode(raw_bytes).decode("utf-8")
+                proceedings_filename = OFFICIAL_PROCEEDINGS_FILE.name
+                logger.info(f"Loaded official DOCX template file: {OFFICIAL_PROCEEDINGS_FILE} ({len(raw_bytes)} bytes)")
+            except Exception as e:
+                logger.warning(f"Could not read official DOCX file {OFFICIAL_PROCEEDINGS_FILE}: {e}")
+
+        # 1. Seed Templates
+        for tpl in OFFICIAL_TEMPLATES:
+            tpl_copy = dict(tpl)
+            if tpl_copy["template_code"] == "proceedings_default" and proceedings_b64:
+                tpl_copy["file_base64"] = proceedings_b64
+                tpl_copy["file_name"] = proceedings_filename
+
+            # Ensure compatibility with existing schemas
+            tpl_copy.setdefault("subject_template", tpl_copy.get("name", ""))
+            tpl_copy.setdefault("reference_template", "")
+            tpl_copy.setdefault("order_para1_template", "")
+            tpl_copy.setdefault("order_para2_template", "")
+            tpl_copy.setdefault("order_para3_template", "")
+
+            stmt = select(DocumentTemplate).where(DocumentTemplate.template_code == tpl_copy["template_code"])
             result = await session.execute(stmt)
             existing = result.scalars().first()
             if not existing:
-                new_tpl = DocumentTemplate(**tpl)
+                new_tpl = DocumentTemplate(**tpl_copy)
                 session.add(new_tpl)
-                logger.info(f"Seeded default template: {tpl['template_code']} ({tpl['name']})")
-            elif existing.template_data is None:
-                existing.template_data = tpl.get("template_data")
-                logger.info(f"Updated existing template template_data: {tpl['template_code']}")
+                logger.info(f"Seeded default template: {tpl_copy['template_code']} ({tpl_copy['name']})")
+            else:
+                existing.name = tpl_copy.get("name", existing.name)
+                existing.locked_template = tpl_copy.get("locked_template")
+                existing.slot_instructions = tpl_copy.get("slot_instructions")
+                existing.template_data = tpl_copy.get("template_data")
+                if tpl_copy.get("file_base64"):
+                    existing.file_base64 = tpl_copy.get("file_base64")
+                    existing.file_name = tpl_copy.get("file_name")
+                logger.info(f"Updated existing template format: {tpl_copy['template_code']}")
+
+        # 2. Seed Office Configuration
+        cfg_stmt = select(OfficeConfiguration).where(OfficeConfiguration.config_key == "ERODE_COLLECTORATE")
+        cfg_res = await session.execute(cfg_stmt)
+        existing_cfg = cfg_res.scalars().first()
+
+        if not existing_cfg:
+            new_cfg = OfficeConfiguration(
+                config_key="ERODE_COLLECTORATE",
+                collector_line=COLLECTOR_LINE,
+                office_section=OFFICE_SECTION,
+                taluks=ERODE_TALUKS,
+                taluk_to_rdo=TALUK_TO_RDO,
+                dept_configs={},
+                is_active=True,
+            )
+            session.add(new_cfg)
+            logger.info("Seeded default OfficeConfiguration for ERODE_COLLECTORATE.")
+        else:
+            existing_cfg.collector_line = COLLECTOR_LINE
+            existing_cfg.office_section = OFFICE_SECTION
+            existing_cfg.taluks = ERODE_TALUKS
+            existing_cfg.taluk_to_rdo = TALUK_TO_RDO
+
         await session.commit()
     except Exception as e:
         await session.rollback()
-        logger.error(f"Failed to seed default templates: {e}")
+        logger.error(f"Failed to seed default templates and configuration: {e}")

@@ -59,7 +59,9 @@ async def stream_original_document(filename: str):
         return FileResponse(
             path=str(path),
             filename=path.name,
-            media_type=media_type
+            media_type=media_type,
+            content_disposition_type="inline",
+            headers={"Content-Disposition": f'inline; filename="{path.name}"'}
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Original document not found.")

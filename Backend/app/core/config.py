@@ -70,30 +70,15 @@ class Settings(BaseSettings):
     # Local Ollama LLM Configuration
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "qwen2.5:7b-instruct-q4_K_M"
-    OLLAMA_TIMEOUT_SECONDS: int = 75
+    OLLAMA_TIMEOUT_SECONDS: int = 95
 
     # Typography & Government Style Guide Enforcement
     PRIMARY_FONT_TAMIL: str = "TAU-Marutham"
 
     LATIN_FONT: str = "TAU-Marutham"
 
-    # Default Template Paths
-    PROCEEDINGS_TEMPLATE_PATH: Path = BASE_DIR / "templates" / "proceedings_template.docx"
-    FINAL_CUSTOMS_TEMPLATE_PATH: Path = BASE_DIR / "templates" / "final_customs_template_source.docx"
-
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8000", "*"]
-
-    # Seed Account Credentials — loaded from .env, used only on first startup
-    SEED_ADMIN_USERNAME: str = ""
-    SEED_ADMIN_EMAIL: str = ""
-    SEED_ADMIN_PASSWORD: str = ""
-    SEED_ADMIN_FULLNAME: str = ""
-
-    SEED_USER_USERNAME: str = ""
-    SEED_USER_EMAIL: str = ""
-    SEED_USER_PASSWORD: str = ""
-    SEED_USER_FULLNAME: str = ""
 
     model_config = SettingsConfigDict(env_file=[".env", "../.env"], extra="allow")
 

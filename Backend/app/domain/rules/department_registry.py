@@ -1,31 +1,32 @@
 """
 Department Registry and Statutory Recovery Metadata Provider.
 Provides declarative, extensible registration of all government, judicial, and regulatory
-authorities for Tamil Nadu Revenue Recovery Proceedings (RSO 41 & Act II of 1864).
+authorities for Tamil Nadu Revenue Recovery Proceedings (RSO 41 & Act II of 1864),
+with dynamic LLM-driven resolution.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 from pydantic import BaseModel, Field
 from app.domain.schemas.legal_entities import DepartmentType
 
 
 class DepartmentSpec(BaseModel):
-    department_type: DepartmentType
+    department_type: Union[DepartmentType, str]
     title_ta: str
     issuing_authority_default: str
     statutory_act_and_section: str
-    head_of_account_default: str
-    section_code_default: str
-    default_enclosure: str
-    detection_keywords: List[str]
-    default_reference_templates: List[str]
+    head_of_account_default: str = "0029 - Land Revenue"
+    section_code_default: str = "ஈ2"
+    default_enclosure: str = "கோரிக்கைக் கடித நகல்"
+    detection_keywords: List[str] = Field(default_factory=list)
+    default_reference_templates: List[str] = Field(default_factory=list)
 
 
 DEPARTMENT_SPECS: Dict[DepartmentType, DepartmentSpec] = {
     DepartmentType.CUSTOMS: DepartmentSpec(
         department_type=DepartmentType.CUSTOMS,
         title_ta="சுங்கத்துறை (Customs Commissionerate)",
-        issuing_authority_default="Office of the Commissioner of Customs (Chennai IV)",
+        issuing_authority_default="Office of the Commissioner of Customs",
         statutory_act_and_section="Section 142(1)(c)(ii) of the Customs Act, 1962",
         head_of_account_default="037 – Customs",
         section_code_default="ஈ2",
@@ -36,7 +37,6 @@ DEPARTMENT_SPECS: Dict[DepartmentType, DepartmentSpec] = {
         ],
         default_reference_templates=[
             "{issuing_authority}, கடித F.NO. {case_no}, நாள் {letter_date}.",
-            "Order in Original No. {order_no}, நாள் {order_date}.",
             "வருவாய் நிலை ஆணை எண் 41 மற்றும் தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5."
         ]
     ),
@@ -54,14 +54,13 @@ DEPARTMENT_SPECS: Dict[DepartmentType, DepartmentSpec] = {
         ],
         default_reference_templates=[
             "{issuing_authority}, கடித ந.க. {case_no}, நாள் {letter_date}.",
-            "TNRERA இறுதி ஆணை எண். {order_no}, நாள் {order_date}.",
             "தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5."
         ]
     ),
     DepartmentType.MCOP: DepartmentSpec(
         department_type=DepartmentType.MCOP,
         title_ta="மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம்",
-        issuing_authority_default="சிறப்பு சார்பு நீதிமன்றம் / மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம்",
+        issuing_authority_default="மோட்டார் வாகன விபத்து இழப்பீட்டு தீர்ப்பாயம்",
         statutory_act_and_section="பிரிவு 174, மோட்டார் வாகனச் சட்டம் 1988 மற்றும் தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864",
         head_of_account_default="0041 - Taxes on Vehicles / MCOP Claims",
         section_code_default="ஈ2",
@@ -73,7 +72,7 @@ DEPARTMENT_SPECS: Dict[DepartmentType, DepartmentSpec] = {
         ],
         default_reference_templates=[
             "{issuing_authority}, {case_no}, உத்தரவு, நாள் {order_date}.",
-            "வருவாய் நிலை ஆணை எண் 41 (RSO 41)."
+            "வருவாய் நிலை ஆணை எண் 41 மற்றும் தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5."
         ]
     ),
     DepartmentType.COMMERCIAL_TAX: DepartmentSpec(
@@ -130,18 +129,47 @@ DEPARTMENT_SPECS: Dict[DepartmentType, DepartmentSpec] = {
 
 
 class DepartmentRegistry:
-    """Enterprise resolver for revenue departments, statutory acts, and reference structures."""
+    """Dynamic, enterprise resolver for revenue departments, statutory acts, and reference structures."""
 
     @classmethod
-    def get_spec(cls, dept_type: DepartmentType) -> DepartmentSpec:
-        return DEPARTMENT_SPECS.get(dept_type, DEPARTMENT_SPECS[DepartmentType.GENERAL_RR])
+    def get_spec(cls, dept_type: Union[DepartmentType, str]) -> DepartmentSpec:
+        if isinstance(dept_type, DepartmentType):
+            return DEPARTMENT_SPECS.get(dept_type, DEPARTMENT_SPECS[DepartmentType.GENERAL_RR])
+        try:
+            d_enum = DepartmentType(dept_type)
+            return DEPARTMENT_SPECS.get(d_enum, DEPARTMENT_SPECS[DepartmentType.GENERAL_RR])
+        except Exception:
+            return DepartmentSpec(
+                department_type=str(dept_type),
+                title_ta=str(dept_type),
+                issuing_authority_default="கோரிக்கை அலுவலகம்",
+                statutory_act_and_section="தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5 / வருவாய் நிலை ஆணை 41",
+            )
+
+    @classmethod
+    def create_dynamic_spec(
+        cls,
+        department_name_ta: str,
+        statute_cited: str,
+        issuing_authority: Optional[str] = None,
+        head_of_account: Optional[str] = None,
+        section_code: str = "ஈ2",
+        enclosure: str = "கோரிக்கைக் கடித நகல்"
+    ) -> DepartmentSpec:
+        """Creates a fully dynamic DepartmentSpec from LLM-extracted legal metadata."""
+        return DepartmentSpec(
+            department_type=DepartmentType.GENERAL_RR,
+            title_ta=department_name_ta or "பொது வருவாய் வசூல்",
+            issuing_authority_default=issuing_authority or department_name_ta or "கோரிக்கை அலுவலகம்",
+            statutory_act_and_section=statute_cited or "தமிழ்நாடு வருவாய் வசூல் சட்டம் 1864 பிரிவு 5",
+            head_of_account_default=head_of_account or "0029 - Land Revenue",
+            section_code_default=section_code or "ஈ2",
+            default_enclosure=enclosure or "கோரிக்கைக் கடித நகல்"
+        )
 
     @classmethod
     def match_department(cls, text: str) -> DepartmentSpec:
-        """
-        Determines the department specification based on weighted keyword match frequencies.
-        Deterministic and extensible.
-        """
+        """Determines the department specification based on weighted keyword match frequencies."""
         text_upper = text.upper()
         best_spec = DEPARTMENT_SPECS[DepartmentType.GENERAL_RR]
         max_score = 0
@@ -150,7 +178,6 @@ class DepartmentRegistry:
             score = 0
             for kw in spec.detection_keywords:
                 if kw in text_upper:
-                    # Specific domain departments get higher multiplier
                     if dept_type != DepartmentType.GENERAL_RR:
                         score += 3 if len(kw) > 6 else 2
                     else:

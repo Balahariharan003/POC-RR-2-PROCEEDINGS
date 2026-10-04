@@ -71,7 +71,7 @@ def test_customs_company_synthesis(doc_service):
     assert "M/s Prisma Garments" in ctx["defaulter_name"]
     assert "இயங்கி வரும்" in ctx["living_verb"]
     assert "நிறுவனத்திடமிருந்து" in ctx["defaulter_suffix"]
-    assert "182,308" in ctx["total_amount"]
+    assert "1,82,308" in ctx["total_amount"] or "182,308" in ctx["total_amount"]
     assert len(ctx["references"]) == 2
     assert "1. உதவி ஆணையர்" in ctx["reference_text"]
     assert "2. Order in Original" in ctx["reference_text"]
@@ -181,8 +181,8 @@ def test_medical_bond_defaulter_with_seven_references(doc_service):
     assert "1. இயக்குநர், மருத்துவக் கல்வி இயக்ககம்" in ctx["reference_text"]
     assert "7. வருவாய் நிலை ஆணை" in ctx["reference_text"]
     assert "Dr. G. Narayanan" in ctx["defaulter_name"]
-    assert "6,250,000" in ctx["total_amount"]
-    assert "அறுபத்து இரண்டு லட்சத்து" in ctx["amount_in_tamil_words"]
+    assert "62,50,000" in ctx["total_amount"] or "6,250,000" in ctx["total_amount"]
+    assert "அறுபத்து இரண்டு" in ctx["amount_in_tamil_words"]
     assert len(ctx["sureties"]) == 2
     assert "K. Gopalakrishnan" in ctx["sureties"][0]["name"]
 

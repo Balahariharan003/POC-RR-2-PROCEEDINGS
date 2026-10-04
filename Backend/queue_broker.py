@@ -14,19 +14,19 @@ from typing import Optional, Dict, Any
 from app.core.config import settings
 from app.core.logging import logger
 from workers import (
-    process_office_note,
-    process_proceedings,
-    process_memorandum,
-    process_warrant
+    worker_office_note,
+    worker_proceedings,
+    worker_memorandum,
+    worker_warrant,
 )
 
 DB_DSN = os.getenv("DATABASE_URL") or f"postgresql://{settings.PG_USER}:{settings.PG_PASSWORD}@{settings.PG_HOST}:{settings.PG_PORT}/{settings.PG_DATABASE}"
 
 WORKER_ROUTING_MATRIX = {
-    "OFFICE_NOTE": process_office_note,
-    "PROCEEDINGS": process_proceedings,
-    "MEMORANDUM": process_memorandum,
-    "WARRANT": process_warrant
+    "OFFICE_NOTE": worker_office_note,
+    "PROCEEDINGS": worker_proceedings,
+    "MEMORANDUM": worker_memorandum,
+    "WARRANT": worker_warrant,
 }
 
 # Strict 16GB RAM / VRAM Governor: Serializes heavy LLM inference passes
@@ -40,20 +40,19 @@ class IncomingDocumentValidator:
     """
     CURRENCY_PATTERN = re.compile(r'(?:Rs\.?|INR|ரூ\.?)\s*([\d,]+(?:\.\d{2})?)', re.IGNORECASE)
     FILE_REF_PATTERN = re.compile(r'(?:F\.?\s*NO\.?|ROC\.?\s*NO\.?|ந\.?\s*க\.?\s*எண்\.?|EP\.?\s*NO\.?|C\.?\s*NO\.?)\s*([\w\-\.\/]+)', re.IGNORECASE)
-    STATUTORY_ACT_PATTERN = re.compile(r'(?:Section|பிரிவு|Act|சட்டம்|1864|1962|144|125)', re.IGNORECASE)
+    STATUTORY_ACT_PATTERN = re.compile(r'(?:Section|பிரிவு|Act|சட்டம்|1864|1962|144|125|MCOP|TNRERA|RSO)', re.IGNORECASE)
 
     @classmethod
     def pre_verify_structural_composition(cls, text: str) -> Dict[str, Any]:
-        if not text or len(text.strip()) < 50:
-            return {"valid": False, "reason": "Input document text token composition is critically low (< 50 chars)."}
+        if not text or len(text.strip()) < 30:
+            return {"valid": False, "reason": "Input document text token composition is critically low (< 30 chars)."}
 
         currency_matches = cls.CURRENCY_PATTERN.findall(text)
         file_ref_matches = cls.FILE_REF_PATTERN.findall(text)
         statutory_matches = cls.STATUTORY_ACT_PATTERN.findall(text)
 
-        # Ensure at least one grounding anchor exists
         if not file_ref_matches and not currency_matches and not statutory_matches:
-            return {"valid": False, "reason": "Missing required structural File Reference, Currency amount, and Statutory identifiers."}
+            return {"valid": False, "reason": "Missing required structural File Reference, Currency amount, or Statutory identifiers."}
 
         return {
             "valid": True,
@@ -99,7 +98,6 @@ async def dispatch_worker_task(pool: asyncpg.Pool, job_id: int, initial_target: 
             # STAGE 1: Routing & Context Cross-Linking
             first_lines = " ".join(ocr_text.split('\n')[:6])
             
-            # Check historical records ledger
             historical_hit = None
             try:
                 historical_hit = await conn.fetchrow(
@@ -135,7 +133,7 @@ async def dispatch_worker_task(pool: asyncpg.Pool, job_id: int, initial_target: 
 
     # STAGE 2: Local LLM Execution with Semaphore & Timeout
     try:
-        handler = WORKER_ROUTING_MATRIX.get(final_target, process_proceedings)
+        handler = WORKER_ROUTING_MATRIX.get(final_target, worker_proceedings)
         
         async with INFERENCE_SEMAPHORE:
             output_path = await asyncio.wait_for(
