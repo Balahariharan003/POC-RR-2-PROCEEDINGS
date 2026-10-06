@@ -50,3 +50,28 @@ class LLMExtractionError(AppException):
 class CryptographicIntegrityError(AppException):
     def __init__(self, message: str = "Cryptographic signature mismatch or ledger tampering detected"):
         super().__init__(message=message, status_code=409)
+
+
+class ExtractionUnavailable(AppException):
+    """LLM is offline or retry budget exhausted. Case goes to DEAD_LETTER queue."""
+    def __init__(self, message: str = "LLM extraction service unavailable after retries", details: Optional[Any] = None):
+        super().__init__(message=f"Extraction Unavailable: {message}", status_code=503, details=details)
+
+
+class GateRejectionError(AppException):
+    """Extraction gate rejected the case. It goes to NEEDS_REVIEW — never to a renderer."""
+    def __init__(self, gate_errors: list, error_details: Optional[dict] = None):
+        error_names = [str(e) for e in gate_errors]
+        super().__init__(
+            message=f"Extraction gate rejected: {', '.join(error_names)}",
+            status_code=422,
+            details={"gate_errors": error_names, "error_details": error_details or {}}
+        )
+        self.gate_errors = gate_errors
+        self.error_details = error_details or {}
+
+
+class RenderContractError(AppException):
+    """Safety net: invalid state somehow reached the renderer. Blocks rendering loudly."""
+    def __init__(self, message: str = "Render contract violated — invalid data reached document renderer"):
+        super().__init__(message=message, status_code=500)

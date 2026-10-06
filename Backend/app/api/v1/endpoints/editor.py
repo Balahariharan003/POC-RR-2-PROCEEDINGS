@@ -24,6 +24,13 @@ storage_provider = LocalStorageProvider()
 llm_service = LLMService()
 
 
+@router.get("", tags=["Editor"])
+@router.get("/", tags=["Editor"])
+async def get_editor_root():
+    """Returns active editor status."""
+    return {"status": "ACTIVE", "message": "Revenue Recovery Document Editor Service"}
+
+
 @router.get("/{filename:path}", tags=["Editor"])
 async def get_layout(filename: str):
     """Returns block-based JSON layout for interactive in-browser editing of proceedings DOCX."""

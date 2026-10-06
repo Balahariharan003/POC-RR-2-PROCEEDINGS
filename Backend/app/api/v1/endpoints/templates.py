@@ -75,13 +75,6 @@ async def get_template_layout(code: str, db: AsyncSession = Depends(get_db)):
     if tpl.template_data and isinstance(tpl.template_data, dict) and "blocks" in tpl.template_data:
         return tpl.template_data
 
-    if tpl.file_base64:
-        try:
-            raw_bytes = base64.b64decode(tpl.file_base64)
-            return editor_service.bytes_to_layout(raw_bytes, tpl.file_name or f"{tpl.template_code}.docx")
-        except Exception as e:
-            logger.warning(f"Could not parse binary docx for template {code}: {e}")
-    
     return editor_service.template_model_to_layout(tpl)
 
 

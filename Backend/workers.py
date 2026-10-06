@@ -12,6 +12,8 @@ from typing import Dict, Any, Optional
 
 from app.core.config import settings
 from app.core.logging import logger
+from app.core.exceptions import GateRejectionError
+from app.domain.rules.extraction_gate import run_gate
 from app.services.llm_service import LLMService, case_to_extracted_entities
 from app.services.document_service import (
     DocumentService,
@@ -29,12 +31,24 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 async def _resolve_case_dict(ocr_text_or_case: Any) -> Dict[str, Any]:
-    """Helper ensuring input is parsed into a verified case dict."""
+    """Helper ensuring input is parsed into a verified case dict and passed through the extraction gate."""
+    raw_text = ""
     if isinstance(ocr_text_or_case, dict):
-        return ocr_text_or_case
-    if isinstance(ocr_text_or_case, ExtractedLegalEntities):
-        return doc_service._ensure_case_dict(ocr_text_or_case)
-    return await llm_service.analyse_case(str(ocr_text_or_case))
+        case = ocr_text_or_case
+    elif isinstance(ocr_text_or_case, ExtractedLegalEntities):
+        case = doc_service._ensure_case_dict(ocr_text_or_case)
+    else:
+        raw_text = str(ocr_text_or_case)
+        case = await llm_service.analyse_case(raw_text)
+
+    # Fail-closed gate check on worker path
+    gate_result = run_gate(case=case, ocr_text=raw_text)
+    if not gate_result.ok:
+        logger.error(f"Worker rejected case: {[e.value for e in gate_result.errors]}")
+        raise GateRejectionError(
+            f"Extraction gate rejected case: {', '.join(e.value for e in gate_result.errors)}"
+        )
+    return case
 
 
 async def worker_office_note(ocr_text_or_case: Any, job_id: int, *args) -> str:

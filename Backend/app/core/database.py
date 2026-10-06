@@ -60,6 +60,14 @@ async def ensure_db_schema_migrated() -> None:
         "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS template_data JSONB;",
         "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS file_name VARCHAR(255);",
         "ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS file_base64 TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN heading_prefix TYPE TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN reference_template TYPE TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN subject_template TYPE TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN order_para1_template TYPE TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN order_para2_template TYPE TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN order_para3_template TYPE TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN signatory_text TYPE TEXT;",
+        "ALTER TABLE document_templates ALTER COLUMN enclosure_text TYPE TEXT;",
         "ALTER TABLE document_templates ALTER COLUMN subject_template DROP NOT NULL;",
         "ALTER TABLE document_templates ALTER COLUMN reference_template DROP NOT NULL;",
         "ALTER TABLE document_templates ALTER COLUMN order_para1_template DROP NOT NULL;",
@@ -69,6 +77,11 @@ async def ensure_db_schema_migrated() -> None:
         "ALTER TABLE document_templates ALTER COLUMN signatory_text DROP NOT NULL;",
         "ALTER TABLE proceedings_cases ADD COLUMN IF NOT EXISTS ocr_data JSONB;",
         "ALTER TABLE proceedings_cases ADD COLUMN IF NOT EXISTS generated_documents JSONB;",
+        "ALTER TABLE proceedings_cases ALTER COLUMN department_type DROP NOT NULL;",
+        "ALTER TABLE proceedings_cases ALTER COLUMN defaulter_name DROP NOT NULL;",
+        "ALTER TABLE proceedings_cases ALTER COLUMN total_amount DROP NOT NULL;",
+        "ALTER TABLE proceedings_cases ALTER COLUMN district_name DROP NOT NULL;",
+        "ALTER TABLE proceedings_cases ALTER COLUMN taluk_name DROP NOT NULL;",
     ]
     try:
         async with engine.begin() as conn:

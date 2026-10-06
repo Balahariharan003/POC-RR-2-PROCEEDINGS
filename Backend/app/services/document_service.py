@@ -68,58 +68,63 @@ LOCK_RULES = """ABSOLUTE RULES
 
 OFFICE_NOTE_TEMPLATE = """\
 // அலுவலகக் குறிப்பு //
-பொருள்: வருவாய் வசூல் சட்டம் 1864 – <<DEPT_LABEL_DASH>>ஈரோடு மாவட்டம் – <<TALUK>> வட்டம் – <<DEFAULTER_FULL>> – «DEMAND_CLAUSE» – வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோருதல் – உத்தரவிடுதல்.
+பொருள்: <<SUBJECT_NOTE>>
 பார்வை: <<REFS_BLOCK>>
 -------
 பணிந்தனுப்பப்படுகிறது:
 «PARA1»
 «PARA2»
-எனவே, மேற்படி தொகையை வருவாய் நிலை ஆணை எண்.41 மற்றும் வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூல் செய்ய <<TALUK>> வருவாய் வட்டாட்சியருக்கு அதிகாரம் வழங்கி இதன் மூலம் உத்தரவிடலாம்.
+«PARA3»
 உத்தரவினை எதிர்நோக்கி செயல்முறை வரைவு ஒப்புதலுக்காக மாவட்ட ஆட்சித்தலைவர் அவர்களுக்கு பணிவுடன் சமர்ப்பிக்கப்படுகிறது.
 """
 
 OFFICE_NOTE_SLOTS = """\
-«DEMAND_CLAUSE» – one phrase: what is due, with figures. With components use exactly: <dues label> <<AMOUNT_FIG>> <<BREAKDOWN>>. Add statute / court case no. dynamically from CASE_JSON.
-«PARA1» – 3-4 lines: the defaulter (<<LIVES>>, with address, taluk, district), what the incoming authority / court sent (cite the references with number and date), the sum <<AMOUNT_FIG>> with breakdown, and that recovery under the Revenue Recovery Act 1864 is requested. If prior_proceedings or reminders exist, cite their numbers and dates.
-«PARA2» – 3-4 lines: the defaulter (with IEC / registration no. if present) owes <<AMOUNT_FIG>> (<<AMOUNT_WORDS>>); recover from movable and immovable property under the RR Act; Demand Draft in favour of “<<PAYEE>>”; ORIGINAL sent to <<DISPATCH>>; particulars with copy of the DD to <<REPORT_TO>>; ends 'அனுப்பி வைக்குமாறு <<TALUK>> வருவாய் வட்டாட்சியருக்குத் தெரிவிக்கலாம்.' Null PAYEE / DISPATCH stay ______ ."""
+«PARA1» – 3-4 lines: the defaulter at the address, what the incoming authority / court sent (cite the reference with number and date), the dues sum with breakdown, and request for recovery under RR Act.
+«PARA2» – 3-4 lines: recover from movable/immovable assets, DD payee name, dispatch address, forwarding of original and copy DD.
+«PARA3» – 1-2 lines: authorization to Tahsildar under RSO 41 and RR Act 1864 Section 5."""
 
 PROCEEDINGS_TEMPLATE = """\
-ஈரோடு மாவட்ட ஆட்சித் தலைவர் மற்றும் மாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள்
-பிறப்பிப்பவர்: <<COLLECTOR>>
+ஈரோடு மாவட்ட ஆட்சித் தலைவர் மற்றும்
+மாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள், ஈரோடு
+முன்னிலை: <<COLLECTOR>>
 ந.க.<<NK>>/<<YEAR>>/<<SEC>>                                   நாள்: <<DOC_DATE>>
-பொருள்: வருவாய் வசூல் சட்டம் 1864 – <<DEPT_LABEL_DASH>>ஈரோடு மாவட்டம் – <<TALUK>> வட்டம் – <<DEFAULTER_FULL>> – «DEMAND_CLAUSE» – வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோருதல் – உத்தரவிடுதல்.
+பொருள்: <<SUBJECT_PROCEEDINGS>>
 பார்வை: <<REFS_BLOCK>>
 -------
 உத்தரவு:
 «PARA1»
-மேற்படி <<DEFAULTER_NAME>> <<FROM_WHOM>> தொகை <<AMOUNT_FIG>> ஐ வருவாய் நிலை ஆணை எண்.41 மற்றும் வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூல் செய்ய <<TALUK>> வருவாய் வட்டாட்சியருக்கு அதிகாரம் வழங்கி இதன் மூலம் உத்திரவிடப்படுகிறது.
-எனவே, மேற்படி முகவரியில் <<LIVES>> <<DEFAULTER_ID>> <<OF_WHOM>> அசையும் மற்றும் அசையா சொத்துக்களிலிருந்து <<AMOUNT_FIG>> (<<AMOUNT_WORDS>>) தொகையினை வருவாய் வசூல் சட்டப்படி வசூல் செய்து “<<PAYEE>>” என்ற பெயரில் வங்கி வரைவோலையாக (Demand Draft) எடுத்து <<DISPATCH>> என்ற அலுவலகத்திற்கு அசலினை அனுப்பி அதன் விவரத்தினை நகல் வங்கி வரைவோலையுடன் <<REPORT_TO>> அனுப்பி வைக்குமாறு <<TALUK>> வருவாய் வட்டாட்சியருக்கு தெரிவிக்கப்படுகிறது.
+«PARA2»
+«PARA3»
 இணைப்பு: கடித நகல்
 மாவட்ட ஆட்சித் தலைவர்,
 ஈரோடு.
-பெறுநர்: வருவாய் வட்டாட்சியர், <<TALUK>>.
-நகல்: வருவாய் கோட்டாட்சியர், <<RDO>>.
+பெறுநர்:
+வருவாய் வட்டாட்சியர்,
+<<TALUK>>.
+நகல்:
+வருவாய் கோட்டாட்சியர்,
+<<RDO>>.
 <<COPY_BENEFICIARY>>
 <<COPY_COURT>>
 <<COPY_DEFAULTER>>
 """
 
 PROCEEDINGS_SLOTS = """\
-«DEMAND_CLAUSE» – one phrase: what is due with figures (<<AMOUNT_FIG>> and breakdown <<BREAKDOWN>> if non-empty); cite statute / act and court/file number dynamically from CASE_JSON.
-«PARA1» – ONE narrative demand paragraph dynamically citing the defaulter, address, taluk, the requisitioning letter/order with date & number, exact recoverable amount with component breakdown, and request for recovery under the RR Act 1864."""
+«PARA1» – narrative demand citing defaulter, address, taluk, incoming letter with date & number, recoverable amount with component breakdown, and request under RR Act 1864.
+«PARA2» – authorization to Tahsildar under RSO 41 and RR Act 1864 Section 5.
+«PARA3» – recovery from movable and immovable assets, Demand Draft drawn in favour of payee, dispatch address, and submission of compliance."""
 
 MEMO_TEMPLATE = """\
 ந.க.<<NK>>/<<YEAR>>/<<SEC>>                                   மாவட்ட ஆட்சியர் அலுவலகம்,
                                                               ஈரோடு.
                                                               நாள்: <<DOC_DATE>>
 // குறிப்பாணை //
-பொருள்: வருவாய் வசூல் சட்டம் 1864 – <<DEPT_LABEL_DASH>>ஈரோடு மாவட்டம் – <<TALUK>> வட்டம் – <<DEFAULTER_FULL>> – «DEMAND_CLAUSE» – வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோருதல் – உத்தரவிடுதல்.
+பொருள்: <<SUBJECT_MEMO>>
 பார்வை: <<REFS_ALL>>
 -------
 «PARA1»
 «PARA2»
 «PARA3»
-எனவே, மேற்படி <<DEFAULTER_NAME>> <<OF_WHOM>> மீது மேற்கொள்ளப்பட்ட வருவாய் வசூல் சட்ட நடவடிக்கைகளை உடனடியாக முடிக்குமாறு <<TALUK>> வட்டாட்சியர் கேட்டுக்கொள்ளப்படுகிறார்.
 மாவட்ட ஆட்சித் தலைவருக்காக /
 மாவட்ட ஆட்சியரின் நேர்முக உதவியாளர் (பொது),
 ஈரோடு.
@@ -131,10 +136,9 @@ MEMO_TEMPLATE = """\
 """
 
 MEMO_SLOTS = """\
-«DEMAND_CLAUSE» – same one-phrase clause as in the Proceedings (figures from CASE_JSON only).
-«PARA1» – 2-3 lines: the defaulter <<LIVES>> at the address owes <<AMOUNT_FIG>> <<BREAKDOWN>>; recovery under the RR Act was requested in reference 1 (cite its number / date).
-«PARA2» – ONLY if prior_proceedings is not null: 2-3 lines – this office's proceedings ந.க.<number>, dated <date>, empowered the <<TALUK>> Tahsildar under RSO 41 and Section 5 of the RR Act 1864 to recover and remit by Demand Draft. If prior_proceedings is null write exactly: மேற்படி தொகையினை வருவாய் வசூல் சட்டப்படி வசூல் செய்யுமாறு இவ்வலுவலக செயல்முறை ஆணை தனியாக அனுப்பப்படுகிறது.
-«PARA3» – ONLY if reminders is not empty: 2-3 lines – the later letter (number / date from reminders) again asks that the recovery steps be completed quickly. If reminders is empty write exactly: மேற்படி தொகையினை தாமதமின்றி வசூல் செய்ய வேண்டியுள்ளது."""
+«PARA1» – defaulter at address owes amount, recovery under RR Act was requested in reference 1, and Tahsildar was authorized in reference 2.
+«PARA2» – reminder / current status statement.
+«PARA3» – directive to Tahsildar to conclude or drop RR proceedings."""
 
 WARRANT_TEMPLATE = """\
 // ஜப்தி மற்றும் கைது வாரண்ட் ஆணை //
@@ -163,8 +167,36 @@ class DraftValidationError(Exception):
 
 
 def fill(t: str, slots: dict) -> str:
+    """
+    Substitutes all template keywords/tags in both <<KEY>>, {{key}}, and «KEY» styles.
+    Supports case-insensitive matching for standard placeholders.
+    """
+    if not t:
+        return ""
+    
+    # 1. Exact key substitutions
     for k, v in slots.items():
-        t = t.replace(f"<<{k}>>", str(v))
+        v_str = str(v) if v is not None else ""
+        t = t.replace(f"<<{k}>>", v_str)
+        t = t.replace(f"<<{k.upper()}>>", v_str)
+        t = t.replace(f"<<{k.lower()}>>", v_str)
+        t = t.replace(f"{{{{{k}}}}}", v_str)
+        t = t.replace(f"{{{{{k.upper()}}}}}", v_str)
+        t = t.replace(f"{{{{{k.lower()}}}}}", v_str)
+        t = t.replace(f"«{k}»", v_str)
+        t = t.replace(f"«{k.upper()}»", v_str)
+        t = t.replace(f"«{k.lower()}»", v_str)
+
+    # 2. Replace any leftover {{tag}} or <<tag>> matching case-insensitively
+    slots_lower = {k.lower(): (str(v) if v is not None else "") for k, v in slots.items()}
+    def _replace_tag(m):
+        key = m.group(1).strip().lower()
+        if key in slots_lower:
+            return slots_lower[key]
+        return m.group(0)
+
+    t = re.sub(r"\{\{([a-zA-Z0-9_]+)\}\}", _replace_tag, t)
+    t = re.sub(r"<<([a-zA-Z0-9_]+)>>", _replace_tag, t)
     return t
 
 
@@ -210,14 +242,49 @@ def build_slots(c: dict, meta: Optional[dict] = None, office_config: Optional[di
     taluk_to_rdo = cfg.get("taluk_to_rdo", TALUK_TO_RDO)
 
     person = c.get("entity_type") == "INDIVIDUAL"
+    defaulters_list = c.get("defaulters") or []
 
-    name = str(c.get("defaulter_name") or "எதிர்மனுதாரர்")
-    if c.get("relation_text"):
-        name += f" {c['relation_text']}"
+    if isinstance(defaulters_list, list) and len(defaulters_list) > 1:
+        # Multiple co-defaulters (e.g. MCOP joint vehicle owners)
+        name_parts = []
+        full_parts = []
+        for idx, d in enumerate(defaulters_list, 1):
+            if isinstance(d, dict):
+                d_name = d.get("name")
+                if d.get("father_or_spouse_name") or d.get("parent_name") or d.get("relation_text"):
+                    d_name += f" {d.get('father_or_spouse_name') or d.get('parent_name') or d.get('relation_text')}"
+                d_addr = ", ".join(x for x in (d.get("door_no"), d.get("street_and_locality"), d.get("village")) if x)
+                name_parts.append(f"{d_name}")
+                full_parts.append(f"{d_name}, {d_addr}" if d_addr else f"{d_name}")
+        name = " மற்றும் ".join(name_parts)
+        addr = "; ".join(full_parts)
+        name_id = name
+        full_addr = addr + (f", {c.get('district_name')}" if c.get("district_name") else "") + (f" – {c['pincode']}" if c.get("pincode") else "")
+        from_whom = "ஆகியோரிடமிருந்து"
+        of_whom = "ஆகியோரின்"
+        lives_verb = "வசிக்கும்"
+    else:
+        name = str(c.get("defaulter_name") or "எதிர்மனுதாரர்")
+        if c.get("relation_text"):
+            name += f" {c['relation_text']}"
 
-    name_id = name + (f" (IEC No : {c['iec_number']})" if c.get("iec_number") else "")
-    addr = ", ".join(x for x in (c.get("door_no"), c.get("street_and_locality"), c.get("village")) if x)
-    full_addr = ", ".join(x for x in (addr, c.get("district_name")) if x) + (f" – {c['pincode']}" if c.get("pincode") else "")
+        name_id = name + (f" (IEC No : {c['iec_number']})" if c.get("iec_number") else "")
+        addr = ", ".join(x for x in (c.get("door_no"), c.get("street_and_locality"), c.get("village")) if x)
+        full_addr = ", ".join(x for x in (addr, c.get("district_name")) if x) + (f" – {c['pincode']}" if c.get("pincode") else "")
+
+        if c.get("entity_type") in ("MULTIPLE_PROMOTERS", "MULTIPLE_INDIVIDUALS"):
+            from_whom = "ஆகியோரிடமிருந்து"
+            of_whom = "ஆகியோரின்"
+            lives_verb = "வசிக்கும்"
+        elif person:
+            from_whom = "என்பவரிடமிருந்து"
+            of_whom = "என்பவரின்"
+            lives_verb = "வசிக்கும்"
+        else:
+            from_whom = "என்ற நிறுவனத்திடமிருந்து"
+            of_whom = "என்ற நிறுவனத்தின்"
+            lives_verb = "இயங்கி வரும்"
+
     taluk = c.get("taluk_name") or "______"
 
     # Fully dynamic labels extracted by LLM from source
@@ -234,63 +301,126 @@ def build_slots(c: dict, meta: Optional[dict] = None, office_config: Optional[di
         (interest_label, c.get("interest_amount")),
         (other_label, c.get("other_charges_amount"))
     ]
-    comps = [(l, v) for l, v in comps if v]
+    comps = [(l, v) for l, v in comps if v and float(v) > 0]
     total = float(c.get("total_recoverable_amount") or 0.0)
     breakdown = f"({' + '.join(f'{l} {fig(v)}' for l, v in comps)})" if len(comps) > 1 else ""
+    total_with_breakdown = f"{fig(total)} {breakdown}".strip() if breakdown else fig(total)
     court = c.get("court_or_issuer_ta") if c.get("requisition_channel") == "FROM_COURT" else None
     prior = c.get("prior_proceedings") or {}
     refs = [r["text_ta"] for r in c.get("references") or [] if r.get("text_ta")]
     if not refs:
         refs = ["______"]
 
-    if c.get("entity_type") in ("MULTIPLE_PROMOTERS", "MULTIPLE_INDIVIDUALS"):
-        from_whom = "ஆகியோரிடமிருந்து"
-        of_whom = "ஆகியோரின்"
-        lives_verb = "வசிக்கும்"
-    elif person:
-        from_whom = "என்பவரிடமிருந்து"
-        of_whom = "என்பவரின்"
-        lives_verb = "வசிக்கும்"
-    else:
-        from_whom = "என்ற நிறுவனத்திடமிருந்து"
-        of_whom = "என்ற நிறுவனத்தின்"
-        lives_verb = "இயங்கி வரும்"
-
     paras = c.get("synthesized_paragraphs") or {}
+    subj_proc = paras.get("subject_text") or f"வருவாய் வசூல் சட்டம் 1864 – {dept_label} – ஈரோடு மாவட்டம் – {taluk} வட்டம் – {name}, {addr} – அரசிற்கு செலுத்த வேண்டிய {dues_label} {total_with_breakdown} - வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோரியது – உத்திரவிடுதல்."
+    subj_note = paras.get("note_subject_text") or subj_proc
+    subj_memo = paras.get("subject_text") or subj_proc
+    ref_block = paras.get("reference_text") or (refs[0] if len(refs) == 1 else "\n".join(f"{i}. {t}" for i, t in enumerate(refs, 1)))
 
     return {
+        # Core Document Meta
         "COLLECTOR": collector,
-        "NK": meta.get("nk_no") or prior.get("nk_no") or c.get("case_file_no") or "______",
+        "collector_name": collector,
+        "NK": meta.get("nk_no") or prior.get("nk_no") or c.get("case_file_no"),
+        "nk_no": meta.get("nk_no") or prior.get("nk_no") or c.get("case_file_no"),
+        "case_file_no": c.get("case_file_no") ,
         "YEAR": meta.get("year", str(datetime.now().year)),
+        "doc_year": meta.get("year", str(datetime.now().year)),
         "DOC_DATE": meta.get("doc_date") or datetime.now().strftime(".%m.%Y"),
+        "doc_date": meta.get("doc_date") or datetime.now().strftime(".%m.%Y"),
         "SEC": section,
-        "DEPT_LABEL_DASH": f"{dept_label} – " if dept_label else "",
+        "section_code": section,
+        
+        # Jurisdictions & Entities
         "TALUK": taluk,
+        "taluk_name": taluk,
+        "district_name": c.get("district_name") or "ஈரோடு",
         "RDO": taluk_to_rdo.get(taluk, "______"),
         "DEFAULTER_FULL": f"{name}, {addr}" if addr else name,
         "DEFAULTER_NAME": name,
+        "defaulter_name": name,
         "DEFAULTER_ID": name_id,
+        "door_no": c.get("door_no") or "",
+        "street_and_locality": c.get("street_and_locality") or "",
+        "village": c.get("village") or "",
+        "pincode": c.get("pincode") or "",
         "FROM_WHOM": from_whom,
+        "defaulter_suffix": from_whom,
         "OF_WHOM": of_whom,
         "LIVES": lives_verb,
-        "AMOUNT_FIG": fig(total),
+        "living_verb": lives_verb,
+        "asset_clause": "அசையும் மற்றும் அசையா சொத்துகளிலிருந்து",
+        "entity_label": "நிறுவனம்" if not person and c.get("entity_type") not in ("INDIVIDUAL", None) else ("நபர்கள்" if c.get("entity_type") in ("MULTIPLE_PROMOTERS", "MULTIPLE_INDIVIDUALS") or (isinstance(defaulters_list, list) and len(defaulters_list) > 1) else "நபர்"),
+        "ENTITY_LABEL": "நிறுவனம்" if not person and c.get("entity_type") not in ("INDIVIDUAL", None) else ("நபர்கள்" if c.get("entity_type") in ("MULTIPLE_PROMOTERS", "MULTIPLE_INDIVIDUALS") or (isinstance(defaulters_list, list) and len(defaulters_list) > 1) else "நபர்"),
+
+        # Financials
+        "AMOUNT_FIG": total_with_breakdown,
+        "total_amount": total_with_breakdown,
+        "total_amount_plain": fig(total),
         "AMOUNT_WORDS": rupees_words(total),
+        "amount_in_tamil_words": rupees_words(total),
         "BREAKDOWN": breakdown,
+        "breakdown": breakdown,
+        "principal_amount": fig(float(c.get("principal_amount") or 0.0)),
+        "penalty_amount": fig(float(c.get("penalty_amount") or 0.0)),
+        "interest_amount": fig(float(c.get("interest_amount") or 0.0)),
+        "statute_cited": dept_label or "நிலுவைத் தொகை",
+        "dues_label": dues_label,
         "PAYEE": c.get("dd_favour_of") or "______",
+        "dd_favour_of": c.get("dd_favour_of") or "______",
         "DISPATCH": c.get("dispatch_address") or "______",
+        "dispatch_address": c.get("dispatch_address") or "______",
         "REPORT_TO": f"{court} என்ற அலுவலகத்திற்கும் மற்றும் இவ்வலுவலகத்திற்கும்" if court else "இவ்வலுவலகத்திற்கு",
-        "REFS_BLOCK": paras.get("reference_text") or (refs[0] if len(refs) == 1 else "\n".join(f"{i}. {t}" for i, t in enumerate(refs, 1))),
-        "COPY_BENEFICIARY": f"நகல்: {c['dispatch_address']}" if c.get("dispatch_address") else "நகல்:",
-        "COPY_COURT": f"நகல்: {c['court_or_issuer_block_en']}" if (court and c.get("court_or_issuer_block_en")) else "நகல்:",
-        "COPY_DEFAULTER": f"நகல்: {name}, {full_addr}",
-        "PARA1_SYNTHESIZED": paras.get("order_para1", ""),
-        "PARA2_SYNTHESIZED": paras.get("order_para2", ""),
-        "PARA3_SYNTHESIZED": paras.get("order_para3", ""),
+
+        # Officers & Offices
+        "issuing_authority_name": c.get("issuing_authority_name") or "கோரிக்கை அலுவலர்",
+        "issuing_officer_role": c.get("issuing_officer_role") or "அலுவலகத் தலைவர்",
+        "collectorate_office_name": "மாவட்ட ஆட்சியர் அலுவலகம், ஈரோடு",
+        "signatory_role": "மாவட்ட ஆட்சித் தலைவர்",
+        "enforcing_officer_role": "வருவாய் வட்டாட்சியர்",
+        "enclosure_text": "கடித நகல்",
+        "signatory_text": "மாவட்ட ஆட்சித் தலைவர்,\nஈரோடு.",
+
+        # Subject & References
+        "DEPT_LABEL_DASH": f"{dept_label} – " if dept_label else "",
+        "SUBJECT_PROCEEDINGS": subj_proc,
+        "subject_text": subj_proc,
+        "SUBJECT_NOTE": subj_note,
+        "note_subject_text": subj_note,
+        "SUBJECT_MEMO": subj_memo,
+        "REFS_BLOCK": ref_block,
+        "reference_text": ref_block,
+        "REFS_ALL": ref_block,
+
+        # Copies
+        "COPY_BENEFICIARY": f"நகல்:\n{c['dispatch_address']}" if c.get("dispatch_address") else "",
+        "COPY_COURT": f"நகல்:\n{c['court_or_issuer_block_en']}" if (court and c.get("court_or_issuer_block_en")) else "",
+        "COPY_DEFAULTER": f"நகல்:\n{name},\n{full_addr}" if (name or full_addr) else "",
+
+        # Paragraphs & Slots
+        "PARA1": paras.get("order_para1", ""),
+        "PARA2": paras.get("order_para2", ""),
+        "PARA3": paras.get("order_para3", ""),
+        "order_para1": paras.get("order_para1", ""),
+        "order_para2": paras.get("order_para2", ""),
+        "order_para3": paras.get("order_para3", ""),
+        "note_para1": paras.get("note_para1", paras.get("order_para1", "")),
+        "note_para2": paras.get("note_para2", paras.get("order_para2", "")),
+        "note_para3": paras.get("note_para3", paras.get("order_para3", "")),
     }
 
 
 def _drop_empty_copy_lines(t: str) -> str:
-    return "\n".join(l for l in t.splitlines() if l.strip() != "நகல்:")
+    """Cleans up extraneous empty lines while strictly preserving headers and static copy prefixes."""
+    lines = []
+    prev_blank = False
+    for line in t.splitlines():
+        is_blank = not line.strip()
+        if is_blank and prev_blank:
+            continue
+        lines.append(line)
+        prev_blank = is_blank
+    return "\n".join(lines).strip()
 
 
 def _ref_numbers(c: dict, include_own: bool = False) -> List[str]:
@@ -332,14 +462,17 @@ async def _draft(doc: str, system: str, template: str, slot_help: str, case: dic
     if doc == "Office Note":
         p1 = paras.get("note_para1") or paras.get("order_para1")
         p2 = paras.get("note_para2") or paras.get("order_para2")
+        p3 = paras.get("note_para3") or f"எனவே மேற்படி தொகையை வருவாய் நிலை ஆணை எண் 41 மற்றும் வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூல் செய்ய {case.get('taluk_name') or 'ஈரோடு'} வருவாய் வட்டாட்சியருக்கு அதிகாரம் வழங்கி இதன் மூலம் உத்தரவிடலாம்."
         if p1 and "«PARA1»" in default_text:
             default_text = default_text.replace("«PARA1»", p1)
         if p2 and "«PARA2»" in default_text:
             default_text = default_text.replace("«PARA2»", p2)
+        if p3 and "«PARA3»" in default_text:
+            default_text = default_text.replace("«PARA3»", p3)
     elif doc == "Memorandum":
         p1 = paras.get("memo_para1") or paras.get("order_para1")
-        p2 = paras.get("memo_para2") or paras.get("order_para2")
-        p3 = paras.get("memo_para3") or (paras.get("order_para3") if case.get("reminders") else "மேற்படி தொகையினை தாமதமின்றி வசூல் செய்ய வேண்டியுள்ளது.")
+        p2 = paras.get("memo_para2") or "மேற்படி தொகையினை தாமதமின்றி வசூல் செய்ய வேண்டியுள்ளது."
+        p3 = paras.get("memo_para3") or f"எனவே, மேற்படி {case.get('defaulter_name') or 'நிலுவைதாரர்'} மீது மேற்கொள்ளப்பட்ட வருவாய் வசூல் சட்ட நடவடிக்கைகளை உடனடியாக முடிக்குமாறு {case.get('taluk_name') or 'ஈரோடு'} வட்டாட்சியர் கேட்டுக்கொள்ளப்படுகிறார்."
         if p1 and "«PARA1»" in default_text:
             default_text = default_text.replace("«PARA1»", p1)
         if p2 and "«PARA2»" in default_text:
@@ -360,8 +493,8 @@ async def _draft(doc: str, system: str, template: str, slot_help: str, case: dic
     if "«MAINT_DETAILS»" in default_text:
         default_text = default_text.replace("«MAINT_DETAILS»", f"பராமரிப்புத் தொகை {fig(total_val)} ({words_val}).")
 
-    # If all slots were successfully filled from the master analysis, return immediately
-    if "«" not in default_text and paras:
+    # If all slots were successfully filled from the DB template, return immediately
+    if "«" not in default_text:
         return default_text
 
     for _ in range(2):
@@ -455,19 +588,21 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
             continue
 
         # Header titles
-        if any(h in line for h in [
-            "ஈரோடு மாவட்ட ஆட்சித் தலைவர் மற்றும் மாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள்",
+        if any(line.startswith(h) or h in line for h in [
+            "ஈரோடு மாவட்ட ஆட்சித் தலைவர்",
+            "மாவட்ட நிர்வாக நடுவர்",
+            "செயல்முறைகள்",
+            "முன்னிலை:",
             "// அலுவலகக் குறிப்பு //",
             "// குறிப்பாணை //",
-            "// ஜப்தி மற்றும் கைது வாரண்ட் ஆணை //",
-            "(Execution Warrant for Maintenance Arrears)"
         ]):
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p.paragraph_format.space_after = Pt(4)
             p.paragraph_format.line_spacing = 1.15
+            p.paragraph_format.first_line_indent = Inches(0)
             r = p.add_run(line)
-            set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=13.0, bold=True)
+            set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=12.0, bold=True)
             i += 1
             continue
 
@@ -475,6 +610,7 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p.paragraph_format.space_after = Pt(8)
+            p.paragraph_format.first_line_indent = Inches(0)
             r = p.add_run(line)
             set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=12.0, bold=True)
             i += 1
@@ -485,6 +621,7 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
             p = doc.add_paragraph()
             p.paragraph_format.space_after = Pt(8)
             p.paragraph_format.line_spacing = 1.15
+            p.paragraph_format.first_line_indent = Inches(0)
             r = p.add_run(line)
             set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.5, bold=True)
             i += 1
@@ -514,12 +651,15 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
 
                 p0 = row.cells[0].paragraphs[0]
                 p0.paragraph_format.space_after = Pt(4)
+                p0.paragraph_format.first_line_indent = Inches(0)
                 r0 = p0.add_run(label)
                 set_run_font(r0, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.5, bold=True)
 
                 p1 = row.cells[1].paragraphs[0]
                 p1.paragraph_format.space_after = Pt(4)
                 p1.paragraph_format.line_spacing = 1.15
+                p1.paragraph_format.first_line_indent = Inches(0)
+                p1.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                 r1 = p1.add_run(val)
                 set_run_font(r1, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.5, bold=False)
 
@@ -531,6 +671,7 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p.paragraph_format.space_after = Pt(4)
+            p.paragraph_format.first_line_indent = Inches(0)
             r = p.add_run("-------")
             set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.0, bold=True)
             i += 1
@@ -538,27 +679,43 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
 
         if line.startswith("உத்தரவு:") or line.startswith("பணிந்தனுப்பப்படுகிறது:") or line.startswith("அமலாக்கக் கட்டளை:"):
             p = doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(8)
             p.paragraph_format.space_after = Pt(6)
+            p.paragraph_format.first_line_indent = Inches(0)
             r = p.add_run(line)
             set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=12.0, bold=True)
             i += 1
             continue
 
         # Signatory block (Right aligned)
-        if any(line.startswith(s) for s in ["மாவட்ட ஆட்சித் தலைவர்,", "மாவட்ட ஆட்சித் தலைவருக்காக /", "மாவட்ட ஆட்சியரின் நேர்முக உதவியாளர்"]):
+        if any(line.startswith(s) for s in ["மாவட்ட ஆட்சித் தலைவர்,", "மாவட்ட ஆட்சித் தலைவருக்காக", "மாவட்ட ஆட்சியரின் நேர்முக உதவியாளர்"]) and not line.startswith("ஈரோடு மாவட்ட ஆட்சித் தலைவர்"):
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
             p.paragraph_format.space_before = Pt(12)
             p.paragraph_format.space_after = Pt(2)
+            p.paragraph_format.first_line_indent = Inches(0)
             r = p.add_run(line)
             set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.5, bold=True)
             if i + 1 < len(lines) and lines[i + 1].strip() == "ஈரோடு.":
                 p2 = doc.add_paragraph()
                 p2.alignment = WD_ALIGN_PARAGRAPH.RIGHT
                 p2.paragraph_format.space_after = Pt(12)
+                p2.paragraph_format.first_line_indent = Inches(0)
                 r2 = p2.add_run("ஈரோடு.")
                 set_run_font(r2, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.5, bold=True)
                 i += 1
+            i += 1
+            continue
+
+        # Enclosure / Recipient / Copy headers
+        if line.startswith("பெறுநர்:") or line.startswith("நகல்:") or line.startswith("இணைப்பு:"):
+            p = doc.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.space_before = Pt(6)
+            p.paragraph_format.space_after = Pt(2)
+            p.paragraph_format.first_line_indent = Inches(0)
+            r = p.add_run(line)
+            set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.5, bold=True)
             i += 1
             continue
 
@@ -566,11 +723,10 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
         p = doc.add_paragraph()
         p.paragraph_format.space_after = Pt(6)
         p.paragraph_format.line_spacing = 1.15
-        p.paragraph_format.first_line_indent = Inches(0.4) if not (line.startswith("பெறுநர்:") or line.startswith("நகல்:") or line.startswith("இணைப்பு:")) else Inches(0)
-
-        is_bold = line.startswith("பெறுநர்:") or line.startswith("நகல்:") or line.startswith("இணைப்பு:")
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.paragraph_format.first_line_indent = Inches(0.4)
         r = p.add_run(line)
-        set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.5, bold=is_bold)
+        set_run_font(r, font_name=settings.PRIMARY_FONT_TAMIL, size_pt=11.5, bold=False)
         i += 1
 
     enforce_document_font(doc, settings.PRIMARY_FONT_TAMIL)
@@ -579,28 +735,79 @@ async def render_text_stream_to_docx(text: str, target_path: Path, doc_type: str
     # ----------------------------------------------------------------------
     # SERVER LOG: STAGE 3 - CREATED DOCUMENT CONTENT
     # ----------------------------------------------------------------------
-    print("\n" + "=" * 80)
-    print(f" [STAGE 3/3] CREATED DOCUMENT CONTENT ({doc_type}) -> {target_path.name}")
-    print("-" * 80)
-    print(text)
-    print("=" * 80 + "\n")
+    try:
+        import sys
+        banner = f"\n{'=' * 80}\n [STAGE 3/3] CREATED DOCUMENT CONTENT ({doc_type}) -> {target_path.name}\n{'-' * 80}\n{text}\n{'=' * 80}\n"
+        sys.stdout.buffer.write(banner.encode("utf-8", errors="replace"))
+        sys.stdout.buffer.flush()
+    except Exception:
+        logger.info(f"[STAGE 3/3] CREATED DOCUMENT CONTENT ({doc_type}) -> {target_path.name}")
 
     logger.info(f"DOCX ({doc_type}) rendered successfully to: {target_path}")
     return target_path
 
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.core.database import AsyncSessionLocal
+from app.domain.models import DocumentTemplate
+
+
+async def get_template_from_db(template_code: str, db: Optional[AsyncSession] = None) -> Optional[DocumentTemplate]:
+    """Dynamically fetches a template from PostgreSQL / SQLite document_templates table."""
+    if db is not None:
+        try:
+            stmt = select(DocumentTemplate).where(DocumentTemplate.template_code == template_code, DocumentTemplate.is_active == True)
+            res = await db.execute(stmt)
+            return res.scalars().first()
+        except Exception as e:
+            logger.warning(f"Error querying DB for template '{template_code}': {e}")
+            return None
+    try:
+        async with AsyncSessionLocal() as session:
+            stmt = select(DocumentTemplate).where(DocumentTemplate.template_code == template_code, DocumentTemplate.is_active == True)
+            res = await session.execute(stmt)
+            return res.scalars().first()
+    except Exception as e:
+        logger.debug(f"DB session query for template '{template_code}' skipped or unavailable: {e}")
+        return None
+
+
 # ======================================================================================
 # 4. WORKER DRAFTING FUNCTIONS
 # ======================================================================================
-async def process_office_note(ocr_text: str, job_id: int, *args, case: Optional[dict] = None, meta: Optional[dict] = None, config: Optional[dict] = None) -> str:
-    """Worker 1: Drafts internal Office Note (Office_Note_{job_id}.docx)."""
+async def process_office_note(ocr_text: str, job_id: int, *args, case: Optional[dict] = None, meta: Optional[dict] = None, config: Optional[dict] = None, db: Optional[AsyncSession] = None) -> str:
+    """Worker 1: Drafts internal Office Note (Office_Note_{job_id}.docx) from dynamic DB template."""
     case, meta = await _case_for(ocr_text, case), meta or {}
     s = build_slots(case, meta, config)
+
+    # Dynamically load template from database
+    tpl = await get_template_from_db("office_note_default", db=db)
+    raw_template = (tpl.locked_template if tpl and tpl.locked_template else OFFICE_NOTE_TEMPLATE)
+    slot_help = (tpl.slot_instructions if tpl and tpl.slot_instructions else OFFICE_NOTE_SLOTS)
+
+    # If dynamic paragraph templates exist in DB, resolve them with slot values
+    if tpl:
+        if tpl.subject_template:
+            s["SUBJECT_NOTE"] = fill(tpl.subject_template, s)
+            s["note_subject_text"] = s["SUBJECT_NOTE"]
+        if tpl.order_para1_template:
+            s["PARA1"] = fill(tpl.order_para1_template, s)
+            s["note_para1"] = s["PARA1"]
+        if tpl.order_para2_template:
+            s["PARA2"] = fill(tpl.order_para2_template, s)
+            s["note_para2"] = s["PARA2"]
+        if tpl.order_para3_template:
+            s["PARA3"] = fill(tpl.order_para3_template, s)
+            s["note_para3"] = s["PARA3"]
+        if tpl.signatory_text:
+            s["signatory_text"] = fill(tpl.signatory_text, s)
+
     text = await _draft(
         "Office Note",
         "Draft the Erode Collectorate Office Note exactly in the locked format. Zero hallucination.",
-        fill(OFFICE_NOTE_TEMPLATE, s),
-        fill(OFFICE_NOTE_SLOTS, s),
+        fill(raw_template, s),
+        fill(slot_help, s),
         case,
         _ref_numbers(case, include_own=True)
     )
@@ -609,15 +816,40 @@ async def process_office_note(ocr_text: str, job_id: int, *args, case: Optional[
     return str(target)
 
 
-async def process_proceedings(ocr_text: str, job_id: int, *args, case: Optional[dict] = None, meta: Optional[dict] = None, config: Optional[dict] = None) -> str:
-    """Worker 2: Drafts Collector's Proceedings Order (Proceedings_{job_id}.docx)."""
+async def process_proceedings(ocr_text: str, job_id: int, *args, case: Optional[dict] = None, meta: Optional[dict] = None, config: Optional[dict] = None, db: Optional[AsyncSession] = None) -> str:
+    """Worker 2: Drafts Collector's Proceedings Order (Proceedings_{job_id}.docx) from dynamic DB template."""
     case, meta = await _case_for(ocr_text, case), meta or {}
     s = build_slots(case, meta, config)
+
+    # Dynamically load template from database
+    tpl = await get_template_from_db("proceedings_default", db=db)
+    raw_template = (tpl.locked_template if tpl and tpl.locked_template else PROCEEDINGS_TEMPLATE)
+    slot_help = (tpl.slot_instructions if tpl and tpl.slot_instructions else PROCEEDINGS_SLOTS)
+
+    # If dynamic paragraph templates exist in DB, resolve them with slot values
+    if tpl:
+        if tpl.subject_template:
+            s["SUBJECT_PROCEEDINGS"] = fill(tpl.subject_template, s)
+            s["subject_text"] = s["SUBJECT_PROCEEDINGS"]
+        if tpl.order_para1_template:
+            s["PARA1"] = fill(tpl.order_para1_template, s)
+            s["order_para1"] = s["PARA1"]
+        if tpl.order_para2_template:
+            s["PARA2"] = fill(tpl.order_para2_template, s)
+            s["order_para2"] = s["PARA2"]
+        if tpl.order_para3_template:
+            s["PARA3"] = fill(tpl.order_para3_template, s)
+            s["order_para3"] = s["PARA3"]
+        if tpl.signatory_text:
+            s["signatory_text"] = fill(tpl.signatory_text, s)
+        if tpl.enclosure_text:
+            s["enclosure_text"] = fill(tpl.enclosure_text, s)
+
     text = await _draft(
         "Proceedings",
         "You are the Erode Collectorate drafting section. Follow the locked proceedings format exactly.",
-        _drop_empty_copy_lines(fill(PROCEEDINGS_TEMPLATE, s)),
-        fill(PROCEEDINGS_SLOTS, s),
+        _drop_empty_copy_lines(fill(raw_template, s)),
+        fill(slot_help, s),
         case,
         _ref_numbers(case)
     )
@@ -787,11 +1019,34 @@ class DocumentService:
     def generate_proceedings_docx(self, entities_or_case: Union[ExtractedLegalEntities, dict], custom_filename: Optional[str] = None, meta: Optional[dict] = None) -> Path:
         case = self._ensure_case_dict(entities_or_case)
         s = build_slots(case, meta)
+        
+        tpl = asyncio.run(get_template_from_db("proceedings_default"))
+        raw_template = (tpl.locked_template if tpl and tpl.locked_template else PROCEEDINGS_TEMPLATE)
+        slot_help = (tpl.slot_instructions if tpl and tpl.slot_instructions else PROCEEDINGS_SLOTS)
+
+        if tpl:
+            if tpl.subject_template:
+                s["SUBJECT_PROCEEDINGS"] = fill(tpl.subject_template, s)
+                s["subject_text"] = s["SUBJECT_PROCEEDINGS"]
+            if tpl.order_para1_template:
+                s["PARA1"] = fill(tpl.order_para1_template, s)
+                s["order_para1"] = s["PARA1"]
+            if tpl.order_para2_template:
+                s["PARA2"] = fill(tpl.order_para2_template, s)
+                s["order_para2"] = s["PARA2"]
+            if tpl.order_para3_template:
+                s["PARA3"] = fill(tpl.order_para3_template, s)
+                s["order_para3"] = s["PARA3"]
+            if tpl.signatory_text:
+                s["signatory_text"] = fill(tpl.signatory_text, s)
+            if tpl.enclosure_text:
+                s["enclosure_text"] = fill(tpl.enclosure_text, s)
+
         text = asyncio.run(_draft(
             "Proceedings",
             "You are the Erode Collectorate drafting section. Follow the locked proceedings format exactly.",
-            _drop_empty_copy_lines(fill(PROCEEDINGS_TEMPLATE, s)),
-            fill(PROCEEDINGS_SLOTS, s),
+            _drop_empty_copy_lines(fill(raw_template, s)),
+            fill(slot_help, s),
             case,
             _ref_numbers(case)
         ))
@@ -805,11 +1060,32 @@ class DocumentService:
     def generate_note_docx(self, entities_or_case: Union[ExtractedLegalEntities, dict], custom_filename: Optional[str] = None, meta: Optional[dict] = None) -> Path:
         case = self._ensure_case_dict(entities_or_case)
         s = build_slots(case, meta)
+
+        tpl = asyncio.run(get_template_from_db("office_note_default"))
+        raw_template = (tpl.locked_template if tpl and tpl.locked_template else OFFICE_NOTE_TEMPLATE)
+        slot_help = (tpl.slot_instructions if tpl and tpl.slot_instructions else OFFICE_NOTE_SLOTS)
+
+        if tpl:
+            if tpl.subject_template:
+                s["SUBJECT_NOTE"] = fill(tpl.subject_template, s)
+                s["note_subject_text"] = s["SUBJECT_NOTE"]
+            if tpl.order_para1_template:
+                s["PARA1"] = fill(tpl.order_para1_template, s)
+                s["note_para1"] = s["PARA1"]
+            if tpl.order_para2_template:
+                s["PARA2"] = fill(tpl.order_para2_template, s)
+                s["note_para2"] = s["PARA2"]
+            if tpl.order_para3_template:
+                s["PARA3"] = fill(tpl.order_para3_template, s)
+                s["note_para3"] = s["PARA3"]
+            if tpl.signatory_text:
+                s["signatory_text"] = fill(tpl.signatory_text, s)
+
         text = asyncio.run(_draft(
             "Office Note",
             "Draft the Erode Collectorate Office Note exactly in the locked format. Zero hallucination.",
-            fill(OFFICE_NOTE_TEMPLATE, s),
-            fill(OFFICE_NOTE_SLOTS, s),
+            fill(raw_template, s),
+            fill(slot_help, s),
             case,
             _ref_numbers(case, include_own=True)
         ))

@@ -24,6 +24,7 @@ from app.domain.models import ProceedingsCase, DocumentTemplate
 from app.domain.schemas.legal_entities import ExtractedLegalEntities, DepartmentType
 from app.domain.schemas.validation import ValidationResult, ValidationInsight
 from app.domain.rules.math_validator import validate_financial_math
+from app.domain.rules.extraction_gate import run_gate
 from app.services.ocr_service import OCRService
 from app.services.llm_service import (
     LLMService,
@@ -87,12 +88,13 @@ class PipelineService:
         # ----------------------------------------------------------------------
         # SERVER LOG: STAGE 1 - OCR EXTRACTION OUTPUT
         # ----------------------------------------------------------------------
-        print("\n" + "=" * 80)
-        print(f" [STAGE 1/3] OCR EXTRACTION OUTPUT (File: {file_path.name})")
-        print(f" Engine: {ocr_payload['engine']} | Mode: {ocr_payload['mode_used']} | Pages: {ocr_payload['page_count']} | Length: {len(raw_text)} chars")
-        print("-" * 80)
-        print(raw_text if raw_text else "[NO TEXT EXTRACTED]")
-        print("=" * 80 + "\n")
+        try:
+            import sys
+            stage1_banner = f"\n{'=' * 80}\n [STAGE 1/3] OCR EXTRACTION OUTPUT (File: {file_path.name})\n Engine: {ocr_payload['engine']} | Mode: {ocr_payload['mode_used']} | Pages: {ocr_payload['page_count']} | Length: {len(raw_text)} chars\n{'-' * 80}\n{raw_text if raw_text else '[NO TEXT EXTRACTED]'}\n{'=' * 80}\n"
+            sys.stdout.buffer.write(stage1_banner.encode("utf-8", errors="replace"))
+            sys.stdout.buffer.flush()
+        except Exception:
+            logger.info(f"[STAGE 1/3] OCR extracted {len(raw_text)} chars for {file_path.name}")
 
         # Step 3: LLM Case Analysis via MASTER PROMPT (Zero hardcoded department heuristics)
         case: Dict[str, Any] = await self.llm_service.analyse_case(raw_text)
@@ -100,12 +102,13 @@ class PipelineService:
         # ----------------------------------------------------------------------
         # SERVER LOG: STAGE 2 - LLM EXTRACTS & SYNTHESIZED CASE DATA
         # ----------------------------------------------------------------------
-        print("\n" + "=" * 80)
-        print(f" [STAGE 2/3] LLM EXTRACTS & SYNTHESIZED CASE DATA (Job ID: {job_id})")
-        print(f" Department: {case.get('department_type')} | Defaulter: {case.get('defaulter_name')} | Total: {case.get('total_recoverable_amount')}")
-        print("-" * 80)
-        print(json.dumps(case, ensure_ascii=False, indent=2))
-        print("=" * 80 + "\n")
+        try:
+            import sys
+            stage2_banner = f"\n{'=' * 80}\n [STAGE 2/3] LLM EXTRACTS & SYNTHESIZED CASE DATA (Job ID: {job_id})\n Department: {case.get('department_type')} | Defaulter: {case.get('defaulter_name')} | Total: {case.get('total_recoverable_amount')}\n{'-' * 80}\n{json.dumps(case, ensure_ascii=False, indent=2)}\n{'=' * 80}\n"
+            sys.stdout.buffer.write(stage2_banner.encode("utf-8", errors="replace"))
+            sys.stdout.buffer.flush()
+        except Exception:
+            logger.info(f"[STAGE 2/3] LLM analyzed Job ID {job_id}")
 
         entities: ExtractedLegalEntities = case_to_extracted_entities(case, raw_text)
 
@@ -130,6 +133,82 @@ class PipelineService:
             jurisdiction_assigned_taluk=entities.taluk_name
         )
 
+        # Step 4.5: Fail-Closed Extraction Gate Enforcement
+        gate_result = run_gate(
+            case=case,
+            ocr_text=raw_text,
+            ocr_pages=ocr_result.get("pages_data") or ([{"page": 1, "text": raw_text, "mode": ocr_payload["mode_used"]}] if raw_text else [])
+        )
+
+        if not gate_result.ok:
+            logger.warning(
+                f"Extraction Gate REJECTED case (Job ID: {job_id}): {[e.value for e in gate_result.errors]} | "
+                f"Details: {gate_result.error_details}"
+            )
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+            if db:
+                case_record = ProceedingsCase(
+                    id=str(uuid.uuid4()),
+                    file_no=str(case.get("case_file_no") or job_id),
+                    case_file_no=str(case.get("case_file_no") or job_id),
+                    roc_number=f"ந.க. {case.get('case_file_no') or job_id}/{datetime.now().year}/ஈ2",
+                    department_type=case.get("department_type"),
+                    defaulter_name=case.get("defaulter_name") ,
+                    total_amount=float(case.get("total_recoverable_amount") or 0.0),
+                    district_name=case.get("district_name"),
+                    taluk_name=case.get("taluk_name"),
+                    status="NEEDS_REVIEW",
+                    original_file_name=file_path.name,
+                    docx_path="",
+                    pdf_path="",
+                    hybrid_signature="",
+                    document_content="",
+                    ocr_data=ocr_payload,
+                    extracted_data=case,
+                    generated_documents=[],
+                )
+                db.add(case_record)
+                await db.commit()
+
+                await self.audit_service.record_audit_entry(
+                    db=db,
+                    action="EXTRACTION_GATE_REJECTED",
+                    file_id=str(file_path.name),
+                    user_id=user_id,
+                    metadata={
+                        "case_no": case.get("case_file_no"),
+                        "gate_errors": [e.value for e in gate_result.errors],
+                        "gate_error_details": gate_result.error_details,
+                        "status": "NEEDS_REVIEW",
+                    },
+                    signature="GATE_REJECTED"
+                )
+
+            return {
+                "status": "NEEDS_REVIEW",
+                "gate_passed": False,
+                "gate_errors": [e.value for e in gate_result.errors],
+                "gate_error_details": gate_result.error_details,
+                "file_name": file_path.name,
+                "case": case,
+                "entities": entities.model_dump(),
+                "validation": validation.model_dump(),
+                "output_docx": "",
+                "output_pdf": "",
+                "proceedings_docx": "",
+                "proceedings_pdf": "",
+                "note_docx": "",
+                "note_pdf": "",
+                "memorandum_docx": "",
+                "memorandum_pdf": "",
+                "warrant_docx": "",
+                "warrant_pdf": "",
+                "documents": [],
+                "ocr_metadata": ocr_payload,
+                "processing_time_seconds": duration,
+            }
+
         # Step 5: Multi-Document Worker Drafting Synthesis
         meta_dict = meta or {
             "nk_no": case.get("case_file_no") or str(job_id),
@@ -137,29 +216,15 @@ class PipelineService:
             "doc_date": case.get("order_date") or case.get("letter_date") or datetime.now().strftime(".%m.%Y"),
         }
 
-        # Generate Worker 1: Office Note
-        note_docx_path_str = await process_office_note(raw_text, job_id, case=case, meta=meta_dict)
+        # Generate Worker 1: Office Note (Dynamic DB Template)
+        note_docx_path_str = await process_office_note(raw_text, job_id, case=case, meta=meta_dict, db=db)
         note_docx = Path(note_docx_path_str)
         note_pdf = self.pdf_service.convert_docx_to_pdf(note_docx)
 
-        # Generate Worker 2: Proceedings
-        proceedings_docx_path_str = await process_proceedings(raw_text, job_id, case=case, meta=meta_dict)
+        # Generate Worker 2: Proceedings (Dynamic DB Template)
+        proceedings_docx_path_str = await process_proceedings(raw_text, job_id, case=case, meta=meta_dict, db=db)
         proceedings_docx = Path(proceedings_docx_path_str)
         proceedings_pdf = self.pdf_service.convert_docx_to_pdf(proceedings_docx)
-
-        # Generate Worker 3: Memorandum
-        memorandum_docx_path_str = await process_memorandum(raw_text, job_id, linked_old_ref, case=case, meta=meta_dict)
-        memorandum_docx = Path(memorandum_docx_path_str)
-        memorandum_pdf = self.pdf_service.convert_docx_to_pdf(memorandum_docx)
-
-        # Generate Worker 4: Warrant (only if MAINTENANCE or welfare case)
-        warrant_docx = None
-        warrant_pdf = None
-        if case.get("department_type") == "MAINTENANCE" and case.get("maintenance"):
-            warrant_docx_path_str = await process_warrant(raw_text, job_id, case=case, meta=meta_dict)
-            if warrant_docx_path_str:
-                warrant_docx = Path(warrant_docx_path_str)
-                warrant_pdf = self.pdf_service.convert_docx_to_pdf(warrant_docx)
 
         # Step 6: Advanced Keyed Hybrid SHA-256 Stamping
         crypto_stamp = self.audit_service.generate_hybrid_signature(
@@ -187,22 +252,8 @@ class PipelineService:
                 "type": "NOTE",
                 "docx": str(note_docx.name),
                 "pdf": str(note_pdf.name),
-            },
-            {
-                "title": "3. குறிப்பாணை (Memorandum / Memo)",
-                "type": "MEMORANDUM",
-                "docx": str(memorandum_docx.name),
-                "pdf": str(memorandum_pdf.name),
             }
         ]
-
-        if warrant_docx and warrant_pdf:
-            documents_manifest.append({
-                "title": "4. ஜப்தி / கைது வாரண்ட் (Judicial Warrant)",
-                "type": "WARRANT",
-                "docx": str(warrant_docx.name),
-                "pdf": str(warrant_pdf.name),
-            })
 
         if db:
             case_record = ProceedingsCase(
@@ -243,10 +294,6 @@ class PipelineService:
                     "proceedings_pdf": proceedings_pdf.name,
                     "note_docx": note_docx.name,
                     "note_pdf": note_pdf.name,
-                    "memorandum_docx": memorandum_docx.name if memorandum_docx else "",
-                    "memorandum_pdf": memorandum_pdf.name if memorandum_pdf else "",
-                    "warrant_docx": warrant_docx.name if warrant_docx else "",
-                    "warrant_pdf": warrant_pdf.name if warrant_pdf else "",
                     "defaulter": case.get("defaulter_name"),
                     "defaulterName": case.get("defaulter_name"),
                     "total_amount": case.get("total_recoverable_amount"),
@@ -275,10 +322,6 @@ class PipelineService:
             "proceedings_pdf": str(proceedings_pdf.name),
             "note_docx": str(note_docx.name),
             "note_pdf": str(note_pdf.name),
-            "memorandum_docx": str(memorandum_docx.name) if memorandum_docx else "",
-            "memorandum_pdf": str(memorandum_pdf.name) if memorandum_pdf else "",
-            "warrant_docx": str(warrant_docx.name) if warrant_docx else "",
-            "warrant_pdf": str(warrant_pdf.name) if warrant_pdf else "",
             "documents": documents_manifest,
             "ocr_metadata": ocr_payload,
             "crypto_audit": crypto_stamp,

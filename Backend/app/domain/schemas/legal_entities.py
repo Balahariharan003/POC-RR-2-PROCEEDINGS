@@ -50,7 +50,7 @@ class SuretyDetail(BaseModel):
 
 
 class DefaulterDetail(BaseModel):
-    name: str = Field(..., description="Full legal name of defaulter or entity")
+    name: Optional[str] = Field(None, description="Full legal name of defaulter or entity")
     father_or_spouse_name: Optional[str] = None
     representation_or_title: Optional[str] = None
     door_no: Optional[str] = None
@@ -75,13 +75,13 @@ class FinancialDetails(BaseModel):
 
 
 class ReferenceDetails(BaseModel):
-    issuing_authority_name: str = Field(..., description="E.g., Office of Commissioner of Customs (Chennai IV)")
+    issuing_authority_name: Optional[str] = Field(None, description="E.g., Office of Commissioner of Customs (Chennai IV)")
     issuing_authority_designation: Optional[str] = None
-    case_or_file_no: str = Field(..., description="Originating file number e.g. F.NO. 516/2024-ARC")
+    case_or_file_no: Optional[str] = Field(None, description="Originating file number e.g. F.NO. 516/2024-ARC")
     ia_or_mp_no: Optional[str] = Field(None, description="Order in Original No e.g. 105790/2024")
     order_date: Optional[str] = None
     letter_date: Optional[str] = None
-    statutory_act_and_section: Optional[str] = "Section 142(1)(c)(ii) of Customs Act, 1962"
+    statutory_act_and_section: Optional[str] = None
     references_list: Optional[List[str]] = Field(default_factory=list, description="Dynamic list of references for பார்வை")
 
 
@@ -95,8 +95,8 @@ class ExtractedLegalEntities(BaseModel):
     """
     Standardized payload capturing the complete extraction from a Revenue Recovery certificate.
     """
-    department_type: DepartmentType = DepartmentType.CUSTOMS
-    entity_type: EntityType = EntityType.COMPANY
+    department_type: Optional[DepartmentType] = None
+    entity_type: Optional[EntityType] = None
     
     # Core Entity Records
     defaulter_details: List[DefaulterDetail] = Field(default_factory=list)
@@ -108,18 +108,18 @@ class ExtractedLegalEntities(BaseModel):
     references_items: Optional[List[ReferenceItem]] = Field(default_factory=list, description="Structured reference items")
     
     # Revenue Administration Routing
-    district_name: str = "ஈரோடு"
-    taluk_name: str = "ஈரோடு"
-    assigned_tahsildar: Optional[str] = "வருவாய் வட்டாட்சியர், ஈரோடு"
+    district_name: Optional[str] = None
+    taluk_name: Optional[str] = None
+    assigned_tahsildar: Optional[str] = None
     routing_confidence: float = 1.0
     
     # File Tracking
-    file_no: str = "1248"
-    file_year: str = "2026"
-    section_code: str = "ஈ2"
+    file_no: Optional[str] = None
+    file_year: Optional[str] = None
+    section_code: Optional[str] = None
     roc_number: Optional[str] = None
     proceedings_date: Optional[str] = None
-    collector_name: str = "திரு.ச.கந்தசாமி, இ.ஆ.ப."
+    collector_name: Optional[str] = None
 
     # Raw Text & Provenance
     source_file_sha256: Optional[str] = None

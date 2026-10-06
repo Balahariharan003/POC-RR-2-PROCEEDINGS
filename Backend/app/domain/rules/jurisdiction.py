@@ -53,10 +53,10 @@ ERODE_TALUKS: Dict[str, Dict[str, Any]] = {
         "english_name": "Gobichettipalayam",
         "tahsildar_title": "வருவாய் வட்டாட்சியர், கோபிசெட்டிபாளையம்",
         "rdo_office": "வருவாய் கோட்டாட்சியர், கோபிசெட்டிபாளையம்",
-        "pincodes": ["638452", "638453", "638458", "638476"],
+        "pincodes": ["638452", "638453"],
         "keywords": [
             "gobichettipalayam", "gobi", "கோபிசெட்டிபாளையம்", "கோபி", "kallipatti", "கள்ளிப்பட்டி",
-            "pariyur", "பரியூர்", "nambiyur", "நம்பியூர்", "kugalur", "கூகலூர்"
+            "pariyur", "பரியூர்", "kugalur", "கூகலூர்"
         ]
     },
     "சத்தியமங்கலம்": {
@@ -101,6 +101,16 @@ ERODE_TALUKS: Dict[str, Dict[str, Any]] = {
         "keywords": [
             "anthiyur", "அந்தியூர்", "bargur", "பர்கூர்", "appakudal", "ஆப்பக்கூடல்",
             "athani", "ஆத்தானி", "brammadesam", "பிரம்மதேசம்"
+        ]
+    },
+    "நம்பியூர்": {
+        "tamil_name": "நம்பியூர்",
+        "english_name": "Nambiyur",
+        "tahsildar_title": "வருவாய் வட்டாட்சியர், நம்பியூர்",
+        "rdo_office": "வருவாய் கோட்டாட்சியர், கோபிசெட்டிபாளையம்",
+        "pincodes": ["638458", "638476"],
+        "keywords": [
+            "nambiyur", "நம்பியூர்", "getticheviyur", "கெட்டிசெவியூர்", "polavapalayam", "போலவாபாளையம்"
         ]
     },
     "தாளவாடி": {
@@ -172,35 +182,63 @@ def route_to_jurisdiction(
     Dynamically routes a recovery proceeding to the correct District, Taluk, and Tahsildar.
     Matches in priority:
     1. Exact PIN code lookup in Knowledge Graph
-    2. Explicit Taluk or Village keyword match
-    3. Multi-District resolution across Tamil Nadu
-    Defaults gracefully to Erode headquarters.
+    2. Explicit Taluk match
+    3. Specific Village/Locality keyword match (longest/most specific first)
+    4. Multi-District resolution across Tamil Nadu
+    5. Default to Erode headquarters
     """
-    search_text = f"{raw_address or ''} {explicit_taluk or ''} {explicit_district or ''}".lower()
     clean_pincode = str(pincode or "").strip()
+    raw_addr_str = str(raw_address or "").lower()
+    search_text = f"{raw_addr_str} {explicit_taluk or ''} {explicit_district or ''}".lower()
 
-    # 1. Match in Erode Taluks first (Primary Engine)
-    for taluk_name, data in ERODE_TALUKS.items():
-        if clean_pincode and clean_pincode in data["pincodes"]:
-            return {
-                "district": "ஈரோடு",
-                "taluk": taluk_name,
-                "tahsildar": data["tahsildar_title"],
-                "rdo": data["rdo_office"],
-                "match_reason": f"Matched Erode PIN code {clean_pincode}"
-            }
-        
-        for kw in data["keywords"]:
-            if kw.lower() in search_text:
+    # 1. Exact PIN code lookup across all Erode taluks
+    if clean_pincode:
+        for taluk_name, data in ERODE_TALUKS.items():
+            if clean_pincode in data["pincodes"]:
                 return {
                     "district": "ஈரோடு",
                     "taluk": taluk_name,
                     "tahsildar": data["tahsildar_title"],
                     "rdo": data["rdo_office"],
-                    "match_reason": f"Matched Erode locality keyword: '{kw}'"
+                    "match_reason": f"Matched Erode PIN code {clean_pincode}"
                 }
 
-    # 2. Multi-District Dynamic Routing (Other Tamil Nadu districts)
+    # 2. Explicit taluk match
+    if explicit_taluk:
+        clean_taluk = explicit_taluk.strip()
+        for taluk_name, data in ERODE_TALUKS.items():
+            if clean_taluk == taluk_name or clean_taluk.lower() == data["english_name"].lower():
+                return {
+                    "district": "ஈரோடு",
+                    "taluk": taluk_name,
+                    "tahsildar": data["tahsildar_title"],
+                    "rdo": data["rdo_office"],
+                    "match_reason": f"Explicit taluk matched: '{clean_taluk}'"
+                }
+
+    # 3. Specific Locality keyword match (excluding generic "erode" / "ஈரோடு" district words first)
+    # Check all non-headquarter taluk keywords, sorted by keyword length descending
+    specific_kw_matches = []
+    for taluk_name, data in ERODE_TALUKS.items():
+        if taluk_name == "ஈரோடு":
+            continue
+        for kw in data["keywords"]:
+            if kw.lower() in search_text:
+                specific_kw_matches.append((len(kw), taluk_name, kw, data))
+
+    if specific_kw_matches:
+        # Pick the longest / most specific matched keyword
+        specific_kw_matches.sort(key=lambda x: x[0], reverse=True)
+        best_len, best_taluk, best_kw, data = specific_kw_matches[0]
+        return {
+            "district": "ஈரோடு",
+            "taluk": best_taluk,
+            "tahsildar": data["tahsildar_title"],
+            "rdo": data["rdo_office"],
+            "match_reason": f"Matched specific locality keyword: '{best_kw}'"
+        }
+
+    # 4. Multi-District Dynamic Routing (Other Tamil Nadu districts)
     for dist_name, dist_info in SUPPORTED_DISTRICTS.items():
         if dist_name == "ஈரோடு":
             continue
@@ -223,6 +261,18 @@ def route_to_jurisdiction(
                 "tahsildar": taluks.get(first_taluk, {}).get("tahsildar_title", f"வருவாய் வட்டாட்சியர், {first_taluk}"),
                 "rdo": f"வருவாய் கோட்டாட்சியர், {dist_name}",
                 "match_reason": f"Cross-District matched {dist_name}"
+            }
+
+    # 5. Check Erode taluk specific keywords (e.g. Surampatti, Thindal, etc.)
+    erode_data = ERODE_TALUKS["ஈரோடு"]
+    for kw in erode_data["keywords"]:
+        if kw.lower() in search_text:
+            return {
+                "district": "ஈரோடு",
+                "taluk": "ஈரோடு",
+                "tahsildar": erode_data["tahsildar_title"],
+                "rdo": erode_data["rdo_office"],
+                "match_reason": f"Matched Erode locality keyword: '{kw}'"
             }
 
     # Default fallback

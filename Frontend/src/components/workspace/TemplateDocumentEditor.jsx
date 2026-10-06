@@ -106,8 +106,8 @@ function EditableParagraph({
 
   const activeFont = blockStyle.fontFamily || block.style?.fontFamily || (selectedFont ? `${selectedFont}, serif` : 'TAU-Marutham, serif');
   const activeFontSize = blockStyle.fontSize || block.style?.fontSize || selectedFontSize || '11pt';
-  const activeAlign = blockStyle.textAlign || block.style?.textAlign || selectedAlign || 'justify';
-  const activeLineHeight = blockStyle.lineHeight || block.style?.lineHeight || '1.5';
+  const activeAlign = blockStyle.textAlign || block.style?.textAlign || 'left';
+  const activeLineHeight = blockStyle.lineHeight || block.style?.lineHeight || '1.6';
 
   useLayoutEffect(() => {
     if (!element.current) return;
@@ -128,7 +128,7 @@ function EditableParagraph({
     textAlign: activeAlign,
     lineHeight: activeLineHeight,
     minHeight: blockStyle.minHeight,
-    textIndent: blockStyle.textIndent !== undefined ? blockStyle.textIndent : (block.style?.textIndent || undefined),
+    textIndent: (activeAlign === 'center' || activeAlign === 'right') ? '0' : (blockStyle.textIndent !== undefined ? blockStyle.textIndent : (block.style?.textIndent || undefined)),
   };
 
   const wrapperStyle = {
@@ -218,10 +218,12 @@ export default function TemplateDocumentEditor({
   const [zoom, setZoom] = useState(1);
   const [activeDropdown, setActiveDropdown] = useState(false);
   const [tableColumnRatios, setTableColumnRatios] = useState({});
+  const userInteractedZoom = useRef(false);
 
   useLayoutEffect(() => {
     if (!container.current || !layout?.page?.page_width) return;
     const observer = new ResizeObserver(([entry]) => {
+      if (userInteractedZoom.current) return;
       // Auto fit to available viewport width nicely
       const availableWidth = entry.contentRect.width - 64;
       const targetWidth = (layout.page.page_width * 96) / 72;
@@ -243,11 +245,29 @@ export default function TemplateDocumentEditor({
   }
 
   const handleZoomChange = (delta) => {
-    setZoom(prev => Math.min(1.5, Math.max(0.3, Number((prev + delta).toFixed(2)))));
+    userInteractedZoom.current = true;
+    setZoom(prev => Math.min(2.0, Math.max(0.3, Number((prev + delta).toFixed(2)))));
   };
 
   const setExactZoom = (val) => {
+    userInteractedZoom.current = true;
     setZoom(val);
+    setActiveDropdown(false);
+  };
+
+  const resetZoom = () => {
+    userInteractedZoom.current = false;
+    if (container.current && layout?.page?.page_width) {
+      const availableWidth = container.current.offsetWidth - 64;
+      const targetWidth = (layout.page.page_width * 96) / 72;
+      if (availableWidth > 0 && targetWidth > 0) {
+        setZoom(Math.min(1.1, Math.max(0.4, availableWidth / targetWidth)));
+      } else {
+        setZoom(1.0);
+      }
+    } else {
+      setZoom(1.0);
+    }
     setActiveDropdown(false);
   };
 
@@ -491,7 +511,7 @@ export default function TemplateDocumentEditor({
         <button
           type="button"
           className="rr-zoom-btn"
-          onClick={() => handleZoomChange(-0.1)}
+          onClick={(e) => { e.stopPropagation(); handleZoomChange(-0.1); }}
           title="Zoom Out"
         >
           <ZoomOut size={14} />
@@ -501,18 +521,21 @@ export default function TemplateDocumentEditor({
           <button
             type="button"
             className="rr-zoom-dropdown-trigger"
-            onClick={() => setActiveDropdown(!activeDropdown)}
+            onClick={(e) => { e.stopPropagation(); setActiveDropdown(!activeDropdown); }}
           >
             <span>{Math.round(zoom * 100)}%</span>
             <ChevronDown size={12} />
           </button>
 
           {activeDropdown && (
-            <div className="rr-zoom-menu">
+            <div className="rr-zoom-menu" onClick={(e) => e.stopPropagation()}>
               <button type="button" onClick={() => setExactZoom(0.5)}>50%</button>
               <button type="button" onClick={() => setExactZoom(0.75)}>75%</button>
+              <button type="button" onClick={() => setExactZoom(0.9)}>90%</button>
               <button type="button" onClick={() => setExactZoom(1.0)}>100% (Actual Size)</button>
+              <button type="button" onClick={() => setExactZoom(1.1)}>110%</button>
               <button type="button" onClick={() => setExactZoom(1.25)}>125%</button>
+              <button type="button" onClick={() => setExactZoom(1.5)}>150%</button>
             </div>
           )}
         </div>
@@ -520,7 +543,7 @@ export default function TemplateDocumentEditor({
         <button
           type="button"
           className="rr-zoom-btn"
-          onClick={() => handleZoomChange(0.1)}
+          onClick={(e) => { e.stopPropagation(); handleZoomChange(0.1); }}
           title="Zoom In"
         >
           <ZoomIn size={14} />
@@ -529,8 +552,8 @@ export default function TemplateDocumentEditor({
         <button
           type="button"
           className="rr-zoom-btn"
-          onClick={() => setExactZoom(1.0)}
-          title="Reset to 100%"
+          onClick={(e) => { e.stopPropagation(); resetZoom(); }}
+          title="Reset Fit to Width"
         >
           <Maximize2 size={13} />
         </button>

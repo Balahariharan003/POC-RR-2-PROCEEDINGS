@@ -74,13 +74,15 @@ class ChandraOCRClient:
                         check_url = res_data.get("request_check_url")
                         if check_url:
                             import asyncio
-                            max_polls = 15
-                            for _ in range(max_polls):
-                                await asyncio.sleep(1.5)
+                            poll_interval = 2.0
+                            max_polls = max(30, int(self.timeout / poll_interval))
+                            for poll_idx in range(max_polls):
+                                await asyncio.sleep(poll_interval)
                                 poll_res = await client.get(check_url, headers=headers)
                                 if poll_res.status_code == 200:
                                     poll_data = poll_res.json()
-                                    if poll_data.get("status") == "complete":
+                                    status = poll_data.get("status")
+                                    if status == "complete":
                                         text = poll_data.get("markdown", "") or poll_data.get("text", "")
                                         return {
                                             "text": text,
@@ -88,8 +90,11 @@ class ChandraOCRClient:
                                             "confidence": 0.96,
                                             "raw_response": poll_data
                                         }
-                                    elif poll_data.get("status") == "failed":
+                                    elif status == "failed":
                                         raise OCRProcessingError(f"Datalab processing failed: {poll_data.get('error')}")
+                                    # Still processing/pending, continue polling
+                                else:
+                                    logger.warning(f"Polling check_url returned status {poll_res.status_code}")
 
                         # If text is directly returned
                         extracted_text = res_data.get("text", "") or res_data.get("markdown", "")

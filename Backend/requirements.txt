@@ -33,3 +33,7 @@ python-dotenv>=1.0.0
 # Testing
 pytest>=8.1.0
 pytest-asyncio>=0.23.0
+
+# Robust JSON Repair for LLM Stream Truncation
+json-repair>=0.30.0
+

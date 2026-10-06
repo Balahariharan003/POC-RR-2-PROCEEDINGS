@@ -39,7 +39,7 @@ import { layoutToText } from '../../utils/documentLayout.js';
 import './RRAssistantView.css';
 import TemplateDocumentEditor from './TemplateDocumentEditor.jsx';
 
-export default function RRAssistantView({ 
+export default function RRAssistantView({
   currentLanguage = 'en',
   currentUser,
   onSelectRecent,
@@ -53,7 +53,7 @@ export default function RRAssistantView({
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileInfo, setFileInfo] = useState({ name: '', sizeFormatted: '' });
   const [processingStage, setProcessingStage] = useState('Extracting document content...');
-  
+
   // Document Content & Layout
   const [generatedContent, setGeneratedContent] = useState('');
   const [generatedDocxFilename, setGeneratedDocxFilename] = useState('');
@@ -71,13 +71,11 @@ export default function RRAssistantView({
   const [selectedFontSize, setSelectedFontSize] = useState('11pt');
   const [selectedAlign, setSelectedAlign] = useState('justify');
 
-  // Quadruple Administrative Documents Manifest
+  // Dual Administrative Documents Manifest (Proceedings & Office Note)
   const [activeDocType, setActiveDocType] = useState('proceedings');
   const [docManifest, setDocManifest] = useState({
     proceedings: { docx: '', pdf: '', title: '1. செயல்முறைகள்\n(Order)' },
-    memorandum: { docx: '', pdf: '', title: '2. குறிப்பாணை\n(Memo)' },
-    note: { docx: '', pdf: '', title: '3. அலுவலகக் குறிப்பு\n(Note)' },
-    warrant: { docx: '', pdf: '', title: '4. வாரண்ட்\n(Warrant)' }
+    note: { docx: '', pdf: '', title: '2. அலுவலகக் குறிப்பு\n(Office Note)' }
   });
   const [cachedLayouts, setCachedLayouts] = useState({});
   const [cachedEdits, setCachedEdits] = useState({});
@@ -131,22 +129,16 @@ export default function RRAssistantView({
 
         const s = activeSession;
         const details = s.details && typeof s.details === 'object' ? s.details : {};
-        
+
         // 1. Docx Filenames & Manifest
         const procDocx = s.proceedings_docx || s.generated_docx_filename || details.proceedings_docx || details.generated_docx_filename || details.output_docx || '';
         const procPdf = s.proceedings_pdf || s.generated_pdf_filename || details.proceedings_pdf || details.output_pdf || '';
-        const memoDocx = s.memorandum_docx || details.memorandum_docx || '';
-        const memoPdf = s.memorandum_pdf || details.memorandum_pdf || '';
         const noteDocx = s.note_docx || details.note_docx || '';
         const notePdf = s.note_pdf || details.note_pdf || '';
-        const warrantDocx = s.warrant_docx || details.warrant_docx || '';
-        const warrantPdf = s.warrant_pdf || details.warrant_pdf || '';
 
         const manifest = {
           proceedings: { docx: procDocx, pdf: procPdf, title: '1. செயல்முறைகள்\n(Order)' },
-          memorandum: { docx: memoDocx, pdf: memoPdf, title: '2. குறிப்பாணை\n(Memo)' },
-          note: { docx: noteDocx, pdf: notePdf, title: '3. அலுவலகக் குறிப்பு\n(Note)' },
-          warrant: { docx: warrantDocx, pdf: warrantPdf, title: '4. வாரண்ட்\n(Warrant)' }
+          note: { docx: noteDocx, pdf: notePdf, title: '2. அலுவலகக் குறிப்பு\n(Office Note)' }
         };
         if (!isMounted) return;
         setDocManifest(manifest);
@@ -332,15 +324,11 @@ export default function RRAssistantView({
       const edits = {};
       const formattedDoc = layoutToText(layout, edits);
       const procDocx = result.proceedings_docx || result.generated_docx_filename || '';
-      const memoDocx = result.memorandum_docx || '';
       const noteDocx = result.note_docx || '';
-      const warrantDocx = result.warrant_docx || '';
 
       const manifest = {
         proceedings: { docx: procDocx, pdf: result.proceedings_pdf || '', title: '1. செயல்முறைகள்\n(Order)' },
-        memorandum: { docx: memoDocx, pdf: result.memorandum_pdf || '', title: '2. குறிப்பாணை\n(Memo)' },
-        note: { docx: noteDocx, pdf: result.note_pdf || '', title: '3. அலுவலகக் குறிப்பு\n(Note)' },
-        warrant: { docx: warrantDocx, pdf: result.warrant_pdf || '', title: '4. வாரண்ட்\n(Warrant)' }
+        note: { docx: noteDocx, pdf: result.note_pdf || '', title: '2. அலுவலகக் குறிப்பு\n(Office Note)' }
       };
 
       setGeneratedContent(formattedDoc);
@@ -526,9 +514,9 @@ export default function RRAssistantView({
       <header className="rr-studio-topbar">
         <div className="rr-studio-topbar__left">
           {workflowState === 'generated' && (
-            <button 
-              type="button" 
-              className="rr-studio-topbar__btn-back" 
+            <button
+              type="button"
+              className="rr-studio-topbar__btn-back"
               onClick={() => {
                 if (activeSession && onBackToAudit) {
                   onBackToAudit();
@@ -555,7 +543,7 @@ export default function RRAssistantView({
           )}
 
           <div className="rr-studio-doc-title-box">
-            <FileText size={16} color="#2563eb" style={{ flexShrink: 0 }} />
+            <FileText size={16} color="#12254eff" style={{ flexShrink: 0 }} />
             <input
               type="text"
               className="rr-studio-doc-title-input"
@@ -661,23 +649,6 @@ export default function RRAssistantView({
                 >
                   <MessageSquare size={15} />
                 </button>
-
-                <button
-                  type="button"
-                  className={`rr-studio-ai-pill-btn ${showInspector && rightPanelMode === 'inspector' ? 'active' : ''}`}
-                  onClick={() => {
-                    if (showInspector && rightPanelMode === 'inspector') {
-                      setShowInspector(false);
-                    } else {
-                      setShowInspector(true);
-                      setRightPanelMode('inspector');
-                    }
-                  }}
-                  title="Toggle Legal Inspector & Entities"
-                >
-                  <Sparkles size={13} />
-                  <span>Legal Inspector</span>
-                </button>
               </div>
             </>
           )}
@@ -755,9 +726,9 @@ export default function RRAssistantView({
         {/* Processing State */}
         {workflowState === 'processing' && (
           <div className="rr-studio-upload-hero">
-            <RefreshCw size={36} color="#2563eb" className="spinner" />
+            <RefreshCw size={36} color="#05163bff" className="spinner" />
             <h2>Synthesizing Official Proceedings</h2>
-            <p style={{ fontWeight: 600, color: '#2563eb' }}>{processingStage}</p>
+            <p style={{ fontWeight: 600, color: '#071b48ff' }}>{processingStage}</p>
             <p>{fileInfo.name}</p>
           </div>
         )}
@@ -790,9 +761,7 @@ export default function RRAssistantView({
                   {leftRailTab === 'documents' ? (
                     [
                       { id: 'proceedings', label: 'Proceedings', sub: 'செயல்முறைகள்' },
-                      { id: 'memorandum', label: 'Memo', sub: 'குறிப்பாணை' },
                       { id: 'note', label: 'Office Note', sub: 'அலுவலகக் குறிப்பு' },
-                      { id: 'warrant', label: 'Warrant', sub: 'வாரண்ட்' },
                     ].map((item, idx) => {
                       const isActive = activeDocType === item.id;
                       return (
@@ -1346,10 +1315,10 @@ export default function RRAssistantView({
                           {fileInfo.name || 'Order.pdf'}
                         </span>
                         {docPreviewUrl && (
-                          <a 
-                            href={docPreviewUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={docPreviewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="rr-scanned-open-link"
                             title="Open original file in full browser tab"
                           >
@@ -1358,18 +1327,18 @@ export default function RRAssistantView({
                           </a>
                         )}
                       </div>
-                      
+
                       {docPreviewUrl ? (
                         <div className="rr-scanned-frame-wrapper">
                           {docPreviewUrl.toLowerCase().endsWith('.png') || docPreviewUrl.toLowerCase().endsWith('.jpg') || docPreviewUrl.toLowerCase().endsWith('.jpeg') ? (
-                            <img 
-                              src={docPreviewUrl} 
-                              alt="Original Scanned Order" 
+                            <img
+                              src={docPreviewUrl}
+                              alt="Original Scanned Order"
                               className="rr-scanned-image"
                             />
                           ) : (
-                            <iframe 
-                              src={`${docPreviewUrl}#toolbar=0&navpanes=0`} 
+                            <iframe
+                              src={`${docPreviewUrl}#toolbar=0&navpanes=0`}
                               title="Original Scanned Document"
                               className="rr-scanned-iframe"
                             />
@@ -1410,14 +1379,14 @@ export default function RRAssistantView({
                         {composerNotice}
                       </div>
                     )}
-                    <form 
+                    <form
                       onSubmit={(e) => {
                         e.preventDefault();
                         handleApplyChanges();
                       }}
                       className="rr-studio-chat-input-row"
                     >
-                      <textarea 
+                      <textarea
                         className="rr-studio-chat-textarea"
                         placeholder="Ask AI to revise clauses, change taluk, etc..."
                         rows={1}
@@ -1430,8 +1399,8 @@ export default function RRAssistantView({
                           }
                         }}
                       />
-                      <button 
-                        type="submit" 
+                      <button
+                        type="submit"
                         className="rr-studio-chat-send-btn"
                         disabled={!correctionInstruction.trim() || isApplyingChanges}
                         title="Send instruction to AI"

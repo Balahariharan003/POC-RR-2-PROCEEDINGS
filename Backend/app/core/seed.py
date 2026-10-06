@@ -15,10 +15,6 @@ from app.services.document_service import (
     OFFICE_NOTE_SLOTS,
     PROCEEDINGS_TEMPLATE,
     PROCEEDINGS_SLOTS,
-    MEMO_TEMPLATE,
-    MEMO_SLOTS,
-    WARRANT_TEMPLATE,
-    WARRANT_SLOTS,
 )
 from app.services.llm_service import (
     COLLECTOR_LINE,
@@ -97,9 +93,16 @@ OFFICIAL_TEMPLATES = [
         "department_type": "GENERAL_RR",
         "category": "INTERNAL_NOTE",
         "description": "Internal section note submitted to the District Collector / DRO for RR authorization under RSO 41 & Sec 5.",
+        "heading_prefix": "// அலுவலகக் குறிப்பு //",
+        "subject_template": "வருவாய் வசூல் சட்டம் – {{statute_cited}} – {{district_name}} மாவட்டம், {{taluk_name}} வட்டம், {{street_and_locality}} என்ற முகவரியில் {{living_verb}} {{defaulter_name}} என்ற {{entity_label}} அரசிற்கு செலுத்த வேண்டிய {{dues_label}} மொத்தம் {{total_amount}}ஐ வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோரியது - உத்திரவிடுதல் - தொடர்பாக.",
+        "reference_template": "{{reference_text}}",
+        "order_para1_template": "{{district_name}} மாவட்டம், {{taluk_name}} வட்டம், {{street_and_locality}} என்ற முகவரியில் {{living_verb}} {{defaulter_name}} என்ற {{entity_label}} அரசிற்கு செலுத்த வேண்டிய {{dues_label}} மொத்தம் {{total_amount}}ஐ வருவாய் வசூல் சட்டத்தின் கீழ் வசூலிக்குமாறு பார்வையில் காணும் கடிதத்தில் தெரிவிக்கப்பட்டுள்ளது.",
+        "order_para2_template": "மேற்படி முகவரியில் {{living_verb}} {{defaulter_name}} என்பவரின் அசையும் மற்றும் அசையா சொத்துகளிலிருந்து அரசிற்கு செலுத்த வேண்டிய {{dues_label}} மொத்தம் {{total_amount}}ஐ ({{amount_in_tamil_words}}) வருவாய் வசூல் சட்டப்படி வசூல் செய்து “{{dd_favour_of}}” என்ற பெயரில் வங்கி வரைவோலையாக (Demand Draft) எடுத்து {{dispatch_address}} என்ற அலுவலகத்திற்கு அசல் வங்கி வரைவோலையினை அனுப்பி அதன் விவரத்தினை நகல் வங்கி வரைவோலையுடன் இவ்வலுவலகத்திற்கு அனுப்பி வைக்குமாறு {{taluk_name}} வருவாய் வட்டாட்சியருக்கு தெரிவிக்கலாம்.",
+        "order_para3_template": "எனவே மேற்படி தொகையை வருவாய் நிலை ஆணை எண் 41 மற்றும் வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூல் செய்ய {{taluk_name}} வருவாய் வட்டாட்சியருக்கு அதிகாரம் வழங்கி இதன் மூலம் உத்தரவிடலாம்.",
+        "signatory_text": "உத்தரவினை எதிர்நோக்கி செயல்முறை வரைவு ஒப்புதலுக்காக மாவட்ட ஆட்சித்தலைவர் அவர்களுக்கு பணிவுடன் சமர்ப்பிக்கப்படுகிறது.",
+        "enclosure_text": "கடித நகல்",
         "locked_template": OFFICE_NOTE_TEMPLATE,
         "slot_instructions": OFFICE_NOTE_SLOTS,
-        "enclosure_text": "கடித நகல்",
         "template_data": {
             "worker_target": "OFFICE_NOTE",
             "statute": "Tamil Nadu Revenue Recovery Act 1864",
@@ -114,9 +117,16 @@ OFFICIAL_TEMPLATES = [
         "department_type": "GENERAL_RR",
         "category": "PROCEEDINGS",
         "description": "Official Collector & District Magistrate Proceedings Order empowering the jurisdictional Tahsildar.",
+        "heading_prefix": "ஈரோடு மாவட்ட ஆட்சித் தலைவர் மற்றும்\nமாவட்ட நிர்வாக நடுவர் அவர்களின் செயல்முறைகள், ஈரோடு",
+        "subject_template": "வருவாய் வசூல் சட்டம் 1864 – {{statute_cited}} – {{district_name}} மாவட்டம் - {{taluk_name}} வட்டம் மற்றும் நகரம் – {{defaulter_name}}, {{street_and_locality}} - அரசிற்கு செலுத்த வேண்டிய {{dues_label}} {{total_amount}} - வருவாய் வசூல் சட்டத்தின் கீழ் வசூல் செய்ய கோரியது – உத்திரவிடுதல்.",
+        "reference_template": "{{reference_text}}",
+        "order_para1_template": "{{district_name}} மாவட்டம், {{taluk_name}} வட்டம் மற்றும் நகரம், {{street_and_locality}} என்ற முகவரியில் {{living_verb}} {{defaulter_name}} என்ற {{entity_label}} அரசிற்கு செலுத்த வேண்டிய {{dues_label}} {{total_amount}}ஐ வருவாய் வசூல் சட்டத்தின் கீழ் வசூலிக்குமாறு பார்வையில் காணும் கடிதத்தில் தெரிவிக்கப்பட்டுள்ளது.",
+        "order_para2_template": "மேற்படி {{defaulter_name}} {{defaulter_suffix}} தொகை {{total_amount}}ஐ வருவாய் நிலை ஆணை எண் 41 மற்றும் வருவாய் வசூல் சட்டம் 1864 பிரிவு 5-ன் கீழ் வசூல் செய்ய {{taluk_name}} வருவாய் வட்டாட்சியருக்கு அதிகாரம் வழங்கி உத்திரவிடப்படுகிறது.",
+        "order_para3_template": "எனவே, மேற்படி முகவரியில் {{living_verb}} {{defaulter_name}} என்பவரின் அசையும் மற்றும் அசையா சொத்துகளிலிருந்து அரசிற்கு செலுத்த வேண்டிய {{dues_label}} {{total_amount}}ஐ ({{amount_in_tamil_words}}) வருவாய் வசூல் சட்டப்படி வசூல் செய்து “{{dd_favour_of}}” என்ற பெயரில் வங்கி வரைவோலையாக (Demand Draft) எடுத்து {{dispatch_address}} என்ற அலுவலகத்திற்கு அசலினை அனுப்பி அதன் விவரத்தினை நகல் வங்கி வரைவோலையுடன் இவ்வலுவலகத்திற்கு அனுப்பி வைக்குமாறு {{taluk_name}} வருவாய் வட்டாட்சியருக்கு தெரிவிக்கப்படுகிறது.",
+        "signatory_text": "மாவட்ட ஆட்சித் தலைவர்,\nஈரோடு.",
+        "enclosure_text": "கடித நகல்",
         "locked_template": PROCEEDINGS_TEMPLATE,
         "slot_instructions": PROCEEDINGS_SLOTS,
-        "enclosure_text": "கடித நகல்",
         "template_data": {
             "worker_target": "PROCEEDINGS",
             "statute": "Tamil Nadu Revenue Recovery Act 1864",
@@ -124,68 +134,26 @@ OFFICIAL_TEMPLATES = [
             "section": "Section 5"
         },
         "is_active": True,
-    },
-    {
-        "template_code": "memorandum_default",
-        "name": "மாவட்ட ஆட்சியர் அலுவலக குறிப்பாணை (Memorandum / Memo)",
-        "department_type": "GENERAL_RR",
-        "category": "MEMORANDUM",
-        "description": "Official Collectorate Memorandum forwarding recovery requisition and reminders to Tahsildar.",
-        "locked_template": MEMO_TEMPLATE,
-        "slot_instructions": MEMO_SLOTS,
-        "enclosure_text": "கடித நகல்",
-        "template_data": {
-            "worker_target": "MEMORANDUM",
-            "statute": "Tamil Nadu Revenue Recovery Act 1864"
-        },
-        "is_active": True,
-    },
-    {
-        "template_code": "warrant_maintenance",
-        "name": "ஜப்தி மற்றும் கைது வாரண்ட் ஆணை (Execution Warrant)",
-        "department_type": "MAINTENANCE",
-        "category": "WARRANT",
-        "description": "Execution Warrant for Maintenance Arrears under BNSS 144 / CrPC 125 and TN Revenue Recovery Act 1864.",
-        "locked_template": WARRANT_TEMPLATE,
-        "slot_instructions": WARRANT_SLOTS,
-        "enclosure_text": "நீதிமன்ற ஆணை நகல்",
-        "template_data": {
-            "worker_target": "WARRANT",
-            "statute": "BNSS 144 / CrPC 125 & Tamil Nadu Revenue Recovery Act 1864"
-        },
-        "is_active": True,
     }
 ]
 
 
-import base64
-from pathlib import Path
-
-OFFICIAL_PROCEEDINGS_FILE = Path(r"E:\Documents\Personal\My_docs\IMP_Files\Documentation\Erode Collectorate\Confidential\AI Tools\RR_to_release\RR ACT PROCEEDINGS FORMAT.docx")
+from app.services.editor_service import EditorService
+from sqlalchemy import delete
 
 async def seed_default_templates(session: AsyncSession) -> None:
-    """Seeds standard Tamil Nadu government proceedings templates and office configuration with docx file binaries."""
+    """Seeds standard Tamil Nadu government proceedings and office note templates and deletes removed templates."""
     try:
-        # Load user docx template if available on disk
-        proceedings_b64 = None
-        proceedings_filename = None
-        if OFFICIAL_PROCEEDINGS_FILE.exists():
-            try:
-                raw_bytes = OFFICIAL_PROCEEDINGS_FILE.read_bytes()
-                proceedings_b64 = base64.b64encode(raw_bytes).decode("utf-8")
-                proceedings_filename = OFFICIAL_PROCEEDINGS_FILE.name
-                logger.info(f"Loaded official DOCX template file: {OFFICIAL_PROCEEDINGS_FILE} ({len(raw_bytes)} bytes)")
-            except Exception as e:
-                logger.warning(f"Could not read official DOCX file {OFFICIAL_PROCEEDINGS_FILE}: {e}")
+        editor_service = EditorService()
 
+        # Remove any deprecated templates (e.g. memorandum_default, warrant_maintenance)
+        valid_codes = [t["template_code"] for t in OFFICIAL_TEMPLATES]
+        del_stmt = delete(DocumentTemplate).where(~DocumentTemplate.template_code.in_(valid_codes))
+        await session.execute(del_stmt)
+ 
         # 1. Seed Templates
         for tpl in OFFICIAL_TEMPLATES:
             tpl_copy = dict(tpl)
-            if tpl_copy["template_code"] == "proceedings_default" and proceedings_b64:
-                tpl_copy["file_base64"] = proceedings_b64
-                tpl_copy["file_name"] = proceedings_filename
-
-            # Ensure compatibility with existing schemas
             tpl_copy.setdefault("subject_template", tpl_copy.get("name", ""))
             tpl_copy.setdefault("reference_template", "")
             tpl_copy.setdefault("order_para1_template", "")
@@ -197,17 +165,35 @@ async def seed_default_templates(session: AsyncSession) -> None:
             existing = result.scalars().first()
             if not existing:
                 new_tpl = DocumentTemplate(**tpl_copy)
+                if not new_tpl.template_data:
+                    new_tpl.template_data = editor_service.template_model_to_layout(new_tpl)
                 session.add(new_tpl)
                 logger.info(f"Seeded default template: {tpl_copy['template_code']} ({tpl_copy['name']})")
             else:
-                existing.name = tpl_copy.get("name", existing.name)
-                existing.locked_template = tpl_copy.get("locked_template")
-                existing.slot_instructions = tpl_copy.get("slot_instructions")
-                existing.template_data = tpl_copy.get("template_data")
-                if tpl_copy.get("file_base64"):
-                    existing.file_base64 = tpl_copy.get("file_base64")
-                    existing.file_name = tpl_copy.get("file_name")
-                logger.info(f"Updated existing template format: {tpl_copy['template_code']}")
+                # Retain existing user modifications in the DB; only backfill if empty
+                if not existing.locked_template:
+                    existing.locked_template = tpl_copy.get("locked_template")
+                if not existing.slot_instructions:
+                    existing.slot_instructions = tpl_copy.get("slot_instructions")
+                if not existing.subject_template:
+                    existing.subject_template = tpl_copy.get("subject_template")
+                if not existing.reference_template:
+                    existing.reference_template = tpl_copy.get("reference_template")
+                if not existing.order_para1_template:
+                    existing.order_para1_template = tpl_copy.get("order_para1_template")
+                if not existing.order_para2_template:
+                    existing.order_para2_template = tpl_copy.get("order_para2_template")
+                if not existing.order_para3_template:
+                    existing.order_para3_template = tpl_copy.get("order_para3_template")
+                if not existing.heading_prefix:
+                    existing.heading_prefix = tpl_copy.get("heading_prefix")
+                if not existing.signatory_text:
+                    existing.signatory_text = tpl_copy.get("signatory_text")
+                if not existing.enclosure_text:
+                    existing.enclosure_text = tpl_copy.get("enclosure_text")
+                if not existing.template_data or not isinstance(existing.template_data, dict) or "blocks" not in existing.template_data:
+                    existing.template_data = editor_service.template_model_to_layout(existing)
+                logger.info(f"Verified and synchronized existing template in DB: {tpl_copy['template_code']}")
 
         # 2. Seed Office Configuration
         cfg_stmt = select(OfficeConfiguration).where(OfficeConfiguration.config_key == "ERODE_COLLECTORATE")

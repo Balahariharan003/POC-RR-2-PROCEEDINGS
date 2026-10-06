@@ -65,18 +65,18 @@ class Settings(BaseSettings):
     CHANDRA_FALLBACK_MODE: str = "balance"
 
     DATALAB_API_KEY: str = Field(default="", description="Datalab API Key")
-    CHANDRA_TIMEOUT_SECONDS: int = 45
+    CHANDRA_TIMEOUT_SECONDS: int = 90
 
     # Local Ollama LLM Configuration (.env -> config.py -> source code pipeline)
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
-    OLLAMA_MODEL: str = "qwen2.5:7b-instruct-q4_K_M"
-    OLLAMA_FALLBACK_MODEL: str = "qwen2.5:7b-instruct-q4_K_M"
-    OLLAMA_TIMEOUT_SECONDS: int = 180   
+    OLLAMA_MODEL: str = "qwen2.5:3b-instruct-q4_K_M"
+    OLLAMA_FALLBACK_MODEL: str = "qwen2.5:3b-instruct"
+    OLLAMA_TIMEOUT_SECONDS: int = 540   
     OLLAMA_CONNECT_TIMEOUT_SECONDS: float = 10.0
-    OLLAMA_TEMPERATURE: float = 0.1
+    OLLAMA_TEMPERATURE: float = 0.0
     OLLAMA_TOP_P: float = 0.9
-    OLLAMA_NUM_CTX: int = 4096
-    OLLAMA_NUM_PREDICT: int = 2048
+    OLLAMA_NUM_CTX: int = 8192
+    OLLAMA_NUM_PREDICT: int = 4096
 
     # Typography & Government Style Guide Enforcement
     PRIMARY_FONT_TAMIL: str = "TAU-Marutham"

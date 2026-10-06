@@ -22,6 +22,26 @@ def validate_financial_math(financials: FinancialDetails) -> Tuple[bool, List[Ru
     interest = round(float(financials.interest_amount or 0.0), 2)
     provided_total = round(float(financials.total_recoverable_amount or 0.0), 2)
 
+    # Fail-closed: Zero or negative total recoverable amounts are invalid for RR proceedings
+    if provided_total <= 0.0:
+        violations.append(
+            RuleViolation(
+                rule_id="RULE_MATH_ZERO_DEMAND",
+                severity="ERROR",
+                field="financials.total_recoverable_amount",
+                message=f"Invalid recoverable amount: Rs {provided_total:,.2f}. Demand must be greater than zero.",
+                suggested_fix="Verify recoverable amount from source certificate or mark for manual review."
+            )
+        )
+        insights.append(
+            ValidationInsight(
+                category="FINANCIAL_ARITHMETIC",
+                description=f"Invalid demand: Rs {provided_total:,.2f} <= 0",
+                is_valid=False
+            )
+        )
+        return False, violations, insights, provided_total
+
     # In single lump-sum cases without sub-breakdown, principal equals provided_total
     if principal == 0.0 and penalty == 0.0 and interest == 0.0 and provided_total > 0.0:
         principal = provided_total
