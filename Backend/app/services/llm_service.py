@@ -17,7 +17,11 @@ import re
 from typing import Dict, Any, Optional, List, Union
 from datetime import datetime
 import httpx
-import json_repair
+try:
+    import json_repair
+except ImportError:
+    json_repair = None
+
 
 from app.core.config import settings
 from app.core.logging import logger

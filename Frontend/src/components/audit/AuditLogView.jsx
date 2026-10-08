@@ -397,7 +397,7 @@ export default function AuditLogView({
             No Audit Log entries found
           </h3>
           <p style={{ fontSize: '0.875rem', color: '#102C57', margin: '0 0 22px 0', maxWidth: '480px' }}>
-            Actions submitted in RR Assistant and administrative events will automatically appear here.
+            Actions submitted in office Assistant and administrative events will automatically appear here.
           </p>
 
           <button
@@ -415,7 +415,7 @@ export default function AuditLogView({
               boxShadow: '0 4px 12px rgba(16, 44, 87, 0.2)'
             }}
           >
-            Go to RR Assistant
+            Go to Office Assistant
           </button>
         </div>
       )}
@@ -464,7 +464,7 @@ export default function AuditLogView({
                       tabIndex={0}
                       className="rr-audit-row"
                       onClick={() => handleRowClick(entry)}
-                      title={isRealProceeding ? 'Click to open in RR Assistant' : 'Click to inspect details'}
+                      title={isRealProceeding ? 'Click to open in Office Assistant' : 'Click to inspect details'}
                     >
                       {/* Event / Reference Column */}
                       <td className="rr-audit-cell-identifier">
@@ -503,7 +503,7 @@ export default function AuditLogView({
                             <div className="rr-audit-details-text">
                               {entry.notes && !entry.notes.startsWith('{')
                                 ? entry.notes
-                                : details.notes || 'Automated OCR extraction and draft generation completed in RR Assistant.'}
+                                : details.notes || 'Automated OCR extraction and draft generation completed in Office Assistant.'}
                             </div>
 
                             <div className="rr-audit-chips-row">

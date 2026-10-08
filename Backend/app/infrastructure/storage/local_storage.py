@@ -34,17 +34,30 @@ class LocalStorageProvider:
         return target
 
     def find_file(self, filename: str) -> Path:
-        # Check direct match in output, upload, sample
-        for directory in [self.output_dir, self.upload_dir, settings.SAMPLE_DIR]:
-            try:
-                target = resolve_safe_path(directory, filename)
-                if target.exists():
-                    return target
-            except Exception:
-                continue
-        # Check prefix/suffix glob in upload and output
-        for directory in [self.upload_dir, self.output_dir, settings.SAMPLE_DIR]:
-            matches = list(directory.glob(f"*{filename}*"))
-            if matches:
-                return matches[0]
+        # Candidate search directories
+        directories = [self.output_dir, self.upload_dir, settings.TEMPLATE_DIR, settings.SAMPLE_DIR]
+        candidates = [filename]
+        if not filename.endswith(".docx"):
+            candidates.append(f"{filename}.docx")
+        if filename.endswith(".docx"):
+            candidates.append(filename[:-5])
+
+        # 1. Direct and candidate exact match
+        for directory in directories:
+            for cand in candidates:
+                try:
+                    target = resolve_safe_path(directory, cand)
+                    if target.exists():
+                        return target
+                except Exception:
+                    continue
+
+        # 2. Glob matching across directories
+        for directory in directories:
+            for cand in candidates:
+                matches = list(directory.glob(f"*{cand}*"))
+                if matches:
+                    return matches[0]
+
         raise FileNotFoundError(f"Requested file not found: {filename}")
+

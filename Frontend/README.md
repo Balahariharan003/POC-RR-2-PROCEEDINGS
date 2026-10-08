@@ -1,4 +1,4 @@
-# RR Assistant frontend
+# Office Assistant Frontend
 
 React/Vite client for Revenue Recovery proceedings. The frontend uses the FastAPI backend for authentication, OCR processing, document revision, template-preserving DOCX/PDF export, and audit synchronization.
 

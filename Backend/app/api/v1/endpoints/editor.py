@@ -4,7 +4,7 @@ Editor Endpoints: Layout extraction, interactive revisions, word import, and doc
 
 from pathlib import Path
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File, Body, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, Body, status, Depends
 from fastapi.responses import FileResponse, JSONResponse
 import docx
 import uuid
@@ -16,12 +16,17 @@ from app.services.editor_service import EditorService
 from app.services.pdf_service import PDFService
 from app.services.llm_service import LLMService
 from app.infrastructure.storage.local_storage import LocalStorageProvider
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.repositories.template_repository import TemplateRepository
+
 
 router = APIRouter()
 editor_service = EditorService()
 pdf_service = PDFService()
 storage_provider = LocalStorageProvider()
 llm_service = LLMService()
+template_repo = TemplateRepository()
 
 
 @router.get("", tags=["Editor"])
@@ -32,16 +37,24 @@ async def get_editor_root():
 
 
 @router.get("/{filename:path}", tags=["Editor"])
-async def get_layout(filename: str):
-    """Returns block-based JSON layout for interactive in-browser editing of proceedings DOCX."""
+async def get_layout(filename: str, db: AsyncSession = Depends(get_db)):
+    """Returns block-based JSON layout for interactive in-browser editing of proceedings DOCX or DB template."""
     try:
         layout = editor_service.get_layout(filename)
         return layout
     except FileNotFoundError:
+        # Fallback: check if filename is a registered template in database
+        clean_code = Path(filename).stem
+        tpl = await template_repo.get_by_code(db, clean_code)
+        if not tpl and filename.endswith(".docx"):
+            tpl = await template_repo.get_by_code(db, filename[:-5])
+        if tpl:
+            return editor_service.template_model_to_layout(tpl)
         raise HTTPException(status_code=404, detail=f"Document layout not found for '{filename}'.")
     except Exception as e:
         logger.error(f"Error extracting layout for {filename}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to parse document layout: {str(e)}")
+
 
 
 @router.post("/revise", tags=["Editor"])
@@ -113,22 +126,36 @@ async def export_edited_document(
         source_path = storage_provider.find_file(filename)
         doc = docx.Document(str(source_path))
 
-        # Apply paragraph edits
-        p_count = 0
-        for p in doc.paragraphs:
-            p_count += 1
-            pid = f"p_{p_count}"
-            if pid in edits and edits[pid] is not None:
-                p.text = edits[pid]
+        from docx.text.paragraph import Paragraph
+        from docx.table import Table
+        from app.services.document_service import enforce_document_font
 
-        for t_idx, table in enumerate(doc.tables):
-            for r_idx, row in enumerate(table.rows):
-                for c_idx, cell in enumerate(row.cells):
-                    for cp_idx, cp in enumerate(cell.paragraphs):
-                        p_count += 1
-                        c_pid = f"p_t{t_idx}_r{r_idx}_c{c_idx}_{cp_idx+1}"
-                        if c_pid in edits and edits[c_pid] is not None:
-                            cp.text = edits[c_pid]
+        # Apply edits in exact same sequential traversal order as _parse_doc_to_layout
+        p_count = 0
+        t_count = 0
+        for elem in doc.element.body:
+            if elem.tag.endswith("p"):
+                p = Paragraph(elem, doc)
+                p_count += 1
+                pid = f"p_{p_count}"
+                if pid in edits and edits[pid] is not None:
+                    align = p.alignment
+                    p.text = edits[pid]
+                    p.alignment = align
+            elif elem.tag.endswith("tbl"):
+                t_count += 1
+                table = Table(elem, doc)
+                for r_idx, row in enumerate(table.rows):
+                    for c_idx, cell in enumerate(row.cells):
+                        for cp_idx, cp in enumerate(cell.paragraphs):
+                            p_count += 1
+                            c_pid = f"p_t{t_count}_r{r_idx}_c{c_idx}_{cp_idx+1}"
+                            if c_pid in edits and edits[c_pid] is not None:
+                                align = cp.alignment
+                                cp.text = edits[c_pid]
+                                cp.alignment = align
+
+        enforce_document_font(doc)
 
         out_name = f"Edited_{Path(filename).stem}_{uuid.uuid4().hex[:6]}.docx"
         out_path = settings.OUTPUT_DIR / out_name
@@ -150,3 +177,4 @@ async def export_edited_document(
     except Exception as e:
         logger.error(f"Error exporting document: {e}")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+

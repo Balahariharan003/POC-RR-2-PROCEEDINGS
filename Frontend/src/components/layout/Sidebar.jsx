@@ -1,22 +1,22 @@
 import React from 'react';
-import { 
-  FileText, 
-  History, 
+import {
+  FileText,
+  History,
   LayoutDashboard,
   Users,
   DatabaseBackup,
   FileEdit,
-  ChevronLeft, 
-  ChevronRight, 
+  ChevronLeft,
+  ChevronRight,
   FileSearch,
   Send
 } from 'lucide-react';
 
-export default function Sidebar({ 
+export default function Sidebar({
   isAdmin = false,
-  activeView, 
-  setActiveView, 
-  isCollapsed, 
+  activeView,
+  setActiveView,
+  isCollapsed,
   setIsCollapsed,
   recentPetitions = [],
   onSelectRecent,
@@ -74,10 +74,10 @@ export default function Sidebar({
               if (mobileOpen && setMobileOpen) setMobileOpen(false);
             }}><Icon size={19} style={{ flexShrink: 0 }} />{showLabels && <span>{label}</span>}</button>
           ))}
-          {/* Primary RR Assistant Item */}
+          {/* Primary Office Assistant Item */}
           <button
             type="button"
-            aria-label="RR Assistant"
+            aria-label="Office Assistant"
             aria-current={isRRActive ? 'page' : undefined}
             onClick={() => {
               setActiveView('rrAssistant');
@@ -100,7 +100,7 @@ export default function Sidebar({
               font: 'inherit',
               transition: 'all 0.2s ease'
             }}
-            title={!showLabels ? "RR Assistant" : undefined}
+            title={!showLabels ? "Office Assistant" : undefined}
           >
             <div style={{ color: isRRActive ? '#DAC0A3' : '#EADBC8' }}>
               <FileText size={20} />
@@ -108,10 +108,10 @@ export default function Sidebar({
             {showLabels && (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#ffffff' }}>
-                  RR Assistant
+                  Office Assistant
                 </span>
                 <span style={{ fontSize: '0.7rem', color: '#DAC0A3', marginTop: '1px' }}>
-                  Revenue Recovery Proceedings
+                  Proceedings Office Assistant
                 </span>
               </div>
             )}

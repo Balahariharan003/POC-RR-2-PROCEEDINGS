@@ -8,7 +8,6 @@ RapidOCR and ONNX runtimes are completely eliminated.
 
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-import pypdfium2 as pdfium
 from PIL import Image
 import io
 
@@ -24,6 +23,11 @@ class OCRService:
 
     def _render_pdf_to_images(self, pdf_path: Path, dpi: int = 150) -> tuple[List[Image.Image], List[str]]:
         """Renders all PDF pages to PIL Images using pypdfium2 and extracts embedded text."""
+        try:
+            import pypdfium2 as pdfium
+        except ImportError:
+            raise OCRProcessingError("pypdfium2 library is required for PDF rendering.")
+
         images = []
         embedded_texts = []
         try:

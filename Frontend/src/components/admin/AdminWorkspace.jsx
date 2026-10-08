@@ -100,7 +100,7 @@ function AdminWorkspaceContent({ currentUser, onNavigate }) {
   ];
 
   return <section className="rr-admin rr-admin-dashboard">
-    <header className="rr-admin-heading"><div><p className="rr-admin-eyebrow">RR ASSISTANT · ADMINISTRATION</p><h1>Admin Dashboard</h1><p>Welcome, {currentUser.name || currentUser.full_name}. Manage your Revenue Recovery workspace.</p></div></header>
+    <header className="rr-admin-heading"><div><p className="rr-admin-eyebrow">OFFICE ASSISTANT · ADMINISTRATION</p><h1>Admin Dashboard</h1><p>Welcome, {currentUser.name || currentUser.full_name}. Manage your Proceeding workspace.</p></div></header>
     {error && <div className="rr-admin-alert" role="alert">{error}</div>}
     <>
       <div className="rr-admin-metrics">

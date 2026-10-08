@@ -98,7 +98,7 @@ export default function BackupPage({ onRestored }) {
       const text = await file.text();
       const parsed = JSON.parse(text);
       if (!parsed.data || !parsed.app) {
-        throw new Error('Selected file is not a valid RR Assistant database backup payload.');
+        throw new Error('Selected file is not a valid Office Assistant database backup payload.');
       }
       const createdAt = parsed.created_at || new Date().toISOString();
       setPending({
@@ -255,7 +255,7 @@ export default function BackupPage({ onRestored }) {
               ref={fileInputRef}
               type="file"
               accept=".json"
-              aria-label="Upload RR Assistant backup JSON"
+              aria-label="Upload Office Assistant backup JSON"
               onChange={importBackupFile}
               style={{ display: 'none' }}
               tabIndex={-1}

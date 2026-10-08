@@ -6,7 +6,7 @@ export const APP_CONFIG = Object.freeze({
   apiBaseUrl: normalizeBaseUrl(env.VITE_API_BASE_URL),
   locale: env.VITE_APP_LOCALE || 'en-IN',
   brand: Object.freeze({
-    name: env.VITE_APP_NAME || 'RR Assistant',
+    name: env.VITE_APP_NAME || 'Office Assistant',
     subtitle: env.VITE_APP_SUBTITLE || 'Revenue Recovery Proceedings',
     officeName: env.VITE_OFFICE_NAME || 'District Collectorate',
     emblemPath: env.VITE_EMBLEM_PATH || '/assets/tn_emblem.svg',

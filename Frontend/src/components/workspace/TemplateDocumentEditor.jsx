@@ -103,6 +103,8 @@ function EditableParagraph({
 }) {
   const element = useRef(null);
   const isComposingRef = useRef(false);
+  const targetText = value !== undefined ? value : (block.text || '');
+  const lastValueRef = useRef(targetText);
 
   const activeFont = blockStyle.fontFamily || block.style?.fontFamily || (selectedFont ? `${selectedFont}, serif` : 'TAU-Marutham, serif');
   const activeFontSize = blockStyle.fontSize || block.style?.fontSize || selectedFontSize || '11pt';
@@ -112,11 +114,18 @@ function EditableParagraph({
   useLayoutEffect(() => {
     if (!element.current) return;
     const currentText = (element.current.innerText || '').replace(/\r/g, '');
-    const targetText = value !== undefined ? value : (block.text || '');
+    const currentTargetText = value !== undefined ? value : (block.text || '');
 
-    // Sync innerHTML if text differs (e.g. on Undo / Redo) or if not currently focused
-    if (document.activeElement !== element.current || currentText !== targetText) {
+    // If focused and value matches our latest typed value, do not touch innerHTML to preserve caret
+    const isFocused = document.activeElement === element.current;
+    if (isFocused && currentTargetText === lastValueRef.current) {
+      return;
+    }
+
+    // Sync innerHTML if text differs or if not focused
+    if (!isFocused || currentText !== currentTargetText) {
       element.current.innerHTML = getRunsHtml(block, value, activeFont, { ...block.style, ...blockStyle });
+      lastValueRef.current = currentTargetText;
     }
   }, [value, block.text, block.runs, block.id, activeFont, activeFontSize, blockStyle]);
 
@@ -161,12 +170,21 @@ function EditableParagraph({
         onCompositionStart={() => { isComposingRef.current = true; }}
         onCompositionEnd={(e) => {
           isComposingRef.current = false;
-          onChange(block.id, e.currentTarget.innerText.replace(/\r/g, ''));
+          const text = e.currentTarget.innerText.replace(/\r/g, '');
+          lastValueRef.current = text;
+          onChange(block.id, text);
         }}
         onInput={event => {
           if (!isComposingRef.current) {
-            onChange(block.id, event.currentTarget.innerText.replace(/\r/g, ''));
+            const text = event.currentTarget.innerText.replace(/\r/g, '');
+            lastValueRef.current = text;
+            onChange(block.id, text);
           }
+        }}
+        onBlur={event => {
+          const text = event.currentTarget.innerText.replace(/\r/g, '');
+          lastValueRef.current = text;
+          onChange(block.id, text);
         }}
         onPaste={event => {
           event.preventDefault();

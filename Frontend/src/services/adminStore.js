@@ -44,8 +44,8 @@ export function saveUsers(users) {
 }
 
 export function validateBackup(backup) {
-  if (backup?.app !== 'rr-assistant' || backup.version !== 1 || !backup.data || typeof backup.data !== 'object' || Array.isArray(backup.data)) {
-    throw new Error('Select a valid RR Assistant version 1 backup.');
+  if (backup?.app !== 'rr-assistant' && backup?.app !== 'office-assistant' || backup.version !== 1 || !backup.data || typeof backup.data !== 'object' || Array.isArray(backup.data)) {
+    throw new Error('Select a valid Office Assistant version 1 backup.');
   }
   if (Object.keys(backup.data).some(key => !KEYS.includes(key)) || !KEYS.every(key => Object.hasOwn(backup.data, key))) {
     throw new Error('Backup contains missing or unsupported data sections.');

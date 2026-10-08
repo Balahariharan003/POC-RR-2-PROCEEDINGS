@@ -64,7 +64,7 @@ export default function RRAssistantView({
   const [isEditMode, setIsEditMode] = useState(true);
 
   // Document Title / Case Name
-  const [documentTitle, setDocumentTitle] = useState('Revenue Recovery Proceedings');
+  const [documentTitle, setDocumentTitle] = useState(' Proceedings');
 
   // Formatting Ribbon State
   const [selectedFont, setSelectedFont] = useState('TAU-Marutham');
@@ -160,7 +160,7 @@ export default function RRAssistantView({
         setExtractedEntities(restoredEntities);
 
         // 3. Document Title & File Info
-        const orderName = s.caseNumber || s.fileName || s.orderId || (restoredEntities.roc_number ? `${restoredEntities.roc_number} · ${restoredEntities.statute_cited || 'RR Proceedings'}` : 'Revenue Recovery Proceedings');
+        const orderName = s.caseNumber || s.fileName || s.orderId || (restoredEntities.roc_number ? `${restoredEntities.roc_number} · ${restoredEntities.statute_cited || 'RR Proceedings'}` : ' Proceedings');
         setDocumentTitle(orderName);
         setFileInfo({
           name: s.fileName || s.rawFileId || orderName,
@@ -252,6 +252,9 @@ export default function RRAssistantView({
     fetchTemplates();
   }, []);
 
+  // Block Styles (width, height, align, font size, etc.)
+  const [blockStyles, setBlockStyles] = useState({});
+
   const updateDocumentEdits = (layout, edits) => {
     editsRef.current = edits;
     setDocumentEdits(edits);
@@ -265,6 +268,73 @@ export default function RRAssistantView({
     updateDocumentEdits(documentLayout, { ...editsRef.current, [id]: text });
   };
 
+  const handleUpdateBlockStyle = (blockId, property, value) => {
+    setBlockStyles(prev => ({
+      ...prev,
+      [blockId]: {
+        ...(prev[blockId] || {}),
+        [property]: value
+      }
+    }));
+
+    if (documentLayout && documentLayout.blocks) {
+      const updatedBlocks = documentLayout.blocks.map(b => {
+        if (b.id === blockId) {
+          return {
+            ...b,
+            style: {
+              ...(b.style || {}),
+              [property]: value
+            }
+          };
+        }
+        return b;
+      });
+      const nextLayout = { ...documentLayout, blocks: updatedBlocks };
+      setDocumentLayout(nextLayout);
+      setCachedLayouts(prev => ({ ...prev, [activeDocType]: nextLayout }));
+      if (selectedBlock?.id === blockId) {
+        setSelectedBlock(prev => (prev ? { ...prev, style: { ...(prev.style || {}), [property]: value } } : null));
+      }
+    }
+  };
+
+  const handleSelectBlock = (block) => {
+    setSelectedBlock(block);
+    setSelectedBlockId(block?.id || null);
+    if (block) {
+      setShowInspector(true);
+      const bStyle = blockStyles[block.id] || block.style || {};
+      if (bStyle.fontFamily) {
+        const fn = bStyle.fontFamily.replace(/['",]/g, '').split(' ')[0];
+        if (fn) setSelectedFont(fn);
+      }
+      if (bStyle.fontSize) setSelectedFontSize(bStyle.fontSize);
+      if (bStyle.textAlign) setSelectedAlign(bStyle.textAlign);
+    }
+  };
+
+  const handleFontChange = (font) => {
+    setSelectedFont(font);
+    if (selectedBlockId) {
+      handleUpdateBlockStyle(selectedBlockId, 'fontFamily', font);
+    }
+  };
+
+  const handleFontSizeChange = (size) => {
+    setSelectedFontSize(size);
+    if (selectedBlockId) {
+      handleUpdateBlockStyle(selectedBlockId, 'fontSize', size);
+    }
+  };
+
+  const handleAlignChange = (align) => {
+    setSelectedAlign(align);
+    if (selectedBlockId) {
+      handleUpdateBlockStyle(selectedBlockId, 'textAlign', align);
+    }
+  };
+
   const switchDocumentType = async (type) => {
     if (activeDocType === type) return;
     const targetDocx = docManifest[type]?.docx;
@@ -274,6 +344,8 @@ export default function RRAssistantView({
     setCachedEdits(prev => ({ ...prev, [activeDocType]: editsRef.current }));
     setActiveDocType(type);
     setGeneratedDocxFilename(targetDocx);
+    setSelectedBlock(null);
+    setSelectedBlockId(null);
 
     if (cachedLayouts[type]) {
       const nextLayout = cachedLayouts[type];
@@ -391,7 +463,9 @@ export default function RRAssistantView({
         text: documentEdits[block.id] || block.text
       };
       blocks.splice(index + 1, 0, newBlock);
-      setDocumentLayout({ ...documentLayout, blocks });
+      const nextLayout = { ...documentLayout, blocks };
+      setDocumentLayout(nextLayout);
+      setCachedLayouts(prev => ({ ...prev, [activeDocType]: nextLayout }));
       setSelectedBlockId(newBlock.id);
       setSelectedBlock(newBlock);
     }
@@ -400,7 +474,9 @@ export default function RRAssistantView({
   const handleDeleteBlock = (blockId) => {
     if (!documentLayout || !blockId) return;
     const blocks = (documentLayout.blocks || []).filter(b => b.id !== blockId);
-    setDocumentLayout({ ...documentLayout, blocks });
+    const nextLayout = { ...documentLayout, blocks };
+    setDocumentLayout(nextLayout);
+    setCachedLayouts(prev => ({ ...prev, [activeDocType]: nextLayout }));
     setSelectedBlockId(null);
     setSelectedBlock(null);
   };
@@ -415,7 +491,9 @@ export default function RRAssistantView({
       style: { textAlign: 'justify', fontSize: '11pt', fontFamily: 'TAU-Marutham' }
     };
     const blocks = [...(documentLayout.blocks || []), newBlock];
-    setDocumentLayout({ ...documentLayout, blocks });
+    const nextLayout = { ...documentLayout, blocks };
+    setDocumentLayout(nextLayout);
+    setCachedLayouts(prev => ({ ...prev, [activeDocType]: nextLayout }));
     setSelectedBlockId(newBlock.id);
     setSelectedBlock(newBlock);
   };
@@ -447,7 +525,7 @@ export default function RRAssistantView({
     if (isExporting) return;
     setIsExporting(true);
     try {
-      const types = ['proceedings', 'memorandum', 'note', 'warrant'];
+      const types = ['proceedings', 'note'];
       for (const t of types) {
         const docx = docManifest[t]?.docx;
         if (docx) {
@@ -477,7 +555,11 @@ export default function RRAssistantView({
     editsRef.current = {};
     setCachedLayouts({});
     setCachedEdits({});
+    setBlockStyles({});
+    setSelectedBlock(null);
+    setSelectedBlockId(null);
     setActiveDocType('proceedings');
+
     setSourceFile(null);
     setFileInfo({ name: '', sizeFormatted: '' });
     setGeneratedContent('');
@@ -888,7 +970,7 @@ export default function RRAssistantView({
                   <select
                     className="rr-studio-ribbon-select"
                     value={selectedFont}
-                    onChange={(e) => setSelectedFont(e.target.value)}
+                    onChange={(e) => handleFontChange(e.target.value)}
                     title="Font Family"
                   >
                     <option value="TAU-Marutham">TAU-Marutham (Government Official)</option>
@@ -901,7 +983,7 @@ export default function RRAssistantView({
                   <select
                     className="rr-studio-ribbon-select"
                     value={selectedFontSize}
-                    onChange={(e) => setSelectedFontSize(e.target.value)}
+                    onChange={(e) => handleFontSizeChange(e.target.value)}
                     title="Font Size"
                     style={{ width: '64px' }}
                   >
@@ -919,7 +1001,7 @@ export default function RRAssistantView({
                   <button
                     type="button"
                     className={`rr-studio-ribbon-btn ${selectedAlign === 'left' ? 'active' : ''}`}
-                    onClick={() => setSelectedAlign('left')}
+                    onClick={() => handleAlignChange('left')}
                     title="Align Left"
                   >
                     <AlignLeft size={14} />
@@ -927,7 +1009,7 @@ export default function RRAssistantView({
                   <button
                     type="button"
                     className={`rr-studio-ribbon-btn ${selectedAlign === 'center' ? 'active' : ''}`}
-                    onClick={() => setSelectedAlign('center')}
+                    onClick={() => handleAlignChange('center')}
                     title="Align Center"
                   >
                     <AlignCenter size={14} />
@@ -935,7 +1017,7 @@ export default function RRAssistantView({
                   <button
                     type="button"
                     className={`rr-studio-ribbon-btn ${selectedAlign === 'right' ? 'active' : ''}`}
-                    onClick={() => setSelectedAlign('right')}
+                    onClick={() => handleAlignChange('right')}
                     title="Align Right"
                   >
                     <AlignRight size={14} />
@@ -943,7 +1025,7 @@ export default function RRAssistantView({
                   <button
                     type="button"
                     className={`rr-studio-ribbon-btn ${selectedAlign === 'justify' ? 'active' : ''}`}
-                    onClick={() => setSelectedAlign('justify')}
+                    onClick={() => handleAlignChange('justify')}
                     title="Justify"
                   >
                     <AlignJustify size={14} />
@@ -981,16 +1063,14 @@ export default function RRAssistantView({
                     layout={documentLayout}
                     edits={documentEdits}
                     onChange={handleParagraphChange}
-                    onSelectBlock={(block) => {
-                      setSelectedBlock(block);
-                      setSelectedBlockId(block?.id || null);
-                      if (block) setShowInspector(true);
-                    }}
+                    onSelectBlock={handleSelectBlock}
                     selectedBlockId={selectedBlockId}
                     disabled={!isEditMode}
                     selectedFont={selectedFont}
                     selectedFontSize={selectedFontSize}
                     selectedAlign={selectedAlign}
+                    blockStyles={blockStyles}
+                    onUpdateBlockStyle={handleUpdateBlockStyle}
                     onDuplicateBlock={handleDuplicateBlock}
                     onDeleteBlock={handleDeleteBlock}
                   />
