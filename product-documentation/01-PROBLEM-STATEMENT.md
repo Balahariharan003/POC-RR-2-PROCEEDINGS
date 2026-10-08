@@ -59,7 +59,7 @@ Routes to correct Taluk Tahsildar based on defaulter's address
 Generates multiple copies (Tahsildar, RDO, court copy, defaulter copy)
         │
         ▼
-Gets Collector's signature → Dispatches to DRO Portal / Physical dispatch
+Gets Collector's signature → Physical dispatch / Section delivery
 ```
 
 ---
@@ -125,7 +125,7 @@ Gets Collector's signature → Dispatches to DRO Portal / Physical dispatch
 | Review & edit extracted data | **R** | C | I | A |
 | Generate proceedings document | **R** | I | I | **A** |
 | Approve & sign | I | **R,A** | I | I |
-| Dispatch to DRO portal | **R** | A | I | I |
+| Record proceedings dispatch | **R** | A | I | I |
 | Manage templates & users | I | A | **R** | I |
 
 ---

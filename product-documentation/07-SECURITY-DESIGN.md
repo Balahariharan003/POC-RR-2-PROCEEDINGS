@@ -241,7 +241,7 @@ LLM Response (raw JSON)
     │
     ├── Grounding score check → Warn if <0.80
     │
-    └── Hallucination check → Block DRO dispatch if >0.20
+    └── Hallucination check → Block dispatch if >0.20
 ```
 
 ---

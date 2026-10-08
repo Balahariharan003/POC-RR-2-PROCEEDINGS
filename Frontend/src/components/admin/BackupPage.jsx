@@ -531,7 +531,7 @@ export default function BackupPage({ onRestored }) {
                     </strong>
                   </div>
                   <div style={{ padding: '0.75rem', borderRadius: '6px', backgroundColor: 'rgba(217, 119, 6, 0.08)', border: '1px solid rgba(217, 119, 6, 0.2)' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#92400E', textTransform: 'uppercase' }}>Dispatched to DRO</span>
+                    <span style={{ fontSize: '0.75rem', color: '#92400E', textTransform: 'uppercase' }}>Dispatched</span>
                     <strong style={{ display: 'block', fontSize: '1.35rem', color: '#D97706' }}>
                       {reportData.summary_statistics.status_breakdown?.DISPATCHED || 0}
                     </strong>

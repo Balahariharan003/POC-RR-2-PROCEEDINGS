@@ -76,7 +76,7 @@ class ProceedingsCase(Base, TimestampMixin):
     total_amount = Column(Float, nullable=True, default=0.0)
     district_name = Column(String(50), nullable=True)
     taluk_name = Column(String(50), nullable=True)
-    status = Column(String(30), default="DRAFT", index=True)  # DRAFT | VERIFIED | SIGNED | DISPATCHED_TO_DRO | NEEDS_REVIEW
+    status = Column(String(30), default="DRAFT", index=True)  # DRAFT | VERIFIED | SIGNED | DISPATCHED | NEEDS_REVIEW
     original_file_name = Column(String(255), nullable=True)
     docx_path = Column(String(255), nullable=True)
     pdf_path = Column(String(255), nullable=True)

@@ -127,7 +127,7 @@ function getEventMeta(entry) {
     statusText = 'Verified by Officer';
     statusTagClass = 'verified';
   } else if (status === 'DISPATCHED' || status === 'DISPATCHED_TO_DRO') {
-    statusText = 'Dispatched to DRO';
+    statusText = 'Dispatched';
     statusTagClass = 'dispatched';
   } else if (status === 'FLAGGED' || status === 'FLAGGED_FOR_REVIEW') {
     statusText = 'Flagged for Review';

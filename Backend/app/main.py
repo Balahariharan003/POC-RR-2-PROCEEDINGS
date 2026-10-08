@@ -398,20 +398,21 @@ async def legacy_chat(payload: Dict[str, Any]):
     return await query_legal_assistant(question=payload.get("query", ""), context=str(payload.get("context", "")))
 
 
+@app.post("/api/dispatch")
 @app.post("/api/dispatch-dro")
-async def legacy_dispatch_dro(payload: Dict[str, Any], db: AsyncSession = Depends(get_db)):
+async def legacy_dispatch(payload: Dict[str, Any], db: AsyncSession = Depends(get_db)):
     case_no = payload.get("case_details", {}).get("case_number") or payload.get("reference_details", {}).get("case_or_file_no") or "RR-2026-CASE"
     defaulter = payload.get("defaulter", {}).get("name") or "Defaulter"
     amount = payload.get("financials", {}).get("total_recoverable_amount") or payload.get("financials", {}).get("principal_amount", 0)
     taluk = payload.get("jurisdiction", {}).get("taluk") or "Erode"
     district = payload.get("jurisdiction", {}).get("district") or "Erode"
-    dispatch_id = f"DRO-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    dispatch_id = f"DISP-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     audit_entry = {
         "id": f"audit-{uuid.uuid4().hex[:8]}",
-        "action": "DISPATCHED_TO_DRO",
-        "status": "DISPATCHED_TO_DRO",
+        "action": "DISPATCHED",
+        "status": "DISPATCHED",
         "caseNumber": case_no,
         "orderId": case_no,
         "defaulter": defaulter,
@@ -420,10 +421,10 @@ async def legacy_dispatch_dro(payload: Dict[str, Any], db: AsyncSession = Depend
         "taluk": taluk,
         "district": district,
         "timestamp": timestamp,
-        "officerName": "District Collector / DRO Erode",
+        "officerName": "District Collector Erode",
         "officerId": "OFF-ADMIN-001",
         "dispatchReceipt": dispatch_id,
-        "notes": f"Dispatched order {case_no} to Tamil Nadu DRO Portal.",
+        "notes": f"Dispatched recovery order {case_no}.",
         "details": payload
     }
 
@@ -435,7 +436,7 @@ async def legacy_dispatch_dro(payload: Dict[str, Any], db: AsyncSession = Depend
     sig = audit_service.generate_hybrid_signature(extracted_data=payload, raw_ocr_text=str(payload))
     await audit_repo.create_entry(
         db=db,
-        action="DISPATCHED_TO_DRO",
+        action="DISPATCHED",
         file_id=case_no,
         user_id="OFF-ADMIN-001",
         details=audit_entry,
@@ -446,7 +447,7 @@ async def legacy_dispatch_dro(payload: Dict[str, Any], db: AsyncSession = Depend
         "success": True,
         "dispatchId": dispatch_id,
         "dispatchedAt": timestamp,
-        "status": "DISPATCHED_TO_DRO",
+        "status": "DISPATCHED",
         "auditEntry": audit_entry
     }
 

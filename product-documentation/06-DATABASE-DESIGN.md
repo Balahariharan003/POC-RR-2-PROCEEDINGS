@@ -187,7 +187,7 @@ CREATE TABLE IF NOT EXISTS audit_entries (
     district            VARCHAR(100),
     officer_name        VARCHAR(255),
     status              VARCHAR(50) NOT NULL DEFAULT 'DRAFT'
-                        CHECK (status IN ('DRAFT', 'VERIFIED', 'DISPATCHED_TO_DRO', 'REJECTED', 'ARCHIVED')),
+                        CHECK (status IN ('DRAFT', 'VERIFIED', 'DISPATCHED', 'REJECTED', 'ARCHIVED')),
     template_code       VARCHAR(100),
     file_name           VARCHAR(255),
     file_size           VARCHAR(50),
@@ -216,7 +216,7 @@ CREATE INDEX idx_audit_entities ON audit_entries USING GIN (entities_json);
 
 **Status State Machine**:
 ```
-DRAFT → VERIFIED → DISPATCHED_TO_DRO
+DRAFT → VERIFIED → DISPATCHED
   ↓                         ↓
 REJECTED               ARCHIVED
 ```
@@ -277,7 +277,7 @@ WHERE entities_json->'defaulter'->>'name' ILIKE '%நல்லசிவம்%';
 SELECT 
     to_char(created_at, 'YYYY-MM') AS month,
     COUNT(*) AS total,
-    COUNT(*) FILTER (WHERE status = 'DISPATCHED_TO_DRO') AS dispatched,
+    COUNT(*) FILTER (WHERE status = 'DISPATCHED') AS dispatched,
     AVG(grounding_score) AS avg_grounding
 FROM audit_entries 
 GROUP BY to_char(created_at, 'YYYY-MM')

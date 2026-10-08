@@ -122,7 +122,7 @@ The RR Assistant is a **standalone web application** deployed within the Tamil N
 | PF-3 | Template Management | CRUD operations on proceedings templates |
 | PF-4 | User Management | RBAC user account administration |
 | PF-5 | Audit Trail | Immutable proceedings activity ledger |
-| PF-6 | DRO Dispatch | Record proceedings dispatch to DRO portal |
+| PF-6 | Proceedings Dispatch | Record proceedings dispatch and generate receipt |
 | PF-7 | RAG Chat | Semantic Q&A over extracted document data |
 
 ### 2.3 User Classes and Characteristics
@@ -321,7 +321,7 @@ The RR Assistant is a **standalone web application** deployed within the Tamil N
 | **Input** | Extracted entities + raw OCR text |
 | **Calculation** | 1.0 - grounding_score |
 | **Output** | hallucination_score (0.0–1.0) |
-| **Threshold** | Blocking warning if >0.20 on DRO dispatch |
+| **Threshold** | Blocking warning if >0.20 on dispatch |
 
 ### 3.5 Document Generation Module
 
@@ -455,13 +455,13 @@ The RR Assistant is a **standalone web application** deployed within the Tamil N
 | **Processing** | Upsert: updates if exists, creates if new |
 | **Timestamp** | Auto-generated server-side |
 
-#### SRS-FR-072: DRO Dispatch Recording
+#### SRS-FR-072: Proceedings Dispatch Recording
 
 | Attribute | Value |
 |---|---|
-| **Endpoint** | `POST /api/dispatch-dro` |
+| **Endpoint** | `POST /api/dispatch` |
 | **Input** | Audit entry with entities data |
-| **Processing** | Generates DRO receipt ID; sets status to DISPATCHED_TO_DRO; persists to PostgreSQL |
+| **Processing** | Generates dispatch receipt ID; sets status to DISPATCHED; persists to PostgreSQL |
 | **Output** | Receipt ID, success confirmation |
 | **Precondition** | Hallucination check (<0.20 recommended; warns if exceeded) |
 
@@ -673,7 +673,7 @@ The RR Assistant is a **standalone web application** deployed within the Tamil N
 | sha256_digest | VARCHAR(100) | | SHA-256 hash of generated doc |
 | grounding_score | FLOAT | | AI grounding score (0.0–1.0) |
 | hallucination_score | FLOAT | | AI hallucination score (0.0–1.0) |
-| dispatch_receipt | VARCHAR(100) | | DRO dispatch receipt ID |
+| dispatch_receipt | VARCHAR(100) | | Dispatch receipt ID |
 | entities_json | JSONB | | Full extracted entities snapshot |
 | created_at | TIMESTAMP | DEFAULT NOW() | Creation timestamp |
 | updated_at | TIMESTAMP | | Last update timestamp |

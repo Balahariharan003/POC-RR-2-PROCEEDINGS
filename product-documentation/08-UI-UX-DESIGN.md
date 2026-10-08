@@ -71,7 +71,7 @@ graph TD
         Nav -->|activeView: 'workspace'| Workspace["Document Workspace (App.jsx)<br/>Mode A: Editor Preview (DocumentEditorPreview.jsx)<br/>Mode B: Inspection Mode (DocumentViewer + FullDetailsForm + SummaryChatView)"]
         
         %% Audit Flow
-        Nav -->|activeView: 'audit' / 'droQueue'| AuditLogs["Audit Log & Compliance Trail (AuditLogView.jsx)<br/>Monthly Ledgers + Filter Drawer + Receipt Export + Session Restore"]
+        Nav -->|activeView: 'audit'| AuditLogs["Audit Log & Compliance Trail (AuditLogView.jsx)<br/>Monthly Ledgers + Filter Drawer + Receipt Export + Session Restore"]
         
         %% Profile Flow
         Nav -->|activeView: 'profile'| Profile["Officer Profile (OfficialProfile.jsx)<br/>Bilingual Details, Credentials & Activity Feed"]
@@ -228,7 +228,7 @@ When an officer switches to the detailed Document Workspace, they have access to
 
 1. **Button 1**: `📰 செயல்முறை ஆணை மாதிரி & AI திருத்தம் (Document Editor & AI Re-generation)` -> Mode 1
 2. **Button 2**: `🔍 முழு விவரங்கள் & OCR ஆய்வு (Entities & OCR Inspection)` -> Mode 2
-3. **Right Controls**: Case Number pill (`badge-emerald`) + **"Dispatch to DRO Portal"** button.
+3. **Right Controls**: Case Number pill (`badge-emerald`) + **"Record Dispatch"** button.
 
 #### Mode 1: Document Editor & AI Re-generation (`DocumentEditorPreview.jsx`)
 - **Inputs & AI Re-generation Section**:
@@ -283,7 +283,7 @@ When an officer switches to the detailed Document Workspace, they have access to
      - Section 3: Financial & Recovery Claims (Principal Award, Interest Rate %, Interest Amount, Legal Costs, Total Recovery Amount).
      - Section 4: Jurisdiction & Revenue Taluk (Revenue District, Taluk Name, Directed Tahsildar).
      - Section 5: Relevant Legal Acts (TN Revenue Recovery Act 1864, Section 5, Section 52).
-   - Bottom Bar: **"Recalculate & Re-generate"**, **"Preview Official Tamil Order"**, **"Download DOCX"**, and **"Dispatch to DRO Portal"**.
+   - Bottom Bar: **"Recalculate & Re-generate"**, **"Preview Official Tamil Order"**, **"Download DOCX"**, and **"Record Dispatch"**.
 3. **Column 3 (`SummaryChatView.jsx`)**:
    - RAG Q&A Assistant connected to extracted document vectors.
    - Quick prompt pills: `"What is the award amount?"`, `"Who is the defaulter?"`, `"Which court issued the order?"`.
@@ -303,7 +303,7 @@ The audit log provides an immutable record of all processed court orders and dis
   - Advanced Filter Drawer (`AuditFilters.jsx`): Multi-tag filtering by amount range, hallucination risk, and court type.
 - **Metric Cards Summary**:
   - Total Logged Proceedings
-  - Dispatched to DRO Portal
+  - Dispatched Orders
   - Flagged for Review
   - Mean Grounding Confidence (%)
 - **Monthly Ledger Grouping**:
@@ -311,7 +311,7 @@ The audit log provides an immutable record of all processed court orders and dis
   - Row Data: Case Number, Proceedings ROC, Defaulter Name, Taluk, Recovery Amount, Status Badge, Grounding Bar.
   - Actions per entry:
     - **"Restore Session"**: Restores historical document and prompt conversation directly into `RRAssistantView.jsx` (ChatGPT/Gemini session restore pattern).
-    - **"Audit Receipt"**: Generates a printable compliance receipt including the official cryptographic SHA-256 hash and DRO sync receipt.
+    - **"Audit Receipt"**: Generates a printable compliance receipt including the official cryptographic SHA-256 hash and dispatch receipt ID.
     - **"Export JSON"**: Downloads complete audit ledger in JSON format.
 
 ---
@@ -326,7 +326,7 @@ Available exclusively to users with `role === 'admin'`:
      - `Total Orders` (saved proceedings sessions)
      - `Success` (verified and dispatched proceedings)
      - `Failure / Draft` (awaiting officer verification)
-   - Recent Activity Stream: Live timeline of officer sign-ins, document generations, edits, and DRO dispatches.
+   - Recent Activity Stream: Live timeline of officer sign-ins, document generations, edits, and proceedings dispatches.
    - Recent Orders Table with quick navigation.
 
 2. **User Management Tab (`UserManagement.jsx`)**:
@@ -371,9 +371,9 @@ Accessible on mobile smartphones at `/capture/:sessionId` (requires **no login**
    - "Copy Mobile URL" button and "Simulate Upload" button for testing.
 2. **Proceedings Preview Modal (`Modals.jsx` -> `ProceedingsPreviewModal`)**:
    - High-fidelity A4 modal displaying the official Tamil Nadu State Seal, reference headers, full Tamil proceedings decree, signature blocks, and DOCX download button.
-3. **DRO Portal Dispatch Receipt Modal (`Modals.jsx` -> `DroReceiptModal`)**:
+3. **Dispatch Receipt Modal (`Modals.jsx` -> `DispatchReceiptModal`)**:
    - Confetti burst animation upon dispatch.
-   - Displays DRO portal submission acknowledgment reference number, submission timestamp, and cryptographic verification hash.
+   - Displays dispatch acknowledgment reference number, submission timestamp, and cryptographic verification hash.
 
 ---
 

@@ -25,7 +25,7 @@ export default function Sidebar({
 }) {
   const isRRActive = activeView === 'rrAssistant' || activeView === 'upload';
   const isInspectionActive = activeView === 'workspace';
-  const isAuditActive = activeView === 'audit' || activeView === 'droQueue';
+  const isAuditActive = activeView === 'audit';
 
   const showLabels = !isCollapsed || mobileOpen;
 

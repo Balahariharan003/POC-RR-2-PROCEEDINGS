@@ -400,7 +400,7 @@ App.jsx (Root State Machine)
 ├── OfficialProfile
 ├── Modals
 │   ├── ProceedingsPreviewModal
-│   ├── DroReceiptModal
+│   ├── DispatchReceiptModal
 │   └── MobileQrModal
 └── MobileCapturePage (/capture/:sessionId)
 ```
@@ -471,7 +471,7 @@ async method(args) {
 | `regenerateWithPrompt(prompt, entities)` | POST /api/regenerate-with-prompt | AI instruction-based edit |
 | `modifyContent(content, instruction)` | POST /api/modify-content | NL instruction on doc text |
 | `exportDocx(content, filename)` | POST /api/export-docx | Export current editor content |
-| `dispatchToDRO(payload)` | POST /api/dispatch-dro | DRO portal dispatch |
+| `dispatchOrder(payload)` | POST /api/dispatch | Proceedings dispatch recording |
 | `askRAGChat(query, context)` | POST /api/chat | Semantic Q&A |
 | `getTemplates()` | GET /api/templates | List all templates |
 | `getAuditLogs()` | Local + API | Get proceedings history |
@@ -511,7 +511,7 @@ async method(args) {
 │    taluk                                          │
 │    district                                       │
 │    officer_name                                   │
-│    status (DRAFT | VERIFIED | DISPATCHED_TO_DRO)  │
+│    status (DRAFT | VERIFIED | DISPATCHED)         │
 │    template_code → FK templates.template_code     │
 │    file_name                                      │
 │    file_size                                      │
@@ -603,7 +603,7 @@ def execute_query(sql, params=None, fetch_one=False, fetch_all=False):
 | DELETE | `/api/users/{id}` | Admin | Delete user |
 | GET | `/api/audit-logs` | User | Get all audit logs |
 | POST | `/api/audit-logs` | User | Save audit entry |
-| POST | `/api/dispatch-dro` | User | DRO portal dispatch |
+| POST | `/api/dispatch` | User | Proceedings dispatch recording |
 | POST | `/api/chat` | User | RAG semantic chat |
 
 ### 6.2 Key API Request/Response Examples

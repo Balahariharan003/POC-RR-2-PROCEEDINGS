@@ -25,7 +25,7 @@ Build an AI-powered document processing pipeline that automates the ingestion, e
 | Milestone | Date | Scope |
 |---|---|---|
 | **Alpha (Internal)** | Q3 2026 | Core pipeline: OCR → Extraction → DOCX generation |
-| **Beta (Pilot District)** | Q4 2026 | Full system: Admin panel, audit logs, DRO dispatch |
+| **Beta (Pilot District)** | Q4 2026 | Full system: Admin panel, audit logs, proceedings dispatch |
 | **GA (Statewide)** | Q1 2027 | Multi-district deployment, training, support |
 
 ---
@@ -88,7 +88,7 @@ Build an AI-powered document processing pipeline that automates the ingestion, e
 | F11 | **Template Management** | Admin can add, edit, delete, and preview proceedings templates per department. |
 | F12 | **User Management & RBAC** | Admin manages user accounts. Admin edits all; users edit self only. |
 | F13 | **Audit Trail (PostgreSQL)** | Immutable ledger recording every proceeding: who, when, what data, SHA-256 hash. |
-| F14 | **DRO Portal Dispatch** | One-click dispatch recording to the District Revenue Officer portal. |
+| F14 | **Proceedings Dispatch Recording** | One-click dispatch recording and receipt generation for issued orders. |
 | F15 | **Grounding & Hallucination Score** | Display AI confidence scores — grounding (how much came from the document) and hallucination (how much was fabricated). |
 | F16 | **AI Prompt Re-generation** | Section Officer gives natural language instructions (e.g., "Change taluk to Perundurai") and AI updates the document. |
 
@@ -200,7 +200,7 @@ Build an AI-powered document processing pipeline that automates the ingestion, e
 | **Recorded Fields** | Case number, ROC number, defaulter name, amount, taluk, district, officer, status, template code, file info, SHA-256 hash, grounding/hallucination scores, full entities JSON |
 | **Immutability** | Entries are append-only; status updates create new audit entries |
 | **Grouping** | By month/year |
-| **Statuses** | DRAFT → VERIFIED → DISPATCHED_TO_DRO |
+| **Statuses** | DRAFT → VERIFIED → DISPATCHED |
 
 ### 4.8 Entity Schema (Core Data Model)
 
@@ -337,7 +337,7 @@ Section Officer logs in
     │   │   └── Right: RAG chat for questions
     │   └── Makes corrections → Clicks "Regenerate"
     │
-    ├── Clicks "Dispatch to DRO Portal"
+    ├── Clicks "Record Dispatch"
     │   ├── System checks hallucination score (<0.20)
     │   ├── Records audit entry with SHA-256
     │   └── Shows dispatch receipt modal
@@ -444,7 +444,7 @@ Admin logs in → Sees Admin Dashboard
 | Phase | Scope | Duration | Success Criteria |
 |---|---|---|---|
 | **Phase 1: Core Pipeline** | F1–F9 (Upload → DOCX) | 6 weeks | 10 proceedings processed end-to-end |
-| **Phase 2: Admin & Audit** | F10–F16 (Templates, Users, Audit, DRO) | 4 weeks | Admin panel operational, audit trail complete |
+| **Phase 2: Admin & Audit** | F10–F16 (Templates, Users, Audit, Dispatch) | 4 weeks | Admin panel operational, audit trail complete |
 | **Phase 3: Intelligence** | F17–F22 (RAG Chat, Mobile, Themes) | 4 weeks | Chat assistant functional, mobile QR working |
 | **Phase 4: Pilot** | Erode District pilot with 5 officers | 4 weeks | 200 proceedings/month achieved |
 | **Phase 5: Statewide** | Multi-district deployment | 8 weeks | 10+ districts operational |

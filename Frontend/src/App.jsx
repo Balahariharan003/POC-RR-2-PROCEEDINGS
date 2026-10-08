@@ -196,7 +196,7 @@ export default function App() {
               />
             )}
 
-            {(activeView === 'audit' || activeView === 'droQueue') && (
+            {activeView === 'audit' && (
               <AuditLogView
                 currentUser={currentUser}
                 isAdmin={isAdmin}

@@ -19,8 +19,7 @@ graph TB
     
     RR -->|OCR API calls| CHANDRA[Datalab Chandra OCR v2<br/>External API]
     RR -->|Local inference| OLLAMA[Ollama LLM Runtime<br/>qwen2.5:3b-instruct]
-    RR -->|Persistent storage| PG[(PostgreSQL<br/>rr_proceedings_db)]
-    RR -->|Dispatch recording| DRO[DRO Grievance Portal<br/>Tamil Nadu Revenue]
+    RR -->|Persistent storage & audit logs| PG[(PostgreSQL<br/>rr_proceedings_db)]
     
     COURT[Courts & Tribunals] -->|Issues court orders| SO
 ```
@@ -77,7 +76,7 @@ graph TB
         DOC_ROUTES[Document Processing Routes<br/>/api/process-document<br/>/api/regenerate-document<br/>/api/modify-content<br/>/api/export-docx]
         TPL_ROUTES[Template Routes<br/>/api/templates CRUD]
         USR_ROUTES[User Routes<br/>/api/users CRUD]
-        AUDIT_ROUTES[Audit Routes<br/>/api/audit-logs<br/>/api/dispatch-dro]
+        AUDIT_ROUTES[Audit Routes<br/>/api/audit-logs<br/>/api/dispatch]
         CHAT_ROUTES[Chat Routes<br/>/api/chat]
     end
     

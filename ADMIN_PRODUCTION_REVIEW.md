@@ -18,7 +18,7 @@ This was a source review with local checks, not a live deployment penetration te
 
 ## Functional errors and gaps
 
-6. **High — dispatch contract mismatch and misleading completion.** `App.jsx:247` inserts `response.auditEntry` into the ledger, but `Backend/api.py:324` returns only success/message/receipt. The client also hardcodes September 2026. The endpoint records a database status and generates a receipt locally; it makes no external DRO submission. It does not assign the generated receipt back to the entry before saving. Define one response contract, persist the actual saved entry and receipt, use the real date, and only claim dispatch after a confirmed delivery integration.
+6. **High — dispatch contract mismatch and misleading completion.** `App.jsx:247` inserts `response.auditEntry` into the ledger, but `Backend/api.py:324` returns only success/message/receipt. The client also hardcodes September 2026. The endpoint records a database status and generates a receipt locally. It does not assign the generated receipt back to the entry before saving. Define one response contract, persist the actual saved entry and receipt, use the real date, and only claim dispatch after a confirmed delivery integration.
 
 7. **High — failed audit saves are silently accepted.** `apiService.js:280` catches storage failures and returns null. Callers in `RRAssistantView.jsx:173` and `:224` await the call without checking its result, so completion can appear successful without a saved audit record. `activityStore.js:26` similarly logs failures only to the console. An isolated quota-failure check reproduced the null result. Propagate failure and show an actionable error; make the operation and audit event transactional where required.
 
@@ -42,6 +42,6 @@ This was a source review with local checks, not a live deployment penetration te
 - Isolated storage-quota reproduction: confirmed audit saving resolves null instead of rejecting; no real storage accessed.
 - Reviewed dashboard, user management, profile/password settings, backups, notifications, audit filtering/printing, authentication, and associated backend routes.
 
-Not verified: live PostgreSQL/OCR/Ollama/DRO integrations, deployed infrastructure, dependency vulnerability scan, or a fresh end-to-end browser regression. Existing backend integration tests write database records, so they were not run against an unidentified database.
+Not verified: live PostgreSQL/OCR/Ollama integrations, deployed infrastructure, dependency vulnerability scan, or a fresh end-to-end browser regression. Existing backend integration tests write database records, so they were not run against an unidentified database.
 
 Recommended sequence: server authentication/authorization and temporary-access removal; path and HTML-injection fixes; central persistence and dispatch contract; reliable auditing and recovery; then full deployment and browser integration tests.
